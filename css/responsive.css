@@ -1,0 +1,50 @@
+/* responsive.css — adaptation PC (la base est mobile-first) */
+
+@media (min-width: 900px) {
+  /* Navigation latérale gauche au lieu de la barre basse */
+  .nav {
+    top: 0;
+    bottom: 0;
+    right: auto;
+    width: 208px;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 76px 0 16px;
+    border-top: none;
+    border-right: 1px solid var(--c-bordure);
+  }
+
+  .nav a {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 0 18px;
+    font-size: 0.92rem;
+    min-height: 46px;
+    border-radius: 0 999px 999px 0;
+    margin-right: 10px;
+  }
+
+  .nav a.actif {
+    background: color-mix(in srgb, var(--c-accent) 14%, transparent);
+  }
+
+  .nav-ico {
+    width: 20px;
+    height: 20px;
+  }
+
+  .entete {
+    padding-left: 224px;
+  }
+
+  .vue {
+    margin-left: 208px;
+    margin-right: auto;
+    max-width: 900px;
+    padding: 24px 32px 48px;
+  }
+}

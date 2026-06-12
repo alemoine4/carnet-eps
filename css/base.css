@@ -1,0 +1,156 @@
+/* base.css — tokens, reset, layout général (mobile-first) */
+
+:root {
+  --c-fond: #f2f5fa;
+  --c-surface: #ffffff;
+  --c-texte: #16243d;
+  --c-texte-2: #5a6a85;
+  --c-accent: #1d5fd6;
+  --c-accent-fonce: #15459c;
+  --c-sur-accent: #ffffff;
+  --c-ok: #178a52;
+  --c-attention: #c97a06;
+  --c-alerte: #d03a3a;
+  --c-bordure: #dbe3f0;
+  --r-carte: 14px;
+  --ombre: 0 1px 3px rgba(22, 36, 61, 0.1);
+  --tactile: 44px; /* taille minimale des cibles tactiles (terrain) */
+  --h-nav: 64px;
+}
+
+/* Thème sombre : appliqué si l'appareil est en sombre (sauf choix « clair »
+   dans Réglages) OU si l'utilisateur a choisi « sombre ».
+   ⚠ Tokens dupliqués dans les deux blocs ci-dessous : modifier les deux. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="clair"]) {
+    --c-fond: #0f1626;
+    --c-surface: #192238;
+    --c-texte: #e9eef7;
+    --c-texte-2: #97a4bd;
+    --c-accent: #6493f2;
+    --c-accent-fonce: #1d2c4d;
+    --c-sur-accent: #0f1626;
+    --c-bordure: #2a3650;
+    --ombre: 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+}
+
+:root[data-theme="sombre"] {
+  --c-fond: #0f1626;
+  --c-surface: #192238;
+  --c-texte: #e9eef7;
+  --c-texte-2: #97a4bd;
+  --c-accent: #6493f2;
+  --c-accent-fonce: #1d2c4d;
+  --c-sur-accent: #0f1626;
+  --c-bordure: #2a3650;
+  --ombre: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--c-fond);
+  color: var(--c-texte);
+  min-height: 100dvh;
+}
+
+/* ---- En-tête ---- */
+.entete {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--c-accent-fonce);
+  color: #fff;
+  padding: 10px 16px;
+  padding-top: calc(10px + env(safe-area-inset-top));
+}
+
+.entete h1 {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: 0.3px;
+}
+
+.entete-contexte {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  opacity: 0.85;
+  text-transform: capitalize;
+}
+
+/* ---- Zone de contenu ---- */
+.vue {
+  padding: 16px;
+  padding-bottom: calc(var(--h-nav) + 24px + env(safe-area-inset-bottom));
+  max-width: 760px;
+  margin: 0 auto;
+  outline: none;
+}
+
+/* ---- Navigation (barre basse sur mobile) ---- */
+.nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--h-nav) + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-bordure);
+  z-index: 10;
+}
+
+.nav a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--tactile);
+  font-size: 0.62rem;
+  text-decoration: none;
+  color: var(--c-texte-2);
+}
+
+.nav a.actif {
+  color: var(--c-accent);
+  font-weight: 600;
+}
+
+.nav-ico {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+/* ---- Accessibilité ---- */
+:focus-visible {
+  outline: 3px solid var(--c-accent);
+  outline-offset: 2px;
+}
+
+/* ---- Impression ---- */
+@media print {
+  .entete,
+  .nav {
+    display: none;
+  }
+
+  .vue {
+    padding: 0;
+    max-width: none;
+  }
+}
