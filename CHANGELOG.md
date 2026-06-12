@@ -2,6 +2,13 @@
 
 Historique des changements notables. Format : date — résumé. Le détail vit dans `docs/journal.md`.
 
+## 2026-06-12 — v0.9.0 : Phase 9 — Distribution (préparée)
+
+- **Toast de mise à jour** : « Nouvelle version installée — Recharger » quand un nouveau service-worker prend le contrôle en cours d'usage (BIBLE règle 5) ; silencieux à la première installation.
+- **`docs/guide-installation.md`** : installation PWA Android + PC, transfert PC ↔ Android par JSON, mises à jour, dépannage, localisation des données.
+- **`docs/guide-rentree.md`** : procédure de rentrée en 6 étapes (~30 min) + réflexes de l'année (sauvegarde hebdo, certificats, export Pronote).
+- **Dépôt git local initialisé** (commit `04a4d7c`, 55 fichiers). Publication GitHub Pages prête, en attente : (1) `gh auth login` par l'utilisateur, (2) son feu vert explicite.
+
 ## 2026-06-12 — v0.8.1 : Phase 8 — QA & durcissement
 
 - **Durcissement** : `importerJSON` réécrit **par lots** (une transaction clear+puts par store) — restauration d'une année complète en ~2 s au lieu de ~1 min.

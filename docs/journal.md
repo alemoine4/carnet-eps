@@ -14,6 +14,20 @@ Modèle d'entrée :
 
 ---
 
+## 2026-06-12 (6) — Phase 9 : distribution préparée
+
+**Fait** :
+- Toast MAJ (main.js) : écoute `controllerchange` (le SW fait skipWaiting+claim) avec garde « première installation » ; bouton Recharger ; CSS `.toast` au-dessus de la nav. Boot vérifié sain en preview (toast absent sur localhost, console vide), v0.9.0.
+- `docs/guide-installation.md` : Android (bannière/menu Chrome), PC (icône barre d'adresse), transfert JSON entre appareils, mises à jour, tableau de dépannage, « où sont mes données ».
+- `docs/guide-rentree.md` : archive de l'année passée → purge → réglages → import Pronote → EDT (+ rappel parité A/B après vacances) → séquences → vérifications → jour J ; réflexes annuels.
+- `.gitignore` + `git init -b main` + commit initial `04a4d7c` (55 fichiers, 6 630 lignes, identité git locale alemoine).
+
+**Constat** : gh CLI 2.93 installé mais **non authentifié** → la création du dépôt GitHub est impossible sans `gh auth login` (geste utilisateur, navigateur). Publication scriptée prévue : `gh repo create carnet-eps --public --source . --push` puis `git subtree split --prefix app -b gh-pages` + push + activation Pages sur `gh-pages`, et URL reportée dans le guide d'installation.
+
+**Coincé / à vérifier** : rien côté code. Attente : `gh auth login` + feu vert explicite « publie sur GitHub Pages ».
+
+**Prochaine étape** : publication (à son signal), puis installations réelles PC/Android et validations terrain (checklist 🔲).
+
 ## 2026-06-12 (5) — Phase 8 : QA & durcissement
 
 **Fait** :

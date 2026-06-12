@@ -5,13 +5,16 @@ Vue d'ensemble des phases : `docs/roadmap.md`.
 
 ## 🎒 Jalon rentrée 2026 : phases 1→6 TERMINÉES (v0.7.0) — reste les validations terrain ci-dessous
 
-## Phase active : Phase 9 — Distribution & rentrée
+## Phase active : Phase 9 — Distribution (il ne reste que la publication)
 
-- [ ] **Publication GitHub Pages** (code seul, jamais de données — D008) : attendre le « go » d'Alexandre (« publie sur GitHub Pages »), créer le dépôt, pousser `app/`, activer Pages
-- [ ] Tester l'installation PWA réelle depuis l'URL HTTPS (PC + Android) + bouton « Vérifier les mises à jour » après un déploiement
-- [ ] `docs/guide-installation.md` : pas-à-pas PC et Android (avec les écrans Chrome)
-- [ ] `docs/guide-rentree.md` : procédure de rentrée (purge avec archive → import Pronote → EDT → lundi de semaine A)
-- [ ] Toast « nouvelle version disponible » quand un SW est en attente (reliquat phase 1)
+- [ ] **Publication GitHub Pages** — prête à 95 % : dépôt git local créé (commit `04a4d7c`). Il manque deux choses qu'Alexandre seul peut faire :
+  1. Connecter gh CLI une fois : `gh auth login` (choisir GitHub.com → HTTPS → navigateur)
+  2. Me dire « **publie sur GitHub Pages** » → je crée le dépôt, pousse, active Pages (branche `gh-pages` = contenu de `app/`), et je remplis l'URL dans `docs/guide-installation.md`
+- [ ] Après publication : installer la PWA depuis l'URL HTTPS (PC + Android, suivre `docs/guide-installation.md`) et vérifier le toast de MAJ au déploiement suivant
+- [x] 2026-06-12 — `docs/guide-installation.md` (Android + PC + transfert + dépannage)
+- [x] 2026-06-12 — `docs/guide-rentree.md` (archive → purge → import Pronote → EDT → premier cours)
+- [x] 2026-06-12 — Toast « Nouvelle version installée — Recharger » sur `controllerchange` du SW (hors première installation)
+- [x] 2026-06-12 — Dépôt git initialisé, commit v0.9.0 (55 fichiers)
 
 ## Validations terrain (Alexandre) — à faire avant la rentrée
 
