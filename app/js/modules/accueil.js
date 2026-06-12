@@ -1,0 +1,201 @@
+// modules/accueil.js — tableau de bord « Aujourd'hui » (phase 7).
+// Répond sans aucun clic à : quel cours maintenant, qu'est-ce qui m'attend, où reprendre.
+// 1. « En ce moment » : EDT × heure × parité A/B × séquence active, création séance + appel en un tap.
+// 2. Alertes agrégées : inaptitudes expirant (J-7) ou venant de finir, seuils tenue/dispenses,
+//    évaluations notées non remontées vers Pronote.
+// 3. Reprendre : dernière classe ouverte, dernière évaluation.
+
+import { enregistrerVue, el, carte } from '../ui.js';
+import { tous, lire, parIndex, enregistrer } from '../io.js';
+import { coursDuJour, semaineCourante, enMinutes, isoAujourdhui, dateFR, SEUIL_ALERTE } from '../metier.js';
+import { etat } from '../state.js';
+
+// ---------------------------------------------------------------------------
+// Carte « En ce moment / Prochain cours »
+// ---------------------------------------------------------------------------
+
+async function carteMaintenant() {
+  const maintenant = new Date();
+  const isoJour = isoAujourdhui();
+  const minutes = maintenant.getHours() * 60 + maintenant.getMinutes();
+  const cours = await coursDuJour(maintenant);
+
+  if (!cours.length) {
+    const cVide = carte('Aujourd’hui', 'Pas de cours EPS aujourd’hui.');
+    if (!(await tous('edt')).length) {
+      cVide.querySelector('p').textContent = 'Aucun créneau dans l’emploi du temps pour l’instant.';
+      cVide.append(el('div', { class: 'rang-btn' }, el('a', { class: 'btn', href: '#/edt' }, 'Saisir mon EDT')));
+    }
+    return cVide;
+  }
+
+  const enCours = cours.find((cr) => enMinutes(cr.heureDebut) <= minutes && minutes < enMinutes(cr.heureFin));
+  const aVenir = cours.find((cr) => enMinutes(cr.heureDebut) > minutes);
+  const creneau = enCours || aVenir;
+
+  if (!creneau) return carte('Aujourd’hui', 'Les cours de la journée sont terminés.');
+
+  const classe = await lire('classes', creneau.classeId);
+  const sem = await semaineCourante(maintenant);
+  const cM = carte(enCours ? 'En ce moment' : `À ${creneau.heureDebut}`, '', sem ? `semaine ${sem}` : '');
+  cM.append(el('p', { class: 'maintenant-cours' },
+    el('strong', {}, classe ? classe.nom : 'Classe ?'),
+    ` · ${creneau.heureDebut}–${creneau.heureFin}`,
+    creneau.installation ? ` · ${creneau.installation}` : '',
+  ));
+
+  const sequences = (await parIndex('sequences', 'classeId', creneau.classeId))
+    .filter((s) => (!s.dateDebut || s.dateDebut <= isoJour) && (!s.dateFin || isoJour <= s.dateFin));
+  const sequence = sequences[0];
+
+  if (!sequence) {
+    cM.append(
+      el('p', {}, 'Aucune séquence en cours pour cette classe à cette date.'),
+      el('div', { class: 'rang-btn' }, el('a', { class: 'btn', href: '#/sequences' }, 'Créer une séquence')),
+    );
+    return cM;
+  }
+
+  const seances = (await parIndex('seances', 'sequenceId', sequence.id)).sort((a, b) => a.date.localeCompare(b.date));
+  const duJour = seances.find((s) => s.date === isoJour);
+  const total = sequence.nbSeancesPrevu || '?';
+
+  if (duJour) {
+    const numero = seances.indexOf(duJour) + 1;
+    cM.append(
+      el('p', {}, `${sequence.apsa} — séance ${numero}/${total}${duJour.theme ? ` · ${duJour.theme}` : ''}`),
+      el('div', { class: 'rang-btn' },
+        el('a', { class: 'btn btn-principal', href: `#/appel/${duJour.id}` }, 'Faire l’appel'),
+        el('a', { class: 'btn', href: `#/sequences/${sequence.id}` }, 'Séquence'),
+      ),
+    );
+  } else {
+    const numero = seances.filter((s) => s.date < isoJour).length + 1;
+    const btnCreer = el('button', { class: 'btn btn-principal' }, `Créer la séance ${numero}/${total} et faire l’appel`);
+    btnCreer.addEventListener('click', async () => {
+      const nouvelle = {
+        id: crypto.randomUUID(), sequenceId: sequence.id, date: isoJour,
+        edtId: creneau.id, numero, theme: '', bilan: '', annulee: false,
+      };
+      await enregistrer('seances', nouvelle);
+      location.hash = `#/appel/${nouvelle.id}`;
+    });
+    cM.append(
+      el('p', {}, `${sequence.apsa} — prochaine séance : ${numero}/${total}`),
+      el('div', { class: 'rang-btn' }, btnCreer, el('a', { class: 'btn', href: `#/sequences/${sequence.id}` }, 'Séquence')),
+    );
+  }
+
+  const suivants = cours.filter((cr) => enMinutes(cr.heureDebut) > enMinutes(creneau.heureDebut));
+  if (suivants.length) {
+    const classes = await tous('classes');
+    const nomDe = (id) => classes.find((cl) => cl.id === id)?.nom || '?';
+    cM.append(el('p', { class: 'note-discrete' }, 'Ensuite : ' + suivants.map((cr) => `${cr.heureDebut} ${nomDe(cr.classeId)}`).join(' · ')));
+  }
+  return cM;
+}
+
+// ---------------------------------------------------------------------------
+// Carte « Alertes »
+// ---------------------------------------------------------------------------
+
+async function carteAlertes() {
+  const auj = isoAujourdhui();
+  const [inaptitudes, eleves, classes, appels, evaluations, notes, sequences] = await Promise.all([
+    tous('inaptitudes'), tous('eleves'), tous('classes'), tous('appels'),
+    tous('evaluations'), tous('notes'), tous('sequences'),
+  ]);
+  const eleveDe = (id) => eleves.find((e) => e.id === id);
+  const classeDe = (id) => classes.find((cl) => cl.id === id);
+  const nomComplet = (e) => `${e.prenom} ${e.nom}${classeDe(e.classeId) ? ' (' + classeDe(e.classeId).nom + ')' : ''}`;
+  const jours = (de, a) => Math.round((new Date(`${a}T12:00:00`) - new Date(`${de}T12:00:00`)) / 86400000);
+  const alertes = [];
+
+  // Inaptitudes : expirant sous 7 j, ou terminées depuis ≤ 7 j (réintégration)
+  for (const i of inaptitudes) {
+    const e = eleveDe(i.eleveId);
+    if (!e) continue;
+    const active = (!i.dateDebut || i.dateDebut <= auj) && (!i.dateFin || auj <= i.dateFin);
+    if (active && i.dateFin) {
+      const restants = jours(auj, i.dateFin);
+      if (restants <= 7) {
+        alertes.push({ grave: true, href: `#/inaptitudes/${i.id}`, texte: `${nomComplet(e)} — inaptitude : ${restants <= 0 ? 'dernier jour' : `fin dans ${restants} j`}` });
+      }
+    } else if (i.dateFin && i.dateFin < auj && jours(i.dateFin, auj) <= 7) {
+      alertes.push({ grave: false, href: `#/inaptitudes/${i.id}`, texte: `${nomComplet(e)} — redevient apte (inaptitude finie le ${dateFR(i.dateFin)})` });
+    }
+  }
+
+  // Seuils oublis de tenue / dispenses « mot »
+  const cumul = new Map();
+  for (const a of appels) {
+    if (a.statut !== 'oubli_tenue' && a.statut !== 'dispense') continue;
+    if (!cumul.has(a.eleveId)) cumul.set(a.eleveId, { oubli_tenue: 0, dispense: 0 });
+    cumul.get(a.eleveId)[a.statut]++;
+  }
+  for (const [eleveId, c] of cumul) {
+    if (c.oubli_tenue < SEUIL_ALERTE && c.dispense < SEUIL_ALERTE) continue;
+    const e = eleveDe(eleveId);
+    if (!e) continue;
+    const morceaux = [];
+    if (c.oubli_tenue >= SEUIL_ALERTE) morceaux.push(`${c.oubli_tenue} oublis de tenue`);
+    if (c.dispense >= SEUIL_ALERTE) morceaux.push(`${c.dispense} dispenses « mot »`);
+    alertes.push({ grave: true, href: `#/eleves/fiche/${e.id}`, texte: `${nomComplet(e)} — ${morceaux.join(' · ')}` });
+  }
+
+  // Évaluations notées mais jamais remontées vers Pronote
+  const nbNotes = new Map();
+  for (const n of notes) nbNotes.set(n.evaluationId, (nbNotes.get(n.evaluationId) || 0) + 1);
+  for (const ev of evaluations) {
+    if (ev.publieePronote || ev.type === 'afl' || !(nbNotes.get(ev.id) > 0)) continue;
+    const seq = sequences.find((s) => s.id === ev.sequenceId);
+    const cl = seq ? classeDe(seq.classeId) : null;
+    alertes.push({ grave: false, href: `#/notes/eval/${ev.id}`, texte: `« ${ev.titre} »${cl ? ' (' + cl.nom + ')' : ''} — pas encore remontée vers Pronote` });
+  }
+
+  const carteA = carte('Alertes');
+  if (!alertes.length) {
+    carteA.append(el('p', {}, 'Rien à signaler ✓'));
+  } else {
+    for (const a of alertes.slice(0, 8)) {
+      carteA.append(el('a', { class: 'ligne-eleve', href: a.href },
+        el('span', { class: 'badge' + (a.grave ? ' badge-alerte' : '') }, a.grave ? '⚠' : 'ℹ'),
+        el('span', { class: 'ligne-eleve-nom' }, a.texte),
+        el('span', { class: 'chevron pousse-droite', 'aria-hidden': 'true' }, '›'),
+      ));
+    }
+    if (alertes.length > 8) carteA.append(el('p', { class: 'note-discrete' }, `… et ${alertes.length - 8} autre(s)`));
+  }
+  return carteA;
+}
+
+// ---------------------------------------------------------------------------
+// Carte « Reprendre » (raccourcis)
+// ---------------------------------------------------------------------------
+
+async function carteReprendre() {
+  const boutons = [];
+  if (etat.prefs.derniereClasseId) {
+    const cl = await lire('classes', etat.prefs.derniereClasseId);
+    if (cl) boutons.push(el('a', { class: 'btn', href: `#/eleves/classe/${cl.id}` }, `Classe ${cl.nom}`));
+  }
+  if (etat.prefs.derniereEvalId) {
+    const ev = await lire('evaluations', etat.prefs.derniereEvalId);
+    if (ev) boutons.push(el('a', { class: 'btn', href: `#/notes/eval/${ev.id}` }, `Éval. « ${ev.titre} »`));
+  }
+  if (!boutons.length) return null;
+  const cR = carte('Reprendre');
+  cR.append(el('div', { class: 'rang-btn' }, ...boutons));
+  return cR;
+}
+
+// ---------------------------------------------------------------------------
+
+export function initialiser() {
+  enregistrerVue('accueil', async (c) => {
+    c.append(await carteMaintenant());
+    c.append(await carteAlertes());
+    const reprendre = await carteReprendre();
+    if (reprendre) c.append(reprendre);
+  });
+}

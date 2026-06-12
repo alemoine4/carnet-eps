@@ -1,0 +1,712 @@
+/* components.css — composants réutilisables (cartes, badges, boutons, listes) */
+
+/* ---- Cartes ---- */
+.carte {
+  background: var(--c-surface);
+  border: 1px solid var(--c-bordure);
+  border-radius: var(--r-carte);
+  box-shadow: var(--ombre);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.carte h2 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.carte p {
+  margin: 0;
+  color: var(--c-texte-2);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+/* ---- Badges ---- */
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: var(--c-bordure);
+  color: var(--c-texte-2);
+  white-space: nowrap;
+}
+
+.badge-accent {
+  background: var(--c-accent);
+  color: var(--c-sur-accent);
+}
+
+.badge-ok {
+  background: var(--c-ok);
+  color: #fff;
+}
+
+.badge-alerte {
+  background: var(--c-alerte);
+  color: #fff;
+}
+
+/* ---- Boutons ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--tactile);
+  padding: 8px 18px;
+  border: 1px solid var(--c-bordure);
+  border-radius: 12px;
+  background: var(--c-surface);
+  color: var(--c-texte);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-principal {
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+  color: var(--c-sur-accent);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+/* ---- Listes (écran « Plus ») ---- */
+.liste-cartes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.note-discrete {
+  font-size: 0.78rem;
+  color: var(--c-texte-2);
+  text-align: center;
+  margin-top: 20px;
+}
+
+/* ---- Cartes cliquables (écran « Plus ») ---- */
+.carte-lien {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.carte-lien .carte {
+  margin-bottom: 0;
+  border-left: 4px solid var(--c-accent);
+}
+
+.carte-lien:active .carte {
+  transform: scale(0.99);
+}
+
+/* ---- Formulaires ---- */
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.champ label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.champ input,
+.champ select {
+  min-height: var(--tactile);
+  padding: 8px 12px;
+  border: 1px solid var(--c-bordure);
+  border-radius: 10px;
+  background: var(--c-fond);
+  color: var(--c-texte);
+  font: inherit;
+}
+
+.ligne-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--tactile);
+  font-size: 0.9rem;
+  margin-top: 8px;
+  cursor: pointer;
+}
+
+.ligne-option input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--c-accent);
+}
+
+.champ-fichier {
+  margin-top: 12px;
+  font-size: 0.9rem;
+  max-width: 100%;
+}
+
+.rang-btn {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.btn-danger {
+  background: var(--c-alerte);
+  border-color: var(--c-alerte);
+  color: #fff;
+}
+
+/* ---- Retours d'état et infos ---- */
+.statut {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  min-height: 1.2em;
+}
+
+.statut-ok {
+  color: var(--c-ok);
+}
+
+.statut-erreur {
+  color: var(--c-alerte);
+}
+
+.retour {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--tactile);
+  margin-bottom: 4px;
+  color: var(--c-accent);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.info-ligne {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 0.9rem;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--c-bordure);
+}
+
+.info-ligne:last-of-type {
+  border-bottom: none;
+}
+
+/* ---- Référentiel classes & élèves ---- */
+.barre-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.barre-actions .btn {
+  text-decoration: none;
+}
+
+.pastille {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.liste-eleves {
+  margin-top: 8px;
+}
+
+.ligne-eleve {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--tactile);
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--c-bordure);
+  color: inherit;
+  text-decoration: none;
+}
+
+.ligne-eleve:last-of-type {
+  border-bottom: none;
+}
+
+.ligne-eleve-nom {
+  font-size: 0.95rem;
+}
+
+.ligne-eleve .chevron {
+  margin-left: auto;
+  color: var(--c-texte-2);
+  font-size: 1.2rem;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
+
+.recherche {
+  width: 100%;
+  min-height: var(--tactile);
+  padding: 8px 12px;
+  border: 1px solid var(--c-bordure);
+  border-radius: 10px;
+  background: var(--c-fond);
+  color: var(--c-texte);
+  font: inherit;
+  margin-top: 12px;
+}
+
+.vide {
+  text-align: center;
+  color: var(--c-texte-2);
+  padding: 18px 0 6px;
+  font-size: 0.9rem;
+}
+
+.champ textarea {
+  min-height: 76px;
+  padding: 8px 12px;
+  border: 1px solid var(--c-bordure);
+  border-radius: 10px;
+  background: var(--c-fond);
+  color: var(--c-texte);
+  font: inherit;
+  resize: vertical;
+}
+
+.champ input[type="color"] {
+  padding: 2px;
+  width: 64px;
+  height: var(--tactile);
+}
+
+.table-apercu {
+  display: block;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  margin-top: 12px;
+}
+
+.table-apercu th,
+.table-apercu td {
+  border: 1px solid var(--c-bordure);
+  padding: 4px 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table-apercu th {
+  background: var(--c-fond);
+}
+
+/* ---- EDT & séquences ---- */
+.rang-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.jour-section h2 {
+  margin-bottom: 10px;
+}
+
+.ligne-edt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: var(--tactile);
+  padding: 8px 4px;
+  border: none;
+  border-bottom: 1px solid var(--c-bordure);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ligne-edt:last-of-type {
+  border-bottom: none;
+}
+
+.edt-heures {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.edt-classe {
+  font-weight: 600;
+}
+
+.edt-instal {
+  color: var(--c-texte-2);
+  font-size: 0.85rem;
+}
+
+.maintenant-cours {
+  font-size: 1.02rem;
+}
+
+.btn-mini {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tactile);
+  min-height: var(--tactile);
+  padding: 0;
+  border: 1px solid var(--c-bordure);
+  border-radius: 10px;
+  background: var(--c-surface);
+  color: var(--c-alerte);
+  font: inherit;
+  cursor: pointer;
+}
+
+.pousse-droite {
+  margin-left: auto;
+}
+
+@media (min-width: 900px) {
+  .grille-edt {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+    align-items: start;
+  }
+
+  .grille-edt .carte {
+    margin-bottom: 0;
+  }
+}
+
+/* ---- Écran d'appel ---- */
+.compteurs {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  margin: 8px 0 0;
+  font-size: 0.92rem;
+}
+
+.compteurs strong {
+  font-size: 1.2rem;
+}
+
+.note-inline {
+  color: var(--c-texte-2);
+  font-size: 0.82rem;
+}
+
+.grille-appel {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin: 10px 0 16px;
+}
+
+@media (min-width: 560px) {
+  .grille-appel {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 900px) {
+  .grille-appel {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.btn-eleve {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 2px solid var(--c-bordure);
+  border-radius: 12px;
+  background: var(--c-surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
+.btn-eleve:active {
+  transform: scale(0.98);
+}
+
+.btn-eleve .nom-e {
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  padding-right: 26px;
+}
+
+.btn-eleve .detail-statut {
+  font-size: 0.74rem;
+  min-height: 1em;
+}
+
+.btn-eleve .badge-statut {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-width: 22px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.btn-eleve .pastille-info,
+.btn-eleve .pastille-warn {
+  position: absolute;
+  bottom: 6px;
+  right: 8px;
+  font-size: 0.85rem;
+}
+
+.btn-eleve .pastille-warn {
+  right: 30px;
+}
+
+/* ---- Feuille (menu de statuts) ---- */
+.feuille-fond {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(10, 16, 30, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.feuille {
+  width: 100%;
+  max-width: 560px;
+  max-height: 80dvh;
+  overflow: auto;
+  background: var(--c-surface);
+  border-radius: 16px 16px 0 0;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+}
+
+.feuille h3 {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+}
+
+.grille-statuts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.btn-statut {
+  border-width: 2px;
+  justify-content: flex-start;
+  font-size: 0.88rem;
+}
+
+.rang-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+/* ---- Inaptitudes & pièces jointes ---- */
+.ligne-eleve {
+  flex-wrap: wrap;
+}
+
+.ligne-pleine {
+  flex-basis: 100%;
+}
+
+.vignette {
+  display: block;
+  max-width: 240px;
+  max-height: 180px;
+  border: 1px solid var(--c-bordure);
+  border-radius: 10px;
+  cursor: zoom-in;
+  margin-top: 8px;
+}
+
+.visionneuse {
+  align-items: center;
+  cursor: zoom-out;
+}
+
+.visionneuse img {
+  max-width: 96vw;
+  max-height: 90dvh;
+  border-radius: 8px;
+}
+
+.avatar-photo {
+  object-fit: cover;
+}
+
+.btn input[type="file"][hidden] {
+  display: none;
+}
+
+/* ---- Grille de saisie des notes ---- */
+.ligne-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--tactile);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--c-bordure);
+}
+
+.ligne-note:last-of-type {
+  border-bottom: none;
+}
+
+.ligne-note .nom {
+  flex: 1;
+  font-size: 0.92rem;
+}
+
+.input-note {
+  width: 92px;
+  min-height: var(--tactile);
+  text-align: center;
+  border: 1px solid var(--c-bordure);
+  border-radius: 10px;
+  background: var(--c-fond);
+  color: var(--c-texte);
+  font: inherit;
+}
+
+.input-note.invalide {
+  border-color: var(--c-alerte);
+  color: var(--c-alerte);
+}
+
+.input-note.code {
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+/* ---- Bibliothèque de documents ---- */
+.rang-2 > select {
+  min-height: var(--tactile);
+  padding: 8px 12px;
+  border: 1px solid var(--c-bordure);
+  border-radius: 10px;
+  background: var(--c-fond);
+  color: var(--c-texte);
+  font: inherit;
+}
+
+.rang-doc {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--c-bordure);
+}
+
+.rang-doc:last-of-type {
+  border-bottom: none;
+}
+
+.rang-doc .ligne-doc {
+  flex: 1;
+  border: none;
+  border-bottom: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* ---- Toast de mise à jour ---- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--h-nav) + 16px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--c-texte);
+  color: var(--c-fond);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  font-size: 0.9rem;
+  max-width: calc(100vw - 24px);
+}
+
+/* ---- Impression (récap, listes) ---- */
+@media print {
+  .retour,
+  .barre-actions,
+  .rang-btn,
+  .btn,
+  .recherche,
+  .no-print {
+    display: none !important;
+  }
+
+  .carte {
+    box-shadow: none;
+    border: 1px solid #bbb;
+    break-inside: avoid;
+  }
+
+  .table-apercu,
+  .table-recap {
+    display: table;
+    width: 100%;
+    font-size: 11px;
+  }
+}

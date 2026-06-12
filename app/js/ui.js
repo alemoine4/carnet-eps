@@ -1,0 +1,78 @@
+// ui.js — registre de vues + helpers DOM communs.
+// Une vue = fonction (conteneur, params) => void|Promise, enregistrée par enregistrerVue().
+// `params` = segments du hash après la route (ex. #/eleves/fiche/<id> → ['fiche', '<id>']).
+// Les modules métier (js/modules/*.js) s'enregistrent ici sans toucher au router.
+
+const vues = new Map();
+
+export function enregistrerVue(id, rendu) {
+  vues.set(id, rendu);
+}
+
+export async function afficherVue(id, params = []) {
+  const conteneur = document.getElementById('vue');
+  conteneur.innerHTML = '';
+  const rendu = vues.get(id);
+  if (!rendu) {
+    conteneur.append(carte('Page introuvable', `Aucune vue « ${id} ».`));
+    return;
+  }
+  await rendu(conteneur, params);
+  conteneur.focus({ preventScroll: true });
+}
+
+// el('button', { class: 'btn', onclick: fn }, 'Texte') — création DOM concise et sûre
+// (textes passés en nœuds texte, jamais en innerHTML).
+export function el(tag, attrs = {}, ...enfants) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k.startsWith('on') && typeof v === 'function') n.addEventListener(k.slice(2), v);
+    else if (v !== false && v !== null && v !== undefined) n.setAttribute(k, v === true ? '' : v);
+  }
+  n.append(...enfants);
+  return n;
+}
+
+export function carte(titre, texte = '', badge = '') {
+  const c = el('section', { class: 'carte' });
+  const h = el('h2', {}, titre);
+  if (badge) h.append(el('span', { class: 'badge' }, badge));
+  c.append(h);
+  if (texte) c.append(el('p', {}, texte));
+  return c;
+}
+
+// ---- Champs de formulaire (sauvegarde sur `change` + retour visuel « ✓ ») ----
+
+function brancherRetour(controle, onChange, transformer = (v) => v.trim()) {
+  const retour = el('span', { class: 'statut statut-ok', role: 'status' });
+  if (onChange) {
+    controle.addEventListener('change', async () => {
+      await onChange(transformer(controle.value));
+      retour.textContent = '✓';
+      setTimeout(() => { retour.textContent = ''; }, 1500);
+    });
+  }
+  return retour;
+}
+
+export function champTexte({ id, libelle, valeur = '', placeholder = '', type = 'text', onChange }) {
+  const input = el('input', { type, id, placeholder, autocomplete: 'off' });
+  input.value = valeur;
+  const retour = brancherRetour(input, onChange, type === 'date' ? (v) => v : (v) => v.trim());
+  return el('div', { class: 'champ' }, el('label', { for: id }, libelle, ' ', retour), input);
+}
+
+export function champSelect({ id, libelle, options, valeur = '', onChange }) {
+  const select = el('select', { id }, ...options.map((o) => el('option', { value: o.value }, o.label)));
+  select.value = valeur;
+  const retour = brancherRetour(select, onChange, (v) => v);
+  return el('div', { class: 'champ' }, el('label', { for: id }, libelle, ' ', retour), select);
+}
+
+export function champZone({ id, libelle, valeur = '', placeholder = '', rows = 3, onChange }) {
+  const zone = el('textarea', { id, placeholder, rows });
+  zone.value = valeur;
+  const retour = brancherRetour(zone, onChange);
+  return el('div', { class: 'champ' }, el('label', { for: id }, libelle, ' ', retour), zone);
+}
