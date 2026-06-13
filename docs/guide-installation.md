@@ -2,7 +2,7 @@
 
 > L'application s'installe depuis son adresse web (HTTPS) comme une vraie app, puis fonctionne **entièrement hors ligne**. Le code est public, **vos données ne quittent jamais l'appareil**.
 >
-> **Adresse de l'application : `https://<utilisateur>.github.io/carnet-eps/`** *(à compléter après la publication GitHub Pages)*
+> **Adresse de l'application : `https://alemoine4.github.io/carnet-eps/`**
 
 ## 📱 Sur Android (téléphone ou tablette)
 
