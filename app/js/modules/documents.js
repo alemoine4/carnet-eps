@@ -23,7 +23,7 @@ const trierClasses = (a, b) => a.nom.localeCompare(b.nom, 'fr', { numeric: true 
 
 async function vueDocuments(c) {
   const rafraichir = () => { c.innerHTML = ''; return vueDocuments(c); };
-  c.append(el('a', { class: 'retour', href: '#/plus' }, '← Plus'));
+  c.append(el('a', { class: 'retour', href: '#/plus' }, '← Retour'));
   const [documents, classes] = await Promise.all([tous('documents'), tous('classes')]);
   const actives = classes.filter((cl) => !cl.archivee).sort(trierClasses);
   const nomClasse = (id) => classes.find((cl) => cl.id === id)?.nom || '?';

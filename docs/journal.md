@@ -14,6 +14,12 @@ Modèle d'entrée :
 
 ---
 
+## 2026-06-13 (11) — Libellé du bouton retour (v0.9.5)
+
+**Fait** : « ← Plus » → « ← Retour » sur les 6 écrans enfants de l'onglet Plus (main.js + documents/inaptitudes/sequences/reglages/sauvegarde.js). Motif : « Plus » (menu) se lit mal comme cible de retour ; les retours nommant une section réelle sont gardés. Bump → 0.9.5, push main + gh-pages. Vérifié preview (les 6 affichent « ← Retour »).
+
+**Prochaine étape** : terrain.
+
 ## 2026-06-13 (10) — Nettoyage écran « Plus » (v0.9.4)
 
 **Fait** : retrait des badges « prêt » (3e argument de `carte()`) sur les 5 cartes de l'écran Plus (`main.js`) — vestiges de dev, plus de sens une fois tout livré, incohérents avec la carte Aide. Footer RGPD conservé. Bump SW + VERSION_APP → 0.9.4, push main + gh-pages. Vérifié preview (0 badge, footer intact).

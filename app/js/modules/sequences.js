@@ -38,7 +38,7 @@ function estActive(s, jour = isoAujourdhui()) {
 
 async function vueListe(c) {
   const rafraichir = () => { c.innerHTML = ''; return vueListe(c); };
-  c.append(el('a', { class: 'retour', href: '#/plus' }, '← Plus'));
+  c.append(el('a', { class: 'retour', href: '#/plus' }, '← Retour'));
   const classes = (await tous('classes')).filter((cl) => !cl.archivee).sort(trierClasses);
   const sequences = await tous('sequences');
   const seances = await tous('seances');

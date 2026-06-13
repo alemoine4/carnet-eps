@@ -34,7 +34,7 @@ function statut(elem, message, ok = true) {
 
 export function initialiser() {
   enregistrerVue('sauvegarde', async (c) => {
-    c.append(el('a', { class: 'retour', href: '#/plus' }, '← Plus'));
+    c.append(el('a', { class: 'retour', href: '#/plus' }, '← Retour'));
 
     // ---- État actuel ----
     const carteEtat = carte('Données sur cet appareil', '…');

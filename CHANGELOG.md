@@ -2,6 +2,11 @@
 
 Historique des changements notables. Format : date — résumé. Le détail vit dans `docs/journal.md`.
 
+## 2026-06-13 — v0.9.5 : Libellé du bouton retour
+
+- Le bouton retour des écrans ouverts depuis l'onglet « Plus » (Inaptitudes, Séquences, Documents, Sauvegarde, Réglages, Aide) passe de « ← Plus » à **« ← Retour »** : « Plus » (menu fourre-tout) se lisait mal comme destination de retour. Les retours qui nomment une vraie section (« ← Classes », « ← Appel », « ← Notes », « ← Inaptitudes »…) sont conservés.
+- Bump SW + `VERSION_APP` → 0.9.5 ; redéployé.
+
 ## 2026-06-13 — v0.9.4 : Nettoyage écran « Plus »
 
 - Retrait des badges « prêt » (vestiges de dev) sur les cartes de l'écran Plus : tous les modules étant livrés, ce marqueur n'avait plus de sens en production (et était incohérent avec la carte « Aide » sans badge). La ligne RGPD « 100 % local · hors ligne… » est conservée (intentionnelle).

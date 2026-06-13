@@ -38,7 +38,7 @@ enregistrerVue('plus', (c) => {
 // ---- Vue « Aide » (prise en main + rentrée, intégrée et disponible hors ligne) ----
 
 enregistrerVue('aide', (c) => {
-  c.append(el('a', { class: 'retour', href: '#/plus' }, '← Plus'));
+  c.append(el('a', { class: 'retour', href: '#/plus' }, '← Retour'));
 
   const intro = carte('Aide & prise en main');
   intro.append(el('p', {},

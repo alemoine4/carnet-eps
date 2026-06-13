@@ -66,7 +66,7 @@ function resumeRestrictions(i) {
 // ---------------------------------------------------------------------------
 
 async function vueSynthese(c) {
-  c.append(el('a', { class: 'retour', href: '#/plus' }, '← Plus'));
+  c.append(el('a', { class: 'retour', href: '#/plus' }, '← Retour'));
   const [inaptitudes, eleves, classes] = await Promise.all([tous('inaptitudes'), tous('eleves'), tous('classes')]);
   const eleveDe = (id) => eleves.find((e) => e.id === id);
   const classeDe = (id) => classes.find((cl) => cl.id === id);

@@ -25,7 +25,7 @@ function octetsLisibles(n) {
 
 export function initialiser() {
   enregistrerVue('reglages', async (c) => {
-    c.append(el('a', { class: 'retour', href: '#/plus' }, '← Plus'));
+    c.append(el('a', { class: 'retour', href: '#/plus' }, '← Retour'));
 
     // ---- Établissement ----
     const carteEtab = carte('Établissement');
