@@ -15,6 +15,9 @@ const trierEleves = (a, b) =>
   a.nom.localeCompare(b.nom, 'fr') || a.prenom.localeCompare(b.prenom, 'fr');
 const trierClasses = (a, b) => a.nom.localeCompare(b.nom, 'fr', { numeric: true });
 
+// Raccourcis clavier (PC) sur une carte d'élève focalisée : une lettre = un statut.
+const RACCOURCIS_STATUT = { p: 'present', a: 'absent', r: 'retard', d: 'dispense', i: 'inapte', t: 'oubli_tenue', f: 'infirmerie' };
+
 // ---------------------------------------------------------------------------
 // Vue : sélecteur de séance
 // ---------------------------------------------------------------------------
@@ -204,7 +207,7 @@ async function vueAppel(c, seanceId) {
     const badge = carteE.querySelector('.badge-statut');
     badge.hidden = !rec;
     badge.textContent = conf.court;
-    badge.style.background = conf.couleur;
+    // Fond de la pastille piloté par CSS via [data-statut] (thématisé clair/sombre).
     const detail = carteE.querySelector('.detail-txt');
     detail.textContent = !rec ? ''
       : st === 'retard' && rec.minutesRetard ? `${conf.libelle} · ${rec.minutesRetard} min`
@@ -321,6 +324,12 @@ async function vueAppel(c, seanceId) {
       if (idx === -1 && enregs.has(eleve.id)) { ouvrirMenu(eleve); return; } // statut hors cycle : ne pas l'écraser par erreur
       await definirStatut(eleve, idx === -1 ? CYCLE_TAP[1] : CYCLE_TAP[(idx + 1) % CYCLE_TAP.length]);
     });
+    // Raccourci clavier (PC) : une lettre fixe directement le statut de la carte focalisée.
+    cycle.addEventListener('keydown', (e) => {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      const st = RACCOURCIS_STATUT[e.key.toLowerCase()];
+      if (st) { e.preventDefault(); longPress = false; definirStatut(eleve, st); }
+    });
 
     carteE.append(cycle, menu);
     boutons.set(eleve.id, carteE);
@@ -328,7 +337,7 @@ async function vueAppel(c, seanceId) {
     majBouton(eleve);
   }
   c.append(
-    el('p', { class: 'note-discrete' }, 'Tap : présent → absent → tenue · Appui long : tous les statuts'),
+    el('p', { class: 'note-discrete' }, 'Tap : présent → absent → tenue · Appui long (ou ⋯) : tous les statuts · Clavier : P A R D I T, F = infirmerie'),
     grille,
     el('div', { class: 'rang-btn' }, btnTerminer),
     statutFin,

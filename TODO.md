@@ -17,7 +17,8 @@ Vue d'ensemble des phases : `docs/roadmap.md`.
 ### Campagne de tests + sécurité (2026-06-13, v0.9.2)
 - [x] 2026-06-13 — Campagne 14 scénarios (preview) : 0 bug bloquant, 0 bug important. Cf. rapport en session.
 - [x] 2026-06-13 — **Sécurité** : garde `data:` dans `importerJSON` (plus de requête réseau sur fichier piégé) + helper `champCSV()` anti-injection de formule sur les exports CSV. Cf. `AVIS_SECURITE_IMPORT_EXPORT.md`. Vérifié en preview.
-- [ ] UX confort (optionnel, non bloquant) : pastille de statut en thème sombre, raccourcis clavier PC sur l'appel.
+- [x] 2026-06-13 — **Déployé en v0.9.2** : bump SW + VERSION_APP, commit `871773f`, push main + gh-pages. Correctifs UX + sécurité **en ligne** sur https://alemoine4.github.io/carnet-eps/.
+- [x] 2026-06-13 — **UX confort (v0.9.3)** : pastille de statut thématisée (ressort en clair ET sombre) + raccourcis clavier PC sur l'appel (P/A/R/D/I/T/F). Déployé. Vérifié en preview.
 
 ### Distribution (Phase 9 — faite)
 - [x] 2026-06-13 — **Publié sur GitHub Pages** : dépôt public `alemoine4/carnet-eps`, branche `gh-pages` = `app/`, URL `https://alemoine4.github.io/carnet-eps/` reportée dans `docs/guide-installation.md`.

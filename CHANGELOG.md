@@ -2,12 +2,19 @@
 
 Historique des changements notables. Format : date — résumé. Le détail vit dans `docs/journal.md`.
 
+## 2026-06-13 — v0.9.3 : Finitions de confort de l'appel
+
+- **Pastille de statut thématisée** : la pastille (P/A/R/D/I/T/INF) utilise désormais la même couleur `--stb-*` que la bordure et un texte `--c-sur-accent` → en thème clair, couleur saturée + texte blanc ; en thème **sombre**, variante claire + texte encre, donc elle **ressort sur la carte** (le fond n'est plus posé en JS mais piloté par CSS via `[data-statut]`).
+- **Raccourcis clavier (PC) sur l'appel** : une carte d'élève focalisée + une lettre fixe le statut directement — `P` présent, `A` absent, `R` retard, `D` dispensé, `I` inapte, `T` oubli de tenue, `F` infirmerie. Indiqué dans la ligne d'aide sous la grille.
+- Bump SW + `VERSION_APP` → 0.9.3 ; redéployé sur GitHub Pages. Vérifié en preview (clair + sombre, clavier, console propre).
+
 ## 2026-06-13 — v0.9.2 : Campagne de tests + durcissement sécurité
 
 - **Campagne de tests** (14 scénarios, harnais preview — Playwright MCP indisponible, profil verrouillé) : chargement sans erreur, navigation, création classe/élèves, persistance, appel 28 (compteurs + fast-path « Terminer »), 7 statuts, import Pronote, export CSV (contenu capturé), impression (déclenchement + `@media print`), 0 ressource externe, **XSS import CSV/JSON neutralisé**, a11y clavier du menu, responsive 360 px. **0 bug bloquant, 0 bug important fonctionnel.**
 - **Sécurité — garde `data:` à l'import JSON** ([io.js](app/js/io.js)) : `importerJSON` ne reconstruit un blob que depuis une dataURL locale → un fichier de sauvegarde piégé (URL http dans `donnees`) **n'émet plus aucune requête réseau** (offline/RGPD garantis). Vérifié : URL piégée = 0 fetch, dataURL valide = blob reconstruit.
 - **Sécurité — anti-injection de formule CSV** : helper `champCSV()` (RFC 4180 + préfixe `'` sur `= + - @`), appliqué aux exports téléchargés (récap absences, notes, relevé). Corrige aussi les champs non quotés (noms avec `;`/`"`). « Copier pour Pronote » (presse-papiers) inchangé.
 - Détails : `AVIS_SECURITE_IMPORT_EXPORT.md`. Aucun changement de schéma ni d'UI.
+- **Déploiement** : bump `VERSION` service-worker + `VERSION_APP` `0.9.0 → 0.9.2` (les installs existantes reçoivent le toast « Nouvelle version installée ») ; commit `871773f`, redéployé sur GitHub Pages (`gh-pages`).
 
 ## 2026-06-13 — v0.9.1 : Publication + audit UX (P1 accessibilité de l'appel)
 

@@ -14,6 +14,19 @@ Modèle d'entrée :
 
 ---
 
+## 2026-06-13 (9) — Finitions de confort de l'appel (v0.9.3)
+
+**Fait** :
+- **Pastille de statut** : fond retiré du JS (`appel.js` ne fait plus `badge.style.background`), piloté en CSS par `.btn-eleve[data-statut] .badge-statut { background: var(--stb-*) }` (mêmes variables thématisées que la bordure) ; texte de pastille passé à `var(--c-sur-accent)` (blanc en clair, encre en sombre). Résultat vérifié : clair = bg `#d03a3a`/texte blanc ; sombre = bg `#f06363`/texte `#0f1626` → la pastille ressort sur la carte sombre.
+- **Raccourcis clavier PC** : `const RACCOURCIS_STATUT` (p/a/r/d/i/t/f) + `keydown` sur `.eleve-cycle` → une lettre fixe le statut de la carte focalisée. Hint mis à jour. Vérifié : a→absent, r→retard, f→infirmerie.
+- Bump SW + VERSION_APP → 0.9.3, commit + push main + `git subtree push --prefix app origin gh-pages`.
+
+**Décidé** : la pastille réutilise `--c-sur-accent` (déjà défini par thème) pour son texte → pas de nouveau token, lisibilité garantie dans les 2 thèmes. Raccourcis attachés au bouton cycle (cible de focus principale).
+
+**Coincé / à vérifier** : rien côté code (l'audit UX et son confort sont clos). Restent les **validations terrain** (`docs/test-terrain.md`).
+
+**Prochaine étape** : terrain.
+
 ## 2026-06-13 (8) — Campagne de tests + durcissement sécurité (v0.9.2)
 
 **Fait** :
@@ -25,6 +38,8 @@ Modèle d'entrée :
 **Décidé** : « Copier pour Pronote » (presse-papiers) exclu de l'échappement CSV (colonne de nombres collée dans Pronote, pas Excel). Tests d'import JSON faits par import dynamique du module (`await import('/js/io.js')`) faute de file-upload dans le harnais preview.
 
 **Coincé / à vérifier** : tests non automatisables (offline réel sur HTTPS, chrono < 40 s, caméra, rendu papier). UX restant = confort optionnel (pastille statut en sombre, raccourcis clavier PC).
+
+**Déployé** : bump SW + `VERSION_APP` `0.9.0 → 0.9.2`, commit `871773f`, push `main` + `git subtree push --prefix app origin gh-pages`. Vérifié : `origin/gh-pages` contient bien `VERSION_APP 0.9.2`, SW `0.9.2`, `champCSV`. **Les correctifs UX + sécurité sont donc en ligne** (l'app publiée n'était plus à jour avant ce déploiement).
 
 **Prochaine étape** : validations terrain depuis l'URL HTTPS ; correctifs de confort à la demande.
 
