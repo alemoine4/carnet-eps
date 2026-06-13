@@ -575,7 +575,7 @@
   min-width: 20px;
   padding: 1px 6px;
   border-radius: 999px;
-  color: #fff;
+  color: var(--c-sur-accent); /* blanc en clair, encre en sombre → lisible sur les 2 fonds */
   font-size: 0.7rem;
   font-weight: 700;
   text-align: center;
@@ -601,6 +601,16 @@
 .btn-eleve[data-statut="inapte"] { border-color: var(--stb-inapte); }
 .btn-eleve[data-statut="oubli_tenue"] { border-color: var(--stb-oubli_tenue); }
 .btn-eleve[data-statut="infirmerie"] { border-color: var(--stb-infirmerie); }
+
+/* Pastille de statut : même couleur thématisée que la bordure (saturée en clair,
+   claire en sombre) → elle ressort sur la carte dans les deux thèmes. */
+.btn-eleve[data-statut="present"] .badge-statut { background: var(--stb-present); }
+.btn-eleve[data-statut="absent"] .badge-statut { background: var(--stb-absent); }
+.btn-eleve[data-statut="retard"] .badge-statut { background: var(--stb-retard); }
+.btn-eleve[data-statut="dispense"] .badge-statut { background: var(--stb-dispense); }
+.btn-eleve[data-statut="inapte"] .badge-statut { background: var(--stb-inapte); }
+.btn-eleve[data-statut="oubli_tenue"] .badge-statut { background: var(--stb-oubli_tenue); }
+.btn-eleve[data-statut="infirmerie"] .badge-statut { background: var(--stb-infirmerie); }
 
 /* ---- Feuille (menu de statuts, <dialog> natif) ---- */
 
