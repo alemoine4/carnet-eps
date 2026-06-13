@@ -52,10 +52,18 @@ Bibliothèque documents (tags, classes), tableau de bord « Aujourd'hui » (cour
 `tests/checklist.md` complète, axe-core, Lighthouse, volumétrie (6 classes × 28 élèves × 1 an simulé), round-trip sauvegarde avec pièces jointes, gestion d'erreurs (quota, import corrompu), revue RGPD finale.
 **Sortie** : checklist 100 %, Lighthouse PWA/a11y ≥ 90, restauration complète vérifiée sur appareil vierge.
 
-## 🔶 Phase 9 — Distribution & rentrée *(en cours — v0.9.0 : toast MAJ + guides + dépôt git faits ; reste la publication GitHub Pages, en attente de `gh auth login` + feu vert utilisateur)*
+## ✅ Phase 9 — Distribution & rentrée *(2026-06-13, v0.9.1 — publié sur GitHub Pages : https://alemoine4.github.io/carnet-eps/ ; reste les installations PWA réelles)*
 
-GitHub Pages (code seul), guide d'installation PC/Android avec captures, procédure de rentrée (purge + nouvel import + EDT), bouton « Vérifier les mises à jour ».
+GitHub Pages (code seul), guide d'installation PC/Android, procédure de rentrée (purge + nouvel import + EDT), bouton « Vérifier les mises à jour ».
 **Sortie** : installation de zéro sur un appareil neuf en < 5 min en suivant le guide.
+
+## ✅ Suites — audit UX *(2026-06-13, skill impeccable, 31/40 « Bon » — entièrement traité)*
+
+Corrections post-v1 issues de l'audit (détail : `AVIS_APPEL_ACCESSIBILITE.md`).
+- ✅ **P1** — accessibilité de l'appel : `<dialog>` natif + bouton « ⋯ », les 7 statuts au clavier/lecteur d'écran.
+- ✅ **P2** — texte de statut lisible, retour d'appui long (barre + vibration + reduced-motion), pastilles vert/orange WCAG AA, bordures de statut thématisées clair/sombre (`--stb-*`).
+- ✅ **P3** — liseré des cartes « Plus » remplacé (bordure + chevron) ; écran « Aide » in-app (route `#/aide`).
+- ✅ Visionneuse `media.js` passée en `<dialog>` natif ; CSS mort `.feuille-fond` supprimé.
 
 ---
 

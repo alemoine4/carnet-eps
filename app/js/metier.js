@@ -6,9 +6,9 @@ import { tous, lireMeta } from './io.js';
 // ---- Statuts d'appel (docs/modele-donnees.md) ----
 // `pratiquant` : participe physiquement au cours. L'inapte/dispensé présent n'est pas pratiquant.
 export const STATUTS = {
-  present: { libelle: 'Présent', court: 'P', couleur: '#178a52', pratiquant: true },
+  present: { libelle: 'Présent', court: 'P', couleur: '#0f7a46', pratiquant: true },
   absent: { libelle: 'Absent', court: 'A', couleur: '#d03a3a', pratiquant: false },
-  retard: { libelle: 'Retard', court: 'R', couleur: '#c97a06', pratiquant: true },
+  retard: { libelle: 'Retard', court: 'R', couleur: '#a35f00', pratiquant: true },
   dispense: { libelle: 'Dispensé (mot)', court: 'D', couleur: '#7c3aed', pratiquant: false },
   inapte: { libelle: 'Inapte (certificat)', court: 'I', couleur: '#0e7490', pratiquant: false },
   oubli_tenue: { libelle: 'Oubli de tenue', court: 'T', couleur: '#be185d', pratiquant: false },

@@ -57,7 +57,10 @@ export function revoquerURL(url) {
   if (url) setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// Visionneuse plein écran : image en overlay (tap pour fermer), PDF dans un onglet.
+// Visionneuse plein écran : image en lightbox <dialog> natif (tap n'importe où ou Échap
+// pour fermer, fond inerte, focus rendu au déclencheur), PDF dans un onglet.
+// `conteneur` est conservé pour compatibilité d'appel mais inutile : le <dialog> vit
+// dans le top-layer du navigateur.
 export function ouvrirVisionneuse(conteneur, fichier) {
   const url = URL.createObjectURL(fichier.blob);
   if (fichier.mime === 'application/pdf') {
@@ -65,12 +68,20 @@ export function ouvrirVisionneuse(conteneur, fichier) {
     revoquerURL(url);
     return;
   }
-  const fond = document.createElement('div');
-  fond.className = 'feuille-fond visionneuse';
+  const declencheur = document.activeElement;
+  const dlg = document.createElement('dialog');
+  dlg.className = 'visionneuse';
+  dlg.setAttribute('aria-label', `Aperçu : ${fichier.nom}`);
   const img = document.createElement('img');
   img.src = url;
   img.alt = fichier.nom;
-  fond.append(img);
-  fond.addEventListener('click', () => { fond.remove(); revoquerURL(url); });
-  conteneur.append(fond);
+  dlg.append(img);
+  dlg.addEventListener('click', () => dlg.close()); // clic n'importe où = fermer (zoom-out)
+  dlg.addEventListener('close', () => {
+    dlg.remove();
+    revoquerURL(url);
+    if (declencheur?.isConnected) declencheur.focus();
+  });
+  document.body.append(dlg);
+  dlg.showModal();
 }

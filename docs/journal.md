@@ -14,6 +14,37 @@ Modèle d'entrée :
 
 ---
 
+## 2026-06-13 (8) — Campagne de tests + durcissement sécurité (v0.9.2)
+
+**Fait** :
+- **Campagne de tests** sur 14 scénarios (harnais preview ; Playwright MCP indisponible — profil Chrome verrouillé par instance concurrente, `--isolated` impossible). Verts : chargement (0 erreur), 12 routes, création classe (manuelle 2→3) + import, persistance reload (31 élèves), appel 28 (compteurs exacts + fast-path « Terminer » → 28/28), 7 statuts, import Pronote collé (3 + classe auto + accents), export CSV (en-tête FR + 28 lignes capturés), impression (window.print + 2 règles `@media print`), **19 ressources 100 % localhost / 0 externe**, **XSS CSV neutralisé** (payloads inertes via textContent), a11y clavier (focus → dialog), responsive 360 px (2 col, 0 débordement).
+- **2 trouvailles sécurité corrigées** (avis `AVIS_SECURITE_IMPORT_EXPORT.md`) :
+  - `importerJSON` faisait `fetch(donnees)` sans vérifier `data:` → un fichier piégé pouvait émettre une requête réseau (entorse offline/RGPD). Garde ajoutée : fetch seulement si `donnees` commence par `data:`. Testé (espion fetch) : URL http = 0 fetch / blob null ; dataURL = blob reconstruit.
+  - Exports CSV non quotés + injection de formule Excel possible (nom `=…`). Helper `champCSV()` (RFC 4180 + préfixe `'`) câblé dans appel.js (récap) et notes.js (éval + relevé). Testé bout-en-bout : `=SUM(99)`→`'=SUM(99)`, `A;B`→`"A;B"`.
+
+**Décidé** : « Copier pour Pronote » (presse-papiers) exclu de l'échappement CSV (colonne de nombres collée dans Pronote, pas Excel). Tests d'import JSON faits par import dynamique du module (`await import('/js/io.js')`) faute de file-upload dans le harnais preview.
+
+**Coincé / à vérifier** : tests non automatisables (offline réel sur HTTPS, chrono < 40 s, caméra, rendu papier). UX restant = confort optionnel (pastille statut en sombre, raccourcis clavier PC).
+
+**Prochaine étape** : validations terrain depuis l'URL HTTPS ; correctifs de confort à la demande.
+
+## 2026-06-13 (7) — Publication GitHub Pages + audit UX (P1 appel)
+
+**Fait** :
+- **Publication** : `gh repo create carnet-eps --public`, push `main`, `git subtree push --prefix app origin gh-pages`, Pages activé (état `building`), URL `https://alemoine4.github.io/carnet-eps/` reportée dans `docs/guide-installation.md`. Identité git locale configurée.
+- **Audit UX** via skill impeccable (commande `critique`) : 31/40 « Bon », détecteur markup propre. Forces (appel, états vides, cohérence des helpers) ; P1 = statuts inaccessibles clavier/SR + feuille pas un vrai modal ; P2 = contrastes vert/orange + absence de retour d'appui long ; P3 = liseré « Plus » + pas d'aide in-app. → `AVIS_APPEL_ACCESSIBILITE.md`.
+- **P1 corrigé** (avis validé) : helper `ouvrirFeuille()` `<dialog>` natif dans `ui.js` ; carte élève `appel.js` = `<div role=group>` + `.eleve-cycle` (tap-cycle + appui long) + `.eleve-menu` « ⋯ » (`aria-haspopup=dialog`) ; CSS `dialog.feuille`/`::backdrop` + `.eleve-cycle`/`.eleve-menu` (44 px).
+- **P2 partiel** : texte de statut sans couleur (encre pleine) ; barre de progression + `navigator.vibrate(15)` pendant l'appui long (+ `prefers-reduced-motion`) ; vert `#178a52→#0f7a46`, orange `#c97a06→#a35f00` (STATUTS + `--c-ok`), variante verte sombre `--c-ok: #2fae6a` pour `.statut-ok`.
+- **P3** : liseré des cartes « Plus » → bordure pleine + chevron `::after`. **Écran « Aide » in-app** : vue `'aide'` définie inline dans `main.js` (route ajoutée à ROUTES + `PARENT.aide='plus'` + lien dans « Plus ») — choix de l'inline pour **ne pas toucher au service-worker** (un nouveau fichier `modules/aide.js` aurait imposé une bump SW = changement structurant). Contenu = intro + 6 étapes de rentrée + jour J + réflexes (repris de `docs/guide-rentree.md`). CSS `.liste-aide`.
+- **P2 (fin)** : bordures de statut sorties du JS (`appel.js` ne fait plus `style.borderColor`) → pilotées en CSS par `.btn-eleve[data-statut]` via variables `--stb-*` déclinées par thème dans `base.css`. Mesuré : les 7 bordures étaient toutes < 3:1 sur surface sombre (2,62–3,28) ; variantes claires sombres ajoutées (présent `#34c27a` 6,89:1, etc.). Vérifié dans les 2 thèmes (clair = saturé, sombre = clair).
+- **Visionneuse** (`media.js`) : `div.feuille-fond` → `<dialog class="visionneuse">` natif (clic n'importe où ou Échap = fermer, fond inerte, focus rendu). `conteneur` gardé en paramètre (compat) mais inutilisé. CSS `dialog.visionneuse`/`::backdrop` ; `.feuille-fond` (devenu mort) supprimé. **Audit UX entièrement traité (P1+P2+P3 + visionneuse).**
+
+**Décidé** : carte élève = groupe à 2 boutons (un bouton imbriqué dans un bouton = HTML invalide). Backdrop détecté par `e.target===dlg` et non par coordonnées (une activation clavier rapporte (0,0) et fermait la feuille par erreur — bug attrapé en test). `--c-attention` constaté **token mort**, `.badge-ok` inutilisé.
+
+**Coincé / à vérifier** : reste du P2 (couleurs sémantiques par thème : bordure de statut + `.statut-ok` en sombre demandent des variantes dédiées — un assombrissement simple aide le clair mais dégrade le sombre, mesuré) ; P3 ; généraliser `<dialog>` à la visionneuse `media.js`. Validations terrain inchangées.
+
+**Prochaine étape** : reste du P2 (retune par thème) ou P3 ; sinon installation PWA réelle depuis l'URL.
+
 ## 2026-06-12 (6) — Phase 9 : distribution préparée
 
 **Fait** :

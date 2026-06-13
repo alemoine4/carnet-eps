@@ -76,3 +76,26 @@ export function champZone({ id, libelle, valeur = '', placeholder = '', rows = 3
   const retour = brancherRetour(zone, onChange);
   return el('div', { class: 'champ' }, el('label', { for: id }, libelle, ' ', retour), zone);
 }
+
+// ---- Feuille modale (menu bas d'écran) ----
+// <dialog> natif : piège de focus, fermeture par Échap et par clic sur le fond,
+// arrière-plan rendu inerte par le navigateur, focus restitué au déclencheur.
+// `contenu` = un nœud ou un tableau de nœuds. Retourne le <dialog> (close() pour fermer).
+export function ouvrirFeuille({ titre = '', label = '', contenu }) {
+  document.querySelector('dialog.feuille[open]')?.close();
+  const declencheur = document.activeElement;
+  const dlg = el('dialog', { class: 'feuille', 'aria-label': label || titre || 'Menu' });
+  if (titre) dlg.append(el('h3', {}, titre));
+  dlg.append(...(Array.isArray(contenu) ? contenu : [contenu]));
+  // Clic sur le fond (backdrop) = fermeture. Le backdrop cible le <dialog> lui-même ;
+  // un clic/activation clavier sur un enfant cible l'enfant → la feuille ne se ferme pas.
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+  dlg.addEventListener('close', () => {
+    dlg.remove();
+    if (declencheur?.isConnected) declencheur.focus();
+  });
+  document.body.append(dlg);
+  dlg.showModal();
+  dlg.querySelector('button, [href], input, select, textarea')?.focus();
+  return dlg;
+}

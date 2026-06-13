@@ -2,6 +2,23 @@
 
 Historique des changements notables. Format : date — résumé. Le détail vit dans `docs/journal.md`.
 
+## 2026-06-13 — v0.9.2 : Campagne de tests + durcissement sécurité
+
+- **Campagne de tests** (14 scénarios, harnais preview — Playwright MCP indisponible, profil verrouillé) : chargement sans erreur, navigation, création classe/élèves, persistance, appel 28 (compteurs + fast-path « Terminer »), 7 statuts, import Pronote, export CSV (contenu capturé), impression (déclenchement + `@media print`), 0 ressource externe, **XSS import CSV/JSON neutralisé**, a11y clavier du menu, responsive 360 px. **0 bug bloquant, 0 bug important fonctionnel.**
+- **Sécurité — garde `data:` à l'import JSON** ([io.js](app/js/io.js)) : `importerJSON` ne reconstruit un blob que depuis une dataURL locale → un fichier de sauvegarde piégé (URL http dans `donnees`) **n'émet plus aucune requête réseau** (offline/RGPD garantis). Vérifié : URL piégée = 0 fetch, dataURL valide = blob reconstruit.
+- **Sécurité — anti-injection de formule CSV** : helper `champCSV()` (RFC 4180 + préfixe `'` sur `= + - @`), appliqué aux exports téléchargés (récap absences, notes, relevé). Corrige aussi les champs non quotés (noms avec `;`/`"`). « Copier pour Pronote » (presse-papiers) inchangé.
+- Détails : `AVIS_SECURITE_IMPORT_EXPORT.md`. Aucun changement de schéma ni d'UI.
+
+## 2026-06-13 — v0.9.1 : Publication + audit UX (P1 accessibilité de l'appel)
+
+- **Publié sur GitHub Pages** : dépôt public `alemoine4/carnet-eps`, branche `gh-pages` = contenu de `app/`, app en ligne sur `https://alemoine4.github.io/carnet-eps/` (URL reportée dans `docs/guide-installation.md`).
+- **Audit UX** (skill impeccable, score Nielsen 31/40 « Bon », détecteur markup propre) : voir `AVIS_APPEL_ACCESSIBILITE.md`.
+- **P1 — accessibilité de l'écran d'appel** : menu de statuts converti en `<dialog>` natif (helper `ouvrirFeuille` mutualisé dans `ui.js` — Échap, piège de focus, fond cliquable, focus rendu au déclencheur) ; carte élève refondue en groupe « grande zone (tap-cycle + appui long) + bouton ⋯ visible » → **les 7 statuts deviennent accessibles au clavier et au lecteur d'écran** (avant : 4 cachés derrière l'appui long). Tap-cycle et appui long conservés.
+- **P2** : texte de statut en encre pleine (lisibilité) ; retour visuel (barre de progression) + vibration pendant l'appui long (avec `prefers-reduced-motion`) ; pastilles vert `#178a52→#0f7a46` et orange `#c97a06→#a35f00` conformes WCAG AA (+ variante verte sombre pour `.statut-ok`) ; **bordures de statut thématisées** (variables `--stb-*` : couleurs saturées en clair, variantes claires ≥4,9:1 en sombre — les 7 statuts lisibles sur les deux thèmes).
+- **P3** : liseré gauche des cartes « Plus » (anti-pattern) remplacé par une bordure pleine + chevron « › » ; **écran « Aide » in-app** (route `#/aide`) — prise en main, rentrée en 6 étapes, réflexes de l'année, intégré et hors ligne.
+- **Visionneuse** (`media.js`) passée en `<dialog>` natif (Échap, fond inerte, focus rendu) ; CSS mort `.feuille-fond` supprimé. **Audit UX entièrement traité.**
+- Vérifié en preview (clavier, tactile, Retard, pré-remplissage inapte, page Plus + Aide, mobile 375 px sans débordement, console propre). 1 bug attrapé et corrigé en test (la fermeture par clic-fond se déclenchait sur activation clavier).
+
 ## 2026-06-12 — v0.9.0 : Phase 9 — Distribution (préparée)
 
 - **Toast de mise à jour** : « Nouvelle version installée — Recharger » quand un nouveau service-worker prend le contrôle en cours d'usage (BIBLE règle 5) ; silencieux à la première installation.

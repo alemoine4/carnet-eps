@@ -5,12 +5,23 @@ Vue d'ensemble des phases : `docs/roadmap.md`.
 
 ## 🎒 Jalon rentrée 2026 : phases 1→6 TERMINÉES (v0.7.0) — reste les validations terrain ci-dessous
 
-## Phase active : Phase 9 — Distribution (il ne reste que la publication)
+## Phase active : post-v1 — corrections de l'audit UX (2026-06-13)
 
-- [ ] **Publication GitHub Pages** — prête à 95 % : dépôt git local créé (commit `04a4d7c`). Il manque deux choses qu'Alexandre seul peut faire :
-  1. Connecter gh CLI une fois : `gh auth login` (choisir GitHub.com → HTTPS → navigateur)
-  2. Me dire « **publie sur GitHub Pages** » → je crée le dépôt, pousse, active Pages (branche `gh-pages` = contenu de `app/`), et je remplis l'URL dans `docs/guide-installation.md`
-- [ ] Après publication : installer la PWA depuis l'URL HTTPS (PC + Android, suivre `docs/guide-installation.md`) et vérifier le toast de MAJ au déploiement suivant
+### Audit UX du 2026-06-13 (skill impeccable « critique », 31/40 « Bon »)
+- [x] 2026-06-13 — **P1 accessibilité de l'appel** : `<dialog>` natif (helper `ouvrirFeuille` dans `ui.js`) + bouton « ⋯ » visible sur chaque carte élève → les 7 statuts au clavier + lecteur d'écran ; Échap, piège de focus, focus rendu au déclencheur. Tap-cycle + appui long conservés. Vérifié en preview. Voir `AVIS_APPEL_ACCESSIBILITE.md`.
+- [x] 2026-06-13 — **P2 (partiel)** : texte de statut en encre pleine (au lieu de coloré) ; retour pendant l'appui long (barre de progression + `navigator.vibrate` + `prefers-reduced-motion`) ; vert/orange assombris (pastilles conformes WCAG AA, `--c-ok` + variante verte sombre).
+- [x] 2026-06-13 — **P2 (reste)** : bordures de statut thématisées — variables `--stb-*` dans `base.css` (clair = couleurs saturées ; sombre = variantes claires ≥4,9:1), pilotées en CSS via `.btn-eleve[data-statut]` (ligne `borderColor` retirée de `appel.js`). Les 7 statuts désormais lisibles sur fond clair ET sombre. Vérifié en preview (2 thèmes).
+- [x] 2026-06-13 — **P3** : liseré gauche des cartes « Plus » remplacé par une bordure pleine + chevron « › » ; **écran « Aide » in-app** (route `#/aide` sous « Plus ») = prise en main + rentrée en 6 étapes + réflexes de l'année, intégré et hors ligne (sans toucher au SW). Vérifié en preview.
+- [x] 2026-06-13 — Visionneuse de `media.js` passée en `<dialog>` natif (Échap, fond inerte, focus rendu) ; `.feuille-fond` (CSS mort) supprimé. Audit UX **entièrement traité**.
+
+### Campagne de tests + sécurité (2026-06-13, v0.9.2)
+- [x] 2026-06-13 — Campagne 14 scénarios (preview) : 0 bug bloquant, 0 bug important. Cf. rapport en session.
+- [x] 2026-06-13 — **Sécurité** : garde `data:` dans `importerJSON` (plus de requête réseau sur fichier piégé) + helper `champCSV()` anti-injection de formule sur les exports CSV. Cf. `AVIS_SECURITE_IMPORT_EXPORT.md`. Vérifié en preview.
+- [ ] UX confort (optionnel, non bloquant) : pastille de statut en thème sombre, raccourcis clavier PC sur l'appel.
+
+### Distribution (Phase 9 — faite)
+- [x] 2026-06-13 — **Publié sur GitHub Pages** : dépôt public `alemoine4/carnet-eps`, branche `gh-pages` = `app/`, URL `https://alemoine4.github.io/carnet-eps/` reportée dans `docs/guide-installation.md`.
+- [ ] Installer la PWA depuis l'URL HTTPS (PC + Android, suivre `docs/guide-installation.md`) et vérifier le toast de MAJ au déploiement suivant
 - [x] 2026-06-12 — `docs/guide-installation.md` (Android + PC + transfert + dépannage)
 - [x] 2026-06-12 — `docs/guide-rentree.md` (archive → purge → import Pronote → EDT → premier cours)
 - [x] 2026-06-12 — Toast « Nouvelle version installée — Recharger » sur `controllerchange` du SW (hors première installation)

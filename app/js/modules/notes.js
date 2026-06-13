@@ -6,7 +6,7 @@
 // voie B = CSV Nom;Prénom;Note. Type « afl » = positionnement libre, non exportable vers Pronote.
 
 import { enregistrerVue, el, carte, champTexte } from '../ui.js';
-import { tous, lire, parIndex, enregistrer, supprimer, telechargerTexte } from '../io.js';
+import { tous, lire, parIndex, enregistrer, supprimer, telechargerTexte, champCSV } from '../io.js';
 import { isoAujourdhui, dateFR } from '../metier.js';
 import { sauverPrefs } from '../state.js';
 
@@ -286,10 +286,10 @@ async function vueEval(c, evalId) {
     btnCSV.addEventListener('click', async () => {
       const lignes = eleves.map((e) => {
         const v = notesMap.get(e.id)?.valeur;
-        return [e.nom, e.prenom, typeof v === 'number' ? formatFR(v) : v || ''].join(';');
+        return [e.nom, e.prenom, typeof v === 'number' ? formatFR(v) : v || ''].map(champCSV).join(';');
       });
       telechargerTexte(`notes_${classe.nom}_${ev.titre.replace(/[^\wàâéèêëîïôùûç -]/gi, '')}_${isoAujourdhui()}.csv`,
-        ['Nom;Prénom;Note', ...lignes].join('\r\n'));
+        [['Nom', 'Prénom', 'Note'].map(champCSV).join(';'), ...lignes].join('\r\n'));
       await apresExport([]);
     });
 
@@ -371,11 +371,11 @@ async function vueReleve(c, classeId) {
   }
 
   btnCSV.addEventListener('click', () => {
-    const tete = ['Nom', 'Prénom', ...evals.map((ev) => `${ev.titre}${baremeDe(ev) ? ` /${baremeDe(ev)}` : ' (AFL)'}`), 'Moyenne /20'].join(';');
+    const tete = ['Nom', 'Prénom', ...evals.map((ev) => `${ev.titre}${baremeDe(ev) ? ` /${baremeDe(ev)}` : ' (AFL)'}`), 'Moyenne /20'].map(champCSV).join(';');
     const corps = lignes.map(({ e, moyenne }) =>
       [e.nom, e.prenom,
         ...evals.map((ev) => afficherValeur(noteDe.get(`${ev.id}_${e.id}`), null)),
-        moyenne === null ? '' : formatFR(moyenne)].join(';'));
+        moyenne === null ? '' : formatFR(moyenne)].map(champCSV).join(';'));
     telechargerTexte(`releve_${classe.nom}_${isoAujourdhui()}.csv`, [tete, ...corps].join('\r\n'));
   });
 }
