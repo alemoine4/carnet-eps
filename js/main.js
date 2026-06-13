@@ -16,8 +16,8 @@ import { initialiser as initNotes } from './modules/notes.js';
 import { initialiser as initDocuments } from './modules/documents.js';
 
 // Routes principales (onglets) + routes enfants (accessibles depuis « Plus »).
-const ROUTES = ['accueil', 'appel', 'eleves', 'notes', 'edt', 'plus', 'sauvegarde', 'reglages', 'sequences', 'inaptitudes', 'documents'];
-const PARENT = { sauvegarde: 'plus', reglages: 'plus', sequences: 'plus', inaptitudes: 'plus', documents: 'plus' };
+const ROUTES = ['accueil', 'appel', 'eleves', 'notes', 'edt', 'plus', 'sauvegarde', 'reglages', 'sequences', 'inaptitudes', 'documents', 'aide'];
+const PARENT = { sauvegarde: 'plus', reglages: 'plus', sequences: 'plus', inaptitudes: 'plus', documents: 'plus', aide: 'plus' };
 
 // ---- Vue « Plus » (menu des modules secondaires) ----
 
@@ -30,8 +30,51 @@ enregistrerVue('plus', (c) => {
     lien('documents', carte('Documents', 'Bibliothèque locale : fiches, protocoles, convocations — photo, PDF ou lien.', 'prêt')),
     lien('sauvegarde', carte('Sauvegarde', 'Export / import JSON complet — le transfert PC ↔ Android et le filet de sécurité.', 'prêt')),
     lien('reglages', carte('Réglages', 'Établissement, année scolaire, thème, stockage, mises à jour.', 'prêt')),
+    lien('aide', carte('Aide & rentrée', 'Prise en main, procédure de rentrée en 6 étapes, bons réflexes de l’année.')),
   );
   c.append(liste, el('p', { class: 'note-discrete' }, '100 % local · hors ligne · aucune donnée ne quitte cet appareil'));
+});
+
+// ---- Vue « Aide » (prise en main + rentrée, intégrée et disponible hors ligne) ----
+
+enregistrerVue('aide', (c) => {
+  c.append(el('a', { class: 'retour', href: '#/plus' }, '← Plus'));
+
+  const intro = carte('Aide & prise en main');
+  intro.append(el('p', {},
+    'Carnet EPS est votre carnet de bord d’EPS, 100 % sur cet appareil et hors ligne. '
+    + 'Aucune donnée d’élève ne part sur internet : la seule copie qui existe est celle que vous exportez (Sauvegarde).'));
+  c.append(intro);
+
+  const etapes = carte('Première rentrée — 6 étapes (~30 min)');
+  const ol = el('ol', { class: 'liste-aide' });
+  for (const [t, d] of [
+    ['Archiver l’année passée', 'Sauvegarde → Télécharger (avec pièces), ranger le fichier, puis Effacer toutes les données. (À sauter la toute première fois.)'],
+    ['Régler l’année', 'Réglages : année scolaire, établissement, thème.'],
+    ['Importer les élèves', 'Élèves → Importer depuis Pronote : coller le tableau ou le CSV → Analyser → vérifier les colonnes → Importer. Les classes se créent seules, les doublons sont ignorés.'],
+    ['Saisir l’EDT', 'EDT : si alternance, renseigner « un lundi de semaine A », puis ajouter chaque créneau (jour, heures, classe, semaine, installation).'],
+    ['Créer les séquences', 'Séquences → Nouvelle, pour chaque classe (APSA, dates, nombre de séances). Pas besoin de créer les séances : l’accueil propose celle du jour.'],
+    ['Vérifier', 'L’accueil affiche le bon cours, les effectifs sont complets, puis exporter une première sauvegarde de l’année neuve.'],
+  ]) ol.append(el('li', {}, el('strong', {}, `${t} — `), d));
+  etapes.append(ol);
+  c.append(etapes);
+
+  const jourJ = carte('Le jour J');
+  jourJ.append(el('p', {}, 'Ouvrir l’app → la carte « En ce moment » affiche la classe → toucher « Créer la séance et faire l’appel » → appel au pouce.'));
+  c.append(jourJ);
+
+  const reflexes = carte('Au fil de l’année — les bons réflexes');
+  const ul = el('ul', { class: 'liste-aide' });
+  for (const r of [
+    'Exporter une sauvegarde chaque semaine (10 s) — seule protection contre la perte de l’appareil.',
+    'Certificat reçu → Inaptitudes → Nouvelle (avec photo) : l’élève sera signalé à l’appel tout seul.',
+    'Fin de cycle → saisir les notes → « Copier pour Pronote » au bureau.',
+    'L’accueil rappelle le reste : inaptitudes qui expirent, seuils de tenue, notes non remontées.',
+  ]) ul.append(el('li', {}, r));
+  reflexes.append(ul);
+  c.append(reflexes);
+
+  c.append(el('p', { class: 'note-discrete' }, 'Installation sur le téléphone et transfert PC ↔ Android : voir le guide d’installation fourni avec l’app.'));
 });
 
 // ---- Initialisation des modules ----

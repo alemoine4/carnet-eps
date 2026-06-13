@@ -8,10 +8,19 @@
   --c-accent: #1d5fd6;
   --c-accent-fonce: #15459c;
   --c-sur-accent: #ffffff;
-  --c-ok: #178a52;
-  --c-attention: #c97a06;
+  --c-ok: #0f7a46;
+  --c-attention: #a35f00;
   --c-alerte: #d03a3a;
   --c-bordure: #dbe3f0;
+  /* Bordures des cartes d'appel par statut (miroir de STATUTS dans metier.js, déclinées
+     par thème pour rester visibles sur fond clair ET sombre — audit UX P2). */
+  --stb-present: #0f7a46;
+  --stb-absent: #d03a3a;
+  --stb-retard: #a35f00;
+  --stb-dispense: #7c3aed;
+  --stb-inapte: #0e7490;
+  --stb-oubli_tenue: #be185d;
+  --stb-infirmerie: #5b6b85;
   --r-carte: 14px;
   --ombre: 0 1px 3px rgba(22, 36, 61, 0.1);
   --tactile: 44px; /* taille minimale des cibles tactiles (terrain) */
@@ -31,6 +40,14 @@
     --c-accent-fonce: #1d2c4d;
     --c-sur-accent: #0f1626;
     --c-bordure: #2a3650;
+    --c-ok: #2fae6a;
+    --stb-present: #34c27a;
+    --stb-absent: #f06363;
+    --stb-retard: #e0902a;
+    --stb-dispense: #a78bfa;
+    --stb-inapte: #3bb6d4;
+    --stb-oubli_tenue: #ee5a92;
+    --stb-infirmerie: #94a3bd;
     --ombre: 0 1px 3px rgba(0, 0, 0, 0.35);
   }
 }
@@ -44,6 +61,14 @@
   --c-accent-fonce: #1d2c4d;
   --c-sur-accent: #0f1626;
   --c-bordure: #2a3650;
+  --c-ok: #2fae6a;
+  --stb-present: #34c27a;
+  --stb-absent: #f06363;
+  --stb-retard: #e0902a;
+  --stb-dispense: #a78bfa;
+  --stb-inapte: #3bb6d4;
+  --stb-oubli_tenue: #ee5a92;
+  --stb-infirmerie: #94a3bd;
   --ombre: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 

@@ -163,7 +163,10 @@ export async function importerJSON(objet) {
     if (nom === 'fichiers') {
       lots.fichiers = await Promise.all((objet.stores.fichiers || []).map(async (enreg) => {
         const { donnees, ...reste } = enreg;
-        return { ...reste, blob: donnees ? await (await fetch(donnees)).blob() : null };
+        // Sécurité : ne reconstruire un blob que depuis une dataURL locale. Un fichier piégé
+        // avec une URL http n'émet ainsi aucune requête réseau (offline/RGPD garantis).
+        const okDataURL = typeof donnees === 'string' && donnees.startsWith('data:');
+        return { ...reste, blob: okDataURL ? await (await fetch(donnees)).blob() : null };
       }));
     } else {
       lots[nom] = objet.stores[nom] || [];
@@ -210,6 +213,15 @@ export function telechargerTexte(nomFichier, texte, mime = 'text/csv') {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
   return nomFichier;
+}
+
+// Échappe un champ CSV (RFC 4180) et neutralise l'injection de formule (Excel) :
+// un champ commençant par = + - @ (ou tab/CR) est préfixé d'une apostrophe pour rester du texte.
+export function champCSV(valeur) {
+  let s = valeur == null ? '' : String(valeur);
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  if (/[";\r\n]/.test(s)) s = `"${s.replace(/"/g, '""')}"`;
+  return s;
 }
 
 // ---------------------------------------------------------------------------

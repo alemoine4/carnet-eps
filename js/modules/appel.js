@@ -4,8 +4,8 @@
 // ou tap sur un statut hors cycle) = menu complet. Chaque changement est enregistré immédiatement.
 // Rappel D006 : l'appel réglementaire reste fait dans Pronote — ici on trace le suivi EPS.
 
-import { enregistrerVue, el, carte, champZone } from '../ui.js';
-import { tous, lire, parIndex, enregistrer, telechargerTexte } from '../io.js';
+import { enregistrerVue, el, carte, champZone, ouvrirFeuille } from '../ui.js';
+import { tous, lire, parIndex, enregistrer, telechargerTexte, champCSV } from '../io.js';
 import {
   STATUTS, CYCLE_TAP, SEUIL_ALERTE,
   isoAujourdhui, dateFR, coursDuJour, inaptitudesActives,
@@ -195,21 +195,22 @@ async function vueAppel(c, seanceId) {
   const boutons = new Map();
 
   const majBouton = (eleve) => {
-    const btn = boutons.get(eleve.id);
+    const carteE = boutons.get(eleve.id);
     const rec = enregs.get(eleve.id);
     const st = rec?.statut || 'present';
     const conf = STATUTS[st];
-    btn.dataset.statut = rec ? st : '';
-    btn.style.borderColor = rec ? conf.couleur : 'var(--c-bordure)';
-    const badge = btn.querySelector('.badge-statut');
+    carteE.dataset.statut = rec ? st : '';
+    // Couleur de bordure pilotée par CSS via [data-statut] (déclinée par thème, audit UX P2).
+    const badge = carteE.querySelector('.badge-statut');
     badge.hidden = !rec;
     badge.textContent = conf.court;
     badge.style.background = conf.couleur;
-    const detail = btn.querySelector('.detail-statut');
+    const detail = carteE.querySelector('.detail-txt');
     detail.textContent = !rec ? ''
       : st === 'retard' && rec.minutesRetard ? `${conf.libelle} · ${rec.minutesRetard} min`
       : conf.libelle;
-    detail.style.color = conf.couleur;
+    // Le statut est porté par la pastille colorée + la bordure ; le texte reste en encre
+    // pleine pour la lisibilité (contraste WCAG AA, audit UX P2).
   };
 
   async function definirStatut(eleve, statut, extras = {}) {
@@ -226,14 +227,11 @@ async function vueAppel(c, seanceId) {
     majCompteurs();
   }
 
-  // --- Menu complet (feuille bas d'écran) ---
+  // --- Menu complet (feuille bas d'écran, <dialog> natif) ---
   function ouvrirMenu(eleve) {
-    document.querySelector('.feuille-fond')?.remove();
     const rec = enregs.get(eleve.id);
     const courant = rec?.statut || 'present';
-    const fond = el('div', { class: 'feuille-fond' });
-    const feuille = el('div', { class: 'feuille', role: 'dialog', 'aria-label': `Statut de ${eleve.prenom} ${eleve.nom}` });
-    feuille.append(el('h3', {}, `${eleve.prenom} ${eleve.nom}`));
+    let dlg;
 
     const inpMinutes = el('input', { type: 'number', min: '1', max: '120', id: 'ap-minutes' });
     inpMinutes.value = rec?.minutesRetard || '';
@@ -254,7 +252,7 @@ async function vueAppel(c, seanceId) {
           b.style.background = conf.couleur; b.style.color = '#fff';
           inpMinutes.focus();
         } else {
-          fond.remove();
+          dlg.close();
         }
       });
       grilleSt.append(b);
@@ -268,45 +266,65 @@ async function vueAppel(c, seanceId) {
     });
 
     const btnFermer = el('button', { class: 'btn' }, 'Fermer');
-    btnFermer.addEventListener('click', () => fond.remove());
-    fond.addEventListener('click', (e) => { if (e.target === fond) fond.remove(); });
-    feuille.append(grilleSt, ligneMinutes, el('div', { class: 'champ' }, inpComm), el('div', { class: 'rang-btn' }, btnFermer));
-    fond.append(feuille);
-    c.append(fond);
+    btnFermer.addEventListener('click', () => dlg.close());
+
+    dlg = ouvrirFeuille({
+      titre: `${eleve.prenom} ${eleve.nom}`,
+      label: `Statut de ${eleve.prenom} ${eleve.nom}`,
+      contenu: [grilleSt, ligneMinutes, el('div', { class: 'champ' }, inpComm), el('div', { class: 'rang-btn' }, btnFermer)],
+    });
   }
 
   for (const eleve of eleves) {
     const alerte = cumul.get(eleve.id);
     const enAlerte = alerte && (alerte.oubli_tenue >= SEUIL_ALERTE || alerte.dispense >= SEUIL_ALERTE);
-    const btn = el('button', { class: 'btn-eleve', type: 'button' },
+    const carteE = el('div', { class: 'btn-eleve', role: 'group', 'aria-label': `${eleve.prenom} ${eleve.nom}` });
+    const cycle = el('button', { class: 'eleve-cycle', type: 'button' },
       el('span', { class: 'nom-e' }, `${eleve.prenom} ${eleve.nom}`),
-      el('span', { class: 'detail-statut' }, ''),
-      el('span', { class: 'badge-statut', hidden: true }, ''),
+      el('span', { class: 'detail-statut' },
+        el('span', { class: 'badge-statut', hidden: true }, ''),
+        el('span', { class: 'detail-txt' }, ''),
+      ),
       inaptesSet.has(eleve.id) ? el('span', { class: 'pastille-info', title: 'Inaptitude en cours' }, '🩺') : '',
       enAlerte ? el('span', { class: 'pastille-warn', title: `Oublis de tenue ×${alerte.oubli_tenue} · Dispenses ×${alerte.dispense}` }, '⚠') : '',
     );
+    const menu = el('button', {
+      class: 'eleve-menu', type: 'button', 'aria-haspopup': 'dialog',
+      'aria-label': `Choisir le statut de ${eleve.prenom} ${eleve.nom}`,
+    }, '⋯');
+    menu.addEventListener('click', () => ouvrirMenu(eleve));
+
     let timer = null;
     let longPress = false;
-    btn.addEventListener('pointerdown', () => {
+    const finPresse = () => { clearTimeout(timer); cycle.classList.remove('presse'); };
+    cycle.addEventListener('pointerdown', () => {
       longPress = false;
-      timer = setTimeout(() => { longPress = true; ouvrirMenu(eleve); }, 450);
+      cycle.classList.add('presse'); // barre de progression (retour visuel de l'appui long)
+      timer = setTimeout(() => {
+        longPress = true;
+        cycle.classList.remove('presse');
+        navigator.vibrate?.(15); // petit retour haptique au déclenchement (Android)
+        ouvrirMenu(eleve);
+      }, 450);
     });
-    btn.addEventListener('pointerup', () => clearTimeout(timer));
-    btn.addEventListener('pointerleave', () => clearTimeout(timer));
-    btn.addEventListener('contextmenu', (e) => {
+    cycle.addEventListener('pointerup', finPresse);
+    cycle.addEventListener('pointerleave', finPresse);
+    cycle.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      clearTimeout(timer);
+      finPresse();
       if (!longPress) { longPress = true; ouvrirMenu(eleve); }
     });
-    btn.addEventListener('click', async () => {
+    cycle.addEventListener('click', async () => {
       if (longPress) return;
       const courant = enregs.get(eleve.id)?.statut || 'present';
       const idx = CYCLE_TAP.indexOf(courant);
-      if (idx === -1 && enregs.has(eleve.id)) { ouvrirMenu(eleve); return; } // statut « menu » : on ne l'écrase pas par erreur
+      if (idx === -1 && enregs.has(eleve.id)) { ouvrirMenu(eleve); return; } // statut hors cycle : ne pas l'écraser par erreur
       await definirStatut(eleve, idx === -1 ? CYCLE_TAP[1] : CYCLE_TAP[(idx + 1) % CYCLE_TAP.length]);
     });
-    boutons.set(eleve.id, btn);
-    grille.append(btn);
+
+    carteE.append(cycle, menu);
+    boutons.set(eleve.id, carteE);
+    grille.append(carteE);
     majBouton(eleve);
   }
   c.append(
@@ -401,9 +419,9 @@ async function vueRecap(c, classeId) {
 
   btnCSV.addEventListener('click', () => {
     const { lignes } = construire();
-    const tete = ['Nom', 'Prénom', ...CLES.map((k) => STATUTS[k].libelle), 'Alerte'].join(';');
+    const tete = ['Nom', 'Prénom', ...CLES.map((k) => STATUTS[k].libelle), 'Alerte'].map(champCSV).join(';');
     const corps = lignes.map(({ e, cnt, alerte }) =>
-      [e.nom, e.prenom, ...CLES.map((k) => cnt[k]), alerte ? 'OUI' : ''].join(';'));
+      [e.nom, e.prenom, ...CLES.map((k) => cnt[k]), alerte ? 'OUI' : ''].map(champCSV).join(';'));
     telechargerTexte(`recap-eps_${classe.nom}_${isoAujourdhui()}.csv`, [tete, ...corps].join('\r\n'));
   });
   inpDebut.addEventListener('change', construire);
