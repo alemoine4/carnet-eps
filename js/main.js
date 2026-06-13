@@ -25,11 +25,11 @@ enregistrerVue('plus', (c) => {
   const lien = (route, carteElem) => el('a', { class: 'carte-lien', href: `#/${route}` }, carteElem);
   const liste = el('div', { class: 'liste-cartes' });
   liste.append(
-    lien('inaptitudes', carte('Inaptitudes & certificats', 'Totales/partielles, photo du certificat, alertes d’expiration et > 3 mois.', 'prêt')),
-    lien('sequences', carte('Séquences & séances', 'APSA, champs d’apprentissage, séances numérotées automatiquement.', 'prêt')),
-    lien('documents', carte('Documents', 'Bibliothèque locale : fiches, protocoles, convocations — photo, PDF ou lien.', 'prêt')),
-    lien('sauvegarde', carte('Sauvegarde', 'Export / import JSON complet — le transfert PC ↔ Android et le filet de sécurité.', 'prêt')),
-    lien('reglages', carte('Réglages', 'Établissement, année scolaire, thème, stockage, mises à jour.', 'prêt')),
+    lien('inaptitudes', carte('Inaptitudes & certificats', 'Totales/partielles, photo du certificat, alertes d’expiration et > 3 mois.')),
+    lien('sequences', carte('Séquences & séances', 'APSA, champs d’apprentissage, séances numérotées automatiquement.')),
+    lien('documents', carte('Documents', 'Bibliothèque locale : fiches, protocoles, convocations — photo, PDF ou lien.')),
+    lien('sauvegarde', carte('Sauvegarde', 'Export / import JSON complet — le transfert PC ↔ Android et le filet de sécurité.')),
+    lien('reglages', carte('Réglages', 'Établissement, année scolaire, thème, stockage, mises à jour.')),
     lien('aide', carte('Aide & rentrée', 'Prise en main, procédure de rentrée en 6 étapes, bons réflexes de l’année.')),
   );
   c.append(liste, el('p', { class: 'note-discrete' }, '100 % local · hors ligne · aucune donnée ne quitte cet appareil'));
