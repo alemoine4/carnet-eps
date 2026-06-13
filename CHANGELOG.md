@@ -2,6 +2,11 @@
 
 Historique des changements notables. Format : date — résumé. Le détail vit dans `docs/journal.md`.
 
+## 2026-06-13 — v0.9.4 : Nettoyage écran « Plus »
+
+- Retrait des badges « prêt » (vestiges de dev) sur les cartes de l'écran Plus : tous les modules étant livrés, ce marqueur n'avait plus de sens en production (et était incohérent avec la carte « Aide » sans badge). La ligne RGPD « 100 % local · hors ligne… » est conservée (intentionnelle).
+- Bump SW + `VERSION_APP` → 0.9.4 ; redéployé.
+
 ## 2026-06-13 — v0.9.3 : Finitions de confort de l'appel
 
 - **Pastille de statut thématisée** : la pastille (P/A/R/D/I/T/INF) utilise désormais la même couleur `--stb-*` que la bordure et un texte `--c-sur-accent` → en thème clair, couleur saturée + texte blanc ; en thème **sombre**, variante claire + texte encre, donc elle **ressort sur la carte** (le fond n'est plus posé en JS mais piloté par CSS via `[data-statut]`).

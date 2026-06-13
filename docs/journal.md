@@ -14,6 +14,12 @@ Modèle d'entrée :
 
 ---
 
+## 2026-06-13 (10) — Nettoyage écran « Plus » (v0.9.4)
+
+**Fait** : retrait des badges « prêt » (3e argument de `carte()`) sur les 5 cartes de l'écran Plus (`main.js`) — vestiges de dev, plus de sens une fois tout livré, incohérents avec la carte Aide. Footer RGPD conservé. Bump SW + VERSION_APP → 0.9.4, push main + gh-pages. Vérifié preview (0 badge, footer intact).
+
+**Prochaine étape** : terrain (`docs/test-terrain.md`).
+
 ## 2026-06-13 (9) — Finitions de confort de l'appel (v0.9.3)
 
 **Fait** :

@@ -64,6 +64,9 @@ Corrections post-v1 issues de l'audit (détail : `AVIS_APPEL_ACCESSIBILITE.md`).
 - ✅ **P2** — texte de statut lisible, retour d'appui long (barre + vibration + reduced-motion), pastilles vert/orange WCAG AA, bordures de statut thématisées clair/sombre (`--stb-*`).
 - ✅ **P3** — liseré des cartes « Plus » remplacé (bordure + chevron) ; écran « Aide » in-app (route `#/aide`).
 - ✅ Visionneuse `media.js` passée en `<dialog>` natif ; CSS mort `.feuille-fond` supprimé.
+- ✅ Durcissement sécurité (v0.9.2) : garde `data:` à l'import JSON + échappement/anti-formule CSV (`champCSV`).
+- ✅ Confort (v0.9.3) : pastille de statut thématisée (clair + sombre) + raccourcis clavier PC sur l'appel.
+- **Déployé en ligne (v0.9.3)** : https://alemoine4.github.io/carnet-eps/ — reste les validations terrain (`docs/test-terrain.md`).
 
 ---
 
