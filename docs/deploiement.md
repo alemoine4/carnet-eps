@@ -5,6 +5,7 @@
 
 ## Comment déployer une nouvelle version
 
+0. **Lancer les smoke-tests** : `npm test` (doivent être verts — voir `tests/e2e/README.md`).
 1. Incrémenter **les deux** numéros de version (rester synchronisés) :
    - `app/service-worker.js` → `const VERSION`
    - `app/js/state.js` → `VERSION_APP`
