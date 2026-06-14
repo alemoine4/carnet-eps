@@ -103,7 +103,7 @@ body {
 
 .entete h1 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   letter-spacing: 0.3px;
 }
 
@@ -145,7 +145,7 @@ body {
   justify-content: center;
   gap: 2px;
   min-height: var(--tactile);
-  font-size: 0.66rem;
+  font-size: 0.68rem;
   text-decoration: none;
   color: var(--c-texte-2);
 }

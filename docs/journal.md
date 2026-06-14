@@ -14,6 +14,20 @@ Modèle d'entrée :
 
 ---
 
+## 2026-06-13 (15) — Alignement audit : finitions (v0.9.9)
+
+**Fait** (comble les écarts du prompt d'audit affiné, sans structurel) :
+- Aide appel scindée : span `.aide-clavier` (raccourcis) en `@media (pointer: fine)` ; gestes tactiles toujours visibles (appel.js + components.css).
+- Typo : en-tête 1,2→1,3rem (base.css), `.carte p` 0,9→0,95rem (components.css) ; titres de carte gardés à 1,1rem.
+- Nav : 0,66→0,68rem ; testé 320px : 0 débordement, 0 troncature, libellés OK.
+- CSP : +`font-src`/`worker-src`/`manifest-src` ; **`connect-src 'self' data:` conservé** ; `frame-ancestors` volontairement non ajouté (ignoré en meta).
+
+**Décisions** (revue critique du prompt utilisateur) : refusé `connect-src 'self'` sans `data:` (aurait cassé l'import de pièces jointes) ; refusé `frame-ancestors` en meta (no-op) ; refusé le confirm bloquant sur « Terminer » (<40s) ; refusé `role="status"` (verbosité). Documenté dans CHANGELOG.
+
+**Vérifié** : 320/360/desktop, clair/sombre, console propre, 0 violation CSP. Bump → 0.9.9, push main + gh-pages + tag.
+
+**Prochaine étape** : sur validation, implémenter `AVIS_ANNULATION_SUPPRESSIONS.md` ; puis AVIS dédup design-system, IA nav, tests.
+
 ## 2026-06-13 (14) — Corrections d'audit : lot rapide (v0.9.8)
 
 **Contexte** : audit multi-perspectives (UX/UI/ergo/a11y/dev/prof). Aucun P0. Lot de corrections rapides appliqué (le structurel — annulation des suppressions, dédup design-system, IA nav — fera l'objet d'AVIS).

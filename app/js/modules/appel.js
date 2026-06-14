@@ -341,7 +341,10 @@ async function vueAppel(c, seanceId) {
     majBouton(eleve);
   }
   c.append(
-    el('p', { class: 'note-discrete' }, 'Tap : présent → absent → tenue · Appui long (ou ⋯) : tous les statuts · Clavier : P A R D I T, F = infirmerie'),
+    el('p', { class: 'note-discrete' },
+      'Tap : présent → absent → tenue · Appui long (ou ⋯) : tous les statuts',
+      el('span', { class: 'aide-clavier' }, ' · Clavier : P A R D I T, F = infirmerie'),
+    ),
     grille,
     el('div', { class: 'rang-btn' }, btnTerminer),
     statutFin,

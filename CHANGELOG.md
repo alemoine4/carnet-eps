@@ -4,6 +4,16 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-06-13 — v0.9.9 : Alignement audit (finitions)
+
+Comble les écarts restants du lot d'audit, sans toucher aux chantiers structurels :
+- **Aide de l'appel scindée** : gestes tactiles visibles partout ; raccourcis clavier (P A R D I T, F) affichés **seulement sur appareil à pointeur fin** (`@media (pointer: fine)`).
+- **Typo** : en-tête 1,2→1,3rem, corps des cartes 0,9→0,95rem (titres de carte conservés à 1,1rem — meilleur contraste que la grille proposée).
+- **Nav** : libellés 0,66→0,68rem ; vérifié **sans débordement ni troncature à 320px et 360px** (6 onglets).
+- **CSP complétée** : ajout de `font-src 'self'`, `worker-src 'self'`, `manifest-src 'self'`. `connect-src 'self' data:` **conservé** (sinon l'import de pièces jointes casse). `frame-ancestors` **non ajouté** (ignoré en balise `<meta>` — nécessiterait un en-tête HTTP, hors de portée GitHub Pages).
+- Non retenu volontairement : confirmation bloquante sur « Terminer l'appel » (préserve le < 40 s ; le filet sera l'annulation, cf. AVIS). `role="status"` écarté sur les compteurs (verbosité lecteur d'écran).
+- Bump SW + `VERSION_APP` → 0.9.9 ; redéployé. Vérifié clair/sombre, 320/360/desktop, console propre, 0 violation CSP.
+
 ## 2026-06-13 — v0.9.8 : Corrections d'audit (a11y, typo, sécurité)
 
 Lot de corrections rapides issues de l'audit multi-perspectives :
