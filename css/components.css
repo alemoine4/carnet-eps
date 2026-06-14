@@ -636,6 +636,17 @@ dialog.feuille::backdrop {
   background: rgba(10, 16, 30, 0.45);
 }
 
+/* Boîte de confirmation (helper confirmer()) */
+.confirm-detail {
+  color: var(--c-texte-2);
+  font-size: 0.9rem;
+  margin-top: 8px;
+}
+
+dialog.feuille-confirm .rang-btn {
+  justify-content: flex-end;
+}
+
 .feuille h3 {
   margin: 0 0 10px;
   font-size: 1.05rem;

@@ -2,7 +2,7 @@
 // L'export est LE mécanisme de transfert PC ↔ Android et le filet de sécurité
 // avant toute opération destructrice (BIBLE règle 4).
 
-import { enregistrerVue, el, carte } from '../ui.js';
+import { enregistrerVue, el, carte, confirmer } from '../ui.js';
 import { exporterJSON, importerJSON, validerExport, telechargerJSON, compterTout, vider, STORES } from '../io.js';
 
 const LIBELLES = {
@@ -79,13 +79,18 @@ export function initialiser() {
         const objet = JSON.parse(await fichier.text());
         const { date, comptes } = validerExport(objet);
         const total = Object.values(comptes).reduce((a, b) => a + b, 0);
-        const ok1 = confirm(
-          `Sauvegarde du ${date} — ${total} enregistrements (${resumeComptes(comptes)}).\n\n` +
-          'L’import REMPLACE toutes les données actuelles de cet appareil. Continuer ?'
-        );
+        const ok1 = await confirmer({
+          titre: 'Importer cette sauvegarde',
+          message: `Sauvegarde du ${date} — ${total} enregistrements (${resumeComptes(comptes)}). L’import REMPLACE toutes les données de cet appareil.`,
+          action: 'Importer',
+        });
         if (!ok1) return;
         await telechargerJSON(await exporterJSON({ avecFichiers: true }), 'avant-import');
-        const ok2 = confirm('Une sauvegarde de sécurité vient d’être téléchargée.\nConfirmer le remplacement définitif ?');
+        const ok2 = await confirmer({
+          titre: 'Confirmer le remplacement',
+          message: 'Une sauvegarde de sécurité vient d’être téléchargée. Remplacer définitivement les données de cet appareil ?',
+          action: 'Remplacer',
+        });
         if (!ok2) return;
         await importerJSON(objet);
         alert('Import terminé. L’application va se recharger.');
@@ -103,10 +108,18 @@ export function initialiser() {
     const cartePurge = carte('Tout effacer', 'Efface définitivement toutes les données de cet appareil (fin d’année, changement de poste…). Une sauvegarde de sécurité est téléchargée automatiquement avant.');
     const btnPurge = el('button', { class: 'btn btn-danger' }, 'Effacer toutes les données');
     btnPurge.addEventListener('click', async () => {
-      const ok1 = confirm('Tout effacer sur cet appareil ?\nUne sauvegarde de sécurité va d’abord être téléchargée.');
+      const ok1 = await confirmer({
+        titre: 'Tout effacer',
+        message: 'Effacer toutes les données de cet appareil ? Une sauvegarde de sécurité va d’abord être téléchargée.',
+        action: 'Continuer',
+      });
       if (!ok1) return;
       await telechargerJSON(await exporterJSON({ avecFichiers: true }), 'avant-purge');
-      const ok2 = confirm('Sauvegarde téléchargée.\nConfirmer l’effacement DÉFINITIF de toutes les données ?');
+      const ok2 = await confirmer({
+        titre: 'Confirmer l’effacement',
+        message: 'Sauvegarde téléchargée. Effacer DÉFINITIVEMENT toutes les données de cet appareil ?',
+        action: 'Tout effacer',
+      });
       if (!ok2) return;
       for (const nom of STORES) await vider(nom);
       alert('Données effacées. L’application va se recharger.');
