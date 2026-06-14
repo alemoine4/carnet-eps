@@ -167,6 +167,14 @@ body {
   outline-offset: 2px;
 }
 
+/* La zone de contenu (#vue, tabindex=-1) reçoit le focus par programme à chaque
+   changement de vue (scroll en haut + annonce lecteur d'écran). Ce n'est pas un
+   contrôle : on n'affiche jamais d'anneau de focus dessus (sinon liseré au chargement). */
+.vue:focus,
+.vue:focus-visible {
+  outline: none;
+}
+
 /* ---- Impression ---- */
 @media print {
   .entete,

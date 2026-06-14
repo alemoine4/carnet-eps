@@ -14,6 +14,14 @@ Modèle d'entrée :
 
 ---
 
+## 2026-06-13 (13) — Liseré bleu au chargement (v0.9.7)
+
+**Fait** : suppression de l'anneau de focus visible sur `#vue`. Cause : `afficherVue` fait `conteneur.focus()` à chaque vue ; au 1er chargement (sans interaction souris préalable) le navigateur applique `:focus-visible` → anneau bleu accent (3px) autour du contenu, qui disparaît au 1er clic. Le `.vue { outline:none }` était annulé par `:focus-visible` (même spécificité, défini après). Fix : `.vue:focus, .vue:focus-visible { outline:none }` (spécificité 0,2,0 > 0,1,0) dans base.css. Les boutons/liens/champs gardent leur focus visible. Bump → 0.9.7, push main + gh-pages + tag.
+
+**Vérifié** : règle présente dans la feuille de style, `#vue` focalisé calcule `outline: none`.
+
+**Prochaine étape** : terrain.
+
 ## 2026-06-13 (12) — Largeur d'écran PC (v0.9.6)
 
 **Fait** : les vues appel / récap / relevé prennent toute la largeur sur PC (classe `vue-large` ajoutée par `vueAppel`/`vueRecap`/`vueReleve` ; `afficherVue` (ui.js) réinitialise `#vue.className='vue'` à chaque rendu ; règle `.vue.vue-large{max-width:none;margin-right:32px}` dans responsive.css). Grille d'appel passée en `repeat(auto-fill, minmax(160px,1fr))` → 2 col mobile, 7 col sur 1600 px. Formulaires/texte restent capés à 900 px. Bump → 0.9.6, push main + gh-pages.

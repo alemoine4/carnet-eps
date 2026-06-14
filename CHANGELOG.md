@@ -4,6 +4,11 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-06-13 — v0.9.7 : Liseré bleu au chargement (focus)
+
+- Correction : au premier chargement, un anneau de focus bleu (`:focus-visible`) s'affichait autour de la zone de contenu — `#vue` (tabindex=-1) reçoit le focus par programme à chaque vue (scroll en haut + annonce lecteur d'écran), et la règle globale `:focus-visible` annulait le `.vue { outline: none }` voulu. Ajout d'une règle plus spécifique `.vue:focus, .vue:focus-visible { outline: none }` → plus de liseré, tout en gardant l'anneau de focus sur les vrais boutons/liens/champs.
+- Bump SW + `VERSION_APP` → 0.9.7 ; redéployé.
+
 ## 2026-06-13 — v0.9.6 : Largeur d'écran sur PC
 
 - Sur grand écran, les vues à fort contenu **appel**, **récapitulatif** et **relevé** utilisent désormais toute la largeur disponible (classe `vue-large` ajoutée par ces vues ; `afficherVue` réinitialise la classe à chaque rendu). Les formulaires et le texte restent **plafonnés à 900 px** (lisibilité).
