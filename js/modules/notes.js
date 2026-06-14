@@ -315,6 +315,7 @@ async function vueEval(c, evalId) {
 // ---------------------------------------------------------------------------
 
 async function vueReleve(c, classeId) {
+  c.classList.add('vue-large'); // relevé (tableau) : pleine largeur sur PC
   c.append(el('a', { class: 'retour no-print', href: '#/notes' }, '← Notes'));
   const classe = await lire('classes', classeId);
   if (!classe) { c.append(carte('Classe introuvable', '')); return; }

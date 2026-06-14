@@ -459,23 +459,13 @@
   font-size: 0.82rem;
 }
 
+/* Colonnes auto-remplies : 2 sur mobile, davantage dès qu'il y a de la place
+   (la vue d'appel s'élargit sur PC via .vue-large → moins de défilement). */
 .grille-appel {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 10px;
   margin: 10px 0 16px;
-}
-
-@media (min-width: 560px) {
-  .grille-appel {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (min-width: 900px) {
-  .grille-appel {
-    grid-template-columns: repeat(4, 1fr);
-  }
 }
 
 .btn-eleve {

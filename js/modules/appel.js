@@ -118,6 +118,7 @@ async function vueSelecteur(c) {
 // ---------------------------------------------------------------------------
 
 async function vueAppel(c, seanceId) {
+  c.classList.add('vue-large'); // grille d'appel : utiliser toute la largeur sur PC
   c.append(el('a', { class: 'retour', href: '#/appel' }, '← Appel'));
   const seance = await lire('seances', seanceId);
   if (!seance) { c.append(carte('Séance introuvable', 'Elle a peut-être été supprimée.')); return; }
@@ -364,6 +365,7 @@ async function vueAppel(c, seanceId) {
 // ---------------------------------------------------------------------------
 
 async function vueRecap(c, classeId) {
+  c.classList.add('vue-large'); // tableau récap : pleine largeur sur PC
   c.append(el('a', { class: 'retour no-print', href: '#/appel' }, '← Appel'));
   const classe = await lire('classes', classeId);
   if (!classe) { c.append(carte('Classe introuvable', '')); return; }
