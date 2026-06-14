@@ -27,6 +27,7 @@
 
 | Version | Tag | Commit main | Résumé |
 |---|---|---|---|
+| v0.10.1 | `v0.10.1` | `8e264fb` | Annulation des suppressions (phase 2) : toast « Supprimé — Annuler » (8 s, restaure la cascade) |
 | v0.10.0 | `v0.10.0` | `e7a1fcd` | Suppressions sécurisées (phase 1) : `confirm()` natifs → `<dialog>` avec détail des cascades |
 | v0.9.9 | `v0.9.9` | `82a73b5` | Alignement audit : aide appel scindée, typo, nav 0,68rem (320px OK), CSP complétée |
 | v0.9.8 | `v0.9.8` | `e175de0` | Corrections d'audit : a11y (aria-live, titre de zone, reduced-motion), typo, CSP |

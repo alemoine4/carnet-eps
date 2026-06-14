@@ -1,7 +1,7 @@
 # AVIS avant application — Suppressions : confirmation cohérente + filet d'annulation (P1)
 
 > Issu de l'audit du 2026-06-13 (problème **P1** : risque de perte de données élèves).
-> Statut : **Phase 1 IMPLÉMENTÉE et déployée en v0.10.0** (confirmation `<dialog>` cohérente + détail des cascades, 11 `confirm()` natifs remplacés). **Phase 2 (toast « Annuler » 8 s) — à faire en v0.10.1.**
+> Statut : **TERMINÉ.** Phase 1 (confirmation `<dialog>` cohérente + détail des cascades) déployée en **v0.10.0** ; Phase 2 (toast « Supprimé — Annuler » 8 s, restauration de la cascade via `restaurer()`) déployée en **v0.10.1**. Reste optionnel/plus tard : corbeille **persistante** (nouveau store → migration de schéma, AVIS dédié).
 
 ---
 
