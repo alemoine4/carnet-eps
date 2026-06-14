@@ -27,6 +27,7 @@
 
 | Version | Tag | Commit main | Résumé |
 |---|---|---|---|
+| v0.9.7 | `v0.9.7` | `8e738d5` | Supprime le liseré de focus bleu au chargement (zone de contenu) |
 | v0.9.6 | `v0.9.6` | `7fba367` | Largeur PC : appel/récap/relevé en pleine largeur, grille d'appel auto-colonnes |
 | v0.9.5 | `v0.9.5` | `8891834` | Bouton retour « ← Plus » → « ← Retour » |
 | v0.9.4 | `v0.9.4` | `2d6ca9b` | Retrait des badges « prêt » (écran Plus) |
