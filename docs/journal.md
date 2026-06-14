@@ -14,6 +14,22 @@ Modèle d'entrée :
 
 ---
 
+## 2026-06-13 (14) — Corrections d'audit : lot rapide (v0.9.8)
+
+**Contexte** : audit multi-perspectives (UX/UI/ergo/a11y/dev/prof). Aucun P0. Lot de corrections rapides appliqué (le structurel — annulation des suppressions, dédup design-system, IA nav — fera l'objet d'AVIS).
+
+**Fait** :
+- `aria-live="polite"` sur `.compteurs` (appel.js).
+- Nom de zone par écran : `TITRES` + `#vue.setAttribute('aria-label', …)` dans `main.js naviguer()` → annoncé au focus de `#vue`.
+- Typo : en-tête 1,05→1,2rem (base.css), titre de carte 1→1,1rem (components.css), libellés nav 0,62→0,66rem.
+- `prefers-reduced-motion` (neutralise transitions + scale) et `scroll-margin-bottom` sur focusables (base.css).
+- « Terminer l'appel » : label dynamique « · N passé(s) en présent » via majCompteurs (pas de confirm bloquant → fast-path préservé).
+- **CSP** `<meta>` dans index.html : `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'`.
+
+**Vérifié sous CSP** (preview) : styles inline (bordure statut), visionneuse blob, export CSV blob (238o), `fetch(data:)` + `fetch(self)`, aria-live/aria-label/label Terminer — **0 violation console**. Bump → 0.9.8, push main + gh-pages + tag.
+
+**Prochaine étape** : AVIS pour le filet anti-suppression (P1) ; puis dédup design-system + IA nav.
+
 ## 2026-06-13 (13) — Liseré bleu au chargement (v0.9.7)
 
 **Fait** : suppression de l'anneau de focus visible sur `#vue`. Cause : `afficherVue` fait `conteneur.focus()` à chaque vue ; au 1er chargement (sans interaction souris préalable) le navigateur applique `:focus-visible` → anneau bleu accent (3px) autour du contenu, qui disparaît au 1er clic. Le `.vue { outline:none }` était annulé par `:focus-visible` (même spécificité, défini après). Fix : `.vue:focus, .vue:focus-visible { outline:none }` (spécificité 0,2,0 > 0,1,0) dans base.css. Les boutons/liens/champs gardent leur focus visible. Bump → 0.9.7, push main + gh-pages + tag.

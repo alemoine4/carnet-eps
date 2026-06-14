@@ -4,6 +4,15 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-06-13 — v0.9.8 : Corrections d'audit (a11y, typo, sécurité)
+
+Lot de corrections rapides issues de l'audit multi-perspectives :
+- **A11y** : `aria-live="polite"` sur les compteurs d'appel (annoncés au lecteur d'écran) ; **nom de zone par écran** (`aria-label` sur `#vue` selon la route → la section est annoncée à la navigation) ; `scroll-margin-bottom` sur les éléments focusables (WCAG 2.2 — focus non masqué par la nav) ; bloc `@media (prefers-reduced-motion: reduce)`.
+- **Typo** : hiérarchie renforcée (en-tête 1,2rem, titres de carte 1,1rem) ; libellés de nav 0,62→0,66rem.
+- **Appel** : le bouton « Terminer » indique désormais **combien d'élèves passeront présents** (ex. « Terminer l'appel · 6 passés en présent ») — informatif, sans confirmation bloquante (le fast-path reste rapide).
+- **Sécurité** : ajout d'une **CSP** (`script-src 'self'` bloque tout handler injecté ; `blob:`/`data:` autorisés pour photos et import). Vérifié : styles inline, visionneuse, export CSV, import — aucune violation.
+- Bump SW + `VERSION_APP` → 0.9.8 ; redéployé.
+
 ## 2026-06-13 — v0.9.7 : Liseré bleu au chargement (focus)
 
 - Correction : au premier chargement, un anneau de focus bleu (`:focus-visible`) s'affichait autour de la zone de contenu — `#vue` (tabindex=-1) reçoit le focus par programme à chaque vue (scroll en haut + annonce lecteur d'écran), et la règle globale `:focus-visible` annulait le `.vue { outline: none }` voulu. Ajout d'une règle plus spécifique `.vue:focus, .vue:focus-visible { outline: none }` → plus de liseré, tout en gardant l'anneau de focus sur les vrais boutons/liens/champs.
