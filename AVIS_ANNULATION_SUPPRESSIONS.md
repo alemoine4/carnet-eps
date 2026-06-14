@@ -1,7 +1,7 @@
 # AVIS avant application — Suppressions : confirmation cohérente + filet d'annulation (P1)
 
 > Issu de l'audit du 2026-06-13 (problème **P1** : risque de perte de données élèves).
-> Statut : **proposition, aucun code modifié.** À valider avant implémentation (BIBLE : changement transverse → AVIS).
+> Statut : **Phase 1 IMPLÉMENTÉE et déployée en v0.10.0** (confirmation `<dialog>` cohérente + détail des cascades, 11 `confirm()` natifs remplacés). **Phase 2 (toast « Annuler » 8 s) — à faire en v0.10.1.**
 
 ---
 
