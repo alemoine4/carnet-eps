@@ -2,3 +2,10 @@ Thumbs.db
 desktop.ini
 .DS_Store
 *.log
+
+# Outils de dev (tests) — jamais déployés
+node_modules/
+test-results/
+playwright-report/
+blob-report/
+.playwright/

@@ -1,0 +1,15 @@
+{
+  "name": "carnet-eps-dev",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Outils de DÉVELOPPEMENT (tests Playwright) pour Carnet EPS. L'application elle-même (dossier app/) reste 100 % vanilla, SANS dépendance runtime (BIBLE règle 1). Ces dépendances sont strictement dev et ne sont jamais livrées (gh-pages ne déploie que app/).",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}

@@ -4,6 +4,13 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-06-15 — Outils : smoke-tests Playwright (dev, l'app n'est pas modifiée)
+
+- Ajout d'un harnais de tests **Playwright en dépendance de DEV** (validé explicitement ; gratuit Apache-2.0 ; jamais livré — `gh-pages` ne déploie que `app/`, `node_modules/` ignoré). L'application reste **sans dépendance runtime** (BIBLE règle 1).
+- `package.json` (privé, `@playwright/test`), `playwright.config.mjs` (lance/réutilise `server-carnet.mjs`), `tests/e2e/smoke.spec.mjs` (**6 parcours critiques** : chargement+nav, créer classe+persistance, import CSV, appel, suppression+annulation, round-trip export/import) — **tous verts**.
+- Lancement : `npm install` → `npx playwright install chromium` → `npm test`. Détails : `tests/e2e/README.md`.
+- **Pas de changement de l'app** : ni `VERSION`, ni `VERSION_APP`, ni déploiement.
+
 ## 2026-06-13 — v0.10.1 : Annulation des suppressions (phase 2 — « Supprimé — Annuler »)
 
 Filet de récupération après suppression (priorité n°1 de la roadmap).

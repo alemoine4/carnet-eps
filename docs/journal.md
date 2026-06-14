@@ -14,6 +14,16 @@ Modèle d'entrée :
 
 ---
 
+## 2026-06-15 (18) — Smoke-tests Playwright (dev)
+
+**Fait** : harnais de tests automatisés, validé par l'utilisateur (Playwright = dépendance **de dev** ; gratuité OK ; app `app/` toujours sans dépendance runtime ; non déployé).
+- `package.json` (privé, type module, `@playwright/test`), `playwright.config.mjs` (webServer `node server-carnet.mjs` port 8160, `reuseExistingServer`), `tests/e2e/smoke.spec.mjs`, `tests/e2e/README.md`, `.gitignore` (node_modules, test-results, playwright-report).
+- 6 tests : chargement+nav 12 routes, créer classe+persistance, import CSV, appel (tap+Terminer), **suppression+annulation** (undo restaure la cascade), round-trip export/import. **6/6 verts** (2,3 s).
+- 2 ajustements de sélecteurs pendant l'écriture : `.statut-ok` ambigu → `getByText(/Appel complet/)` ; formulaire « Nouvelle classe » masqué → cliquer le bouton « + Nouvelle classe » d'abord.
+- `npm install` + `npx playwright install chromium` exécutés (Chromium headless). **Aucun changement de l'app** (pas de bump, pas de déploiement).
+
+**Prochaine étape** : onglet « Suivi » (sortir Inaptitudes de « Plus ») → **AVIS IA nav** d'abord ; puis observations (**AVIS modèle de données**).
+
 ## 2026-06-13 (17) — Annulation des suppressions, phase 2 (v0.10.1)
 
 **Fait** : filet « Supprimé — Annuler » (8 s).
