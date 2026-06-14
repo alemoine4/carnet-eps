@@ -103,7 +103,7 @@ body {
 
 .entete h1 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1.2rem;
   letter-spacing: 0.3px;
 }
 
@@ -145,7 +145,7 @@ body {
   justify-content: center;
   gap: 2px;
   min-height: var(--tactile);
-  font-size: 0.62rem;
+  font-size: 0.66rem;
   text-decoration: none;
   color: var(--c-texte-2);
 }
@@ -173,6 +173,34 @@ body {
 .vue:focus,
 .vue:focus-visible {
   outline: none;
+}
+
+/* WCAG 2.2 (2.4.11) : un élément focalisé ne doit pas finir caché sous la nav basse fixe. */
+a,
+button,
+input,
+select,
+textarea,
+[tabindex] {
+  scroll-margin-bottom: calc(var(--h-nav) + 16px);
+}
+
+/* Respect de prefers-reduced-motion : neutralise transitions et micro-animations. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .btn:active,
+  .eleve-cycle:active,
+  .eleve-menu:active,
+  .carte-lien:active .carte {
+    transform: none;
+  }
 }
 
 /* ---- Impression ---- */

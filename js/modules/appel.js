@@ -164,7 +164,7 @@ async function vueAppel(c, seanceId) {
   const seancesSeq = (await parIndex('seances', 'sequenceId', sequence.id)).sort((a, b) => a.date.localeCompare(b.date));
   const numero = seancesSeq.findIndex((s) => s.id === seanceId) + 1;
   const total = sequence.nbSeancesPrevu || '?';
-  const compteursEl = el('p', { class: 'compteurs' });
+  const compteursEl = el('p', { class: 'compteurs', 'aria-live': 'polite' });
   const statutFin = el('p', { class: 'statut' });
   const btnTerminer = el('button', { class: 'btn btn-principal' }, 'Terminer l’appel (le reste = présents)');
   const carteTete = carte(`${classe.nom} — ${sequence.apsa}`, '', dateFR(seance.date));
@@ -191,6 +191,9 @@ async function vueAppel(c, seanceId) {
       btnTerminer.hidden = true;
       statutFin.textContent = `Appel complet ✓ (${eleves.length}/${eleves.length})`;
       statutFin.className = 'statut statut-ok';
+    } else {
+      const restants = eleves.length - enregs.size;
+      btnTerminer.textContent = `Terminer l’appel · ${restants} passé${restants > 1 ? 's' : ''} en présent`;
     }
   }
 

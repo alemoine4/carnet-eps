@@ -18,6 +18,9 @@ import { initialiser as initDocuments } from './modules/documents.js';
 // Routes principales (onglets) + routes enfants (accessibles depuis « Plus »).
 const ROUTES = ['accueil', 'appel', 'eleves', 'notes', 'edt', 'plus', 'sauvegarde', 'reglages', 'sequences', 'inaptitudes', 'documents', 'aide'];
 const PARENT = { sauvegarde: 'plus', reglages: 'plus', sequences: 'plus', inaptitudes: 'plus', documents: 'plus', aide: 'plus' };
+// Nom accessible de la zone de contenu par route → annoncé au lecteur d'écran à chaque navigation
+// (la zone #vue reçoit le focus dans afficherVue).
+const TITRES = { accueil: 'Aujourd’hui', appel: 'Appel', eleves: 'Élèves', notes: 'Notes', edt: 'Emploi du temps', plus: 'Plus', sauvegarde: 'Sauvegarde', reglages: 'Réglages', sequences: 'Séquences', inaptitudes: 'Inaptitudes', documents: 'Documents', aide: 'Aide' };
 
 // ---- Vue « Plus » (menu des modules secondaires) ----
 
@@ -100,6 +103,7 @@ async function naviguer() {
   const seg = segmentsDepuisHash();
   const r = ROUTES.includes(seg[0]) ? seg[0] : 'accueil';
   etat.route = r;
+  document.getElementById('vue').setAttribute('aria-label', TITRES[r] || 'Carnet EPS');
   const onglet = PARENT[r] || r; // les routes enfants laissent leur onglet parent actif
   for (const a of document.querySelectorAll('.nav a')) {
     const actif = a.dataset.route === onglet;
