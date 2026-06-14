@@ -27,7 +27,7 @@
 
 | Version | Tag | Commit main | Résumé |
 |---|---|---|---|
-| v0.9.9 | `v0.9.9` | *(ce commit)* | Alignement audit : aide appel scindée, typo, nav 0,68rem (320px OK), CSP complétée |
+| v0.9.9 | `v0.9.9` | `82a73b5` | Alignement audit : aide appel scindée, typo, nav 0,68rem (320px OK), CSP complétée |
 | v0.9.8 | `v0.9.8` | `e175de0` | Corrections d'audit : a11y (aria-live, titre de zone, reduced-motion), typo, CSP |
 | v0.9.7 | `v0.9.7` | `8e738d5` | Supprime le liseré de focus bleu au chargement (zone de contenu) |
 | v0.9.6 | `v0.9.6` | `7fba367` | Largeur PC : appel/récap/relevé en pleine largeur, grille d'appel auto-colonnes |
