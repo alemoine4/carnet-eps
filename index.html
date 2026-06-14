@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <!-- Défense en profondeur : tout est local. script-src 'self' (pas d'inline) bloque
        l'exécution d'un éventuel handler injecté ; blob:/data: requis pour photos et import. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self'; connect-src 'self' data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
   <title>Carnet EPS</title>
   <meta name="description" content="Le carnet de bord du professeur d'EPS — appel, inaptitudes, notes, EDT. 100 % local et hors ligne.">
   <meta name="theme-color" content="#15459c">

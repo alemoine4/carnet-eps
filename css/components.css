@@ -22,8 +22,19 @@
 .carte p {
   margin: 0;
   color: var(--c-texte-2);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   line-height: 1.45;
+}
+
+/* Aide de l'appel : raccourcis clavier affichés seulement sur appareil à pointeur fin (PC) */
+.aide-clavier {
+  display: none;
+}
+
+@media (pointer: fine) {
+  .aide-clavier {
+    display: inline;
+  }
 }
 
 /* ---- Badges ---- */
