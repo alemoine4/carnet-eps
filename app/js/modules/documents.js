@@ -3,7 +3,7 @@
 // Un document = un fichier (image compressée / PDF, store `fichiers`) OU un lien externe.
 // Pas d'édition en v1 : supprimer puis recréer.
 
-import { enregistrerVue, el, carte, confirmer } from '../ui.js';
+import { enregistrerVue, el, carte, confirmer, toast } from '../ui.js';
 import { tous, lire, enregistrer, supprimer } from '../io.js';
 import { stockerFichier, supprimerFichier, ouvrirVisionneuse } from '../media.js';
 import { dateFR } from '../metier.js';
@@ -125,9 +125,11 @@ async function vueDocuments(c) {
     const btnSuppr = el('button', { class: 'btn btn-mini', 'aria-label': `Supprimer ${doc.titre}` }, '✕');
     btnSuppr.addEventListener('click', async () => {
       if (!(await confirmer({ titre: 'Supprimer le document', message: `Supprimer « ${doc.titre} » ?` }))) return;
+      const fichier = doc.fichierId ? await lire('fichiers', doc.fichierId) : null;
       if (doc.fichierId) await supprimerFichier(doc.fichierId);
       await supprimer('documents', doc.id);
       rafraichir();
+      toast('Document supprimé', { action: async () => { if (fichier) await enregistrer('fichiers', fichier); await enregistrer('documents', doc); rafraichir(); } });
     });
     const ligne = el('div', { class: 'rang-doc' }, btnOuvrir, btnSuppr);
     lignes.push({ doc, ligne });

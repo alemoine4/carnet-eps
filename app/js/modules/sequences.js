@@ -3,11 +3,11 @@
 // Le numéro d'une séance est calculé par ordre de date (pas de renumérotation à gérer).
 // Le bilan de séance se saisira depuis l'écran d'appel (phase 4).
 
-import { enregistrerVue, el, carte, champTexte, champSelect, champZone, confirmer } from '../ui.js';
+import { enregistrerVue, el, carte, champTexte, champSelect, champZone, confirmer, toast } from '../ui.js';
 import {
   tous, lire, parIndex, enregistrer,
   supprimerSeanceEnCascade, supprimerSequenceEnCascade,
-  apercuSuppressionSequence, detailSuppression,
+  apercuSuppressionSequence, detailSuppression, restaurer,
 } from '../io.js';
 
 const APSA_COURANTES = [
@@ -185,8 +185,9 @@ async function vueDetail(c, id) {
       const btnSuppr = el('button', { class: 'btn btn-mini', 'aria-label': `Supprimer la séance du ${dateFR(s.date)}` }, '✕');
       btnSuppr.addEventListener('click', async () => {
         if (!(await confirmer({ titre: 'Supprimer la séance', message: `Séance ${idx + 1}/${total} du ${dateFR(s.date)} — son appel éventuel sera supprimé.` }))) return;
-        await supprimerSeanceEnCascade(s.id);
+        const objets = await supprimerSeanceEnCascade(s.id);
         rafraichir();
+        toast('Séance supprimée', { action: async () => { await restaurer(objets); rafraichir(); } });
       });
       listeSe.append(el('div', { class: 'ligne-eleve' },
         el('span', { class: 'badge' }, `${idx + 1}/${total}`),
@@ -209,8 +210,9 @@ async function vueDetail(c, id) {
       message: `Classe ${classe?.nom || '?'}. Action définitive.`,
       detail: detailSuppression(comptes),
     }))) return;
-    await supprimerSequenceEnCascade(id);
+    const objets = await supprimerSequenceEnCascade(id);
     location.hash = '#/sequences';
+    toast(`Séquence ${sequence.apsa} supprimée`, { action: async () => { await restaurer(objets); location.hash = `#/sequences/${id}`; } });
   });
   carteSuppr.append(el('div', { class: 'rang-btn' }, btnSuppr));
   c.append(carteSuppr);

@@ -14,6 +14,19 @@ Modèle d'entrée :
 
 ---
 
+## 2026-06-13 (17) — Annulation des suppressions, phase 2 (v0.10.1)
+
+**Fait** : filet « Supprimé — Annuler » (8 s).
+- `ui.js` : helper `toast(message, {action, libelleAction, duree})`.
+- `io.js` : les 3 cascades renvoient `{store:[records]}` (avec blobs des fichiers lus avant suppression) au lieu de comptes ; nouveau `restaurer(objets)` (ré-`enregistrer`). `supprimerSequenceEnCascade` adapté à la nouvelle signature de `supprimerSeanceEnCascade`.
+- 8 sites de suppression : capture des objets supprimés + `toast(..., { action: () => restaurer(...) })`. Pour les non-cascade (classe, créneau, doc, éval, inaptitude) la capture est inline (lire avant supprimer).
+
+**Vérifié** (preview, après reload propre) : confirmer()→true, suppression élève effective + toast ; **Annuler restaure élève + appel + inaptitude + note** + retour fiche ; console propre.
+
+**Piège de test rencontré** (consigné) : il faut **recharger la page** après édition (sinon code stale), **purger les `dialog`/`.toast` leftover**, et **utiliser une seule instance io** (`import('/js/io.js')` cachée = celle de l'app) pour seed+lecture, sinon résultats incohérents. Ce n'étaient pas des bugs app.
+
+**Prochaine étape** : v0.10.2 smoke-tests (filet anti-régression) avant les gros lots ; puis onglet « Suivi » (AVIS IA nav).
+
 ## 2026-06-13 (16) — Suppressions sécurisées, phase 1 (v0.10.0)
 
 **Contexte** : démarrage du chantier roadmap « sécurité des données » en tant qu'architecte, par versions courtes. Renumérotation : la « 0.9.9 sécurité » du plan utilisateur devient **0.10.0** (0.9.x déjà pris).

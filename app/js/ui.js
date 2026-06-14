@@ -128,3 +128,19 @@ export function confirmer({ titre, message = '', detail = '', action = 'Supprime
     btnAnnuler.focus();
   });
 }
+
+// Notification brève avec action optionnelle (ex. « Supprimé — Annuler »), auto-disparition.
+export function toast(message, { action, libelleAction = 'Annuler', duree = 8000 } = {}) {
+  document.querySelector('.toast')?.remove();
+  const t = el('div', { class: 'toast', role: 'status' }, el('span', {}, message));
+  let timer;
+  const fermer = () => { clearTimeout(timer); t.remove(); };
+  if (action) {
+    const btn = el('button', { class: 'btn btn-principal', type: 'button' }, libelleAction);
+    btn.addEventListener('click', async () => { fermer(); await action(); });
+    t.append(btn);
+  }
+  document.body.append(t);
+  timer = setTimeout(fermer, duree);
+  return t;
+}

@@ -4,6 +4,15 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-06-13 — v0.10.1 : Annulation des suppressions (phase 2 — « Supprimé — Annuler »)
+
+Filet de récupération après suppression (priorité n°1 de la roadmap).
+- **Toast « … supprimé — Annuler » (8 s)** après chaque suppression : un clic **restaure tout**, cascade comprise (helper `toast()` dans ui.js).
+- **io.js** : les cascades (`supprimerSeance/Sequence/EleveEnCascade`) renvoient désormais les **objets supprimés** (avec les blobs des pièces jointes) ; nouveau `restaurer(objets)` qui les ré-enregistre.
+- Câblé sur les 8 suppressions : élève (cascade appels/inaptitudes/certificats/notes/photos), classe, séquence (cascade), séance, évaluation (+notes), inaptitude (+certificat/fichier), document (+fichier), créneau EDT.
+- Vérifié en preview : suppression élève → toast → **Annuler restaure élève + appel + inaptitude + note** et revient sur la fiche ; console propre.
+- Bump SW + `VERSION_APP` → 0.10.1 ; redéployé. *(Corbeille persistante = plus tard, nécessite un store dédié → migration.)*
+
 ## 2026-06-13 — v0.10.0 : Suppressions sécurisées (phase 1 — confirmation cohérente)
 
 Première étape du chantier « sécurité des données » (AVIS_ANNULATION_SUPPRESSIONS.md).

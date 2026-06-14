@@ -4,7 +4,7 @@
 // Limite v1 assumée : l'alternance A/B suit la parité calendaire depuis le
 // lundi de référence (les vacances ne décalent pas l'alternance).
 
-import { enregistrerVue, el, carte, champTexte, confirmer } from '../ui.js';
+import { enregistrerVue, el, carte, champTexte, confirmer, toast } from '../ui.js';
 import { tous, enregistrer, supprimer, lireMeta, ecrireMeta } from '../io.js';
 import { enMinutes, semaineCourante } from '../metier.js';
 
@@ -113,8 +113,10 @@ async function vueEDT(c) {
   btnSupprimer.addEventListener('click', async () => {
     if (!enEdition) return;
     if (!(await confirmer({ titre: 'Supprimer le créneau', message: 'Les séances déjà créées seront conservées.' }))) return;
+    const creneau = enEdition;
     await supprimer('edt', enEdition.id);
     rafraichir();
+    toast('Créneau supprimé', { action: async () => { await enregistrer('edt', creneau); rafraichir(); } });
   });
 
   // --- Semaine (liste par jour) ---
