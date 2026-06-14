@@ -12,6 +12,7 @@ export function enregistrerVue(id, rendu) {
 export async function afficherVue(id, params = []) {
   const conteneur = document.getElementById('vue');
   conteneur.innerHTML = '';
+  conteneur.className = 'vue'; // réinitialise (une vue peut ajouter 'vue-large' pour s'élargir sur PC)
   const rendu = vues.get(id);
   if (!rendu) {
     conteneur.append(carte('Page introuvable', `Aucune vue « ${id} ».`));

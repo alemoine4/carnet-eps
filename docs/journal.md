@@ -14,6 +14,16 @@ Modèle d'entrée :
 
 ---
 
+## 2026-06-13 (12) — Largeur d'écran PC (v0.9.6)
+
+**Fait** : les vues appel / récap / relevé prennent toute la largeur sur PC (classe `vue-large` ajoutée par `vueAppel`/`vueRecap`/`vueReleve` ; `afficherVue` (ui.js) réinitialise `#vue.className='vue'` à chaque rendu ; règle `.vue.vue-large{max-width:none;margin-right:32px}` dans responsive.css). Grille d'appel passée en `repeat(auto-fill, minmax(160px,1fr))` → 2 col mobile, 7 col sur 1600 px. Formulaires/texte restent capés à 900 px. Bump → 0.9.6, push main + gh-pages.
+
+**Vérifié** : appel 1360 px / 7 colonnes (28 élèves), récap 1345 px, Élèves capé 900 px, console propre. (Choix utilisateur : « élargir l'appel + les tableaux ».)
+
+**Note environnement** : le serveur preview carnet-eps s'était arrêté et l'onglet avait basculé sur un autre projet (localhost:8081) → confusion IndexedDB ; résolu en redémarrant le serveur 8160 et en seedant via `import('/js/io.js')` (qui crée les stores correctement) plutôt qu'un `indexedDB.open` brut.
+
+**Prochaine étape** : terrain.
+
 ## 2026-06-13 (11) — Libellé du bouton retour (v0.9.5)
 
 **Fait** : « ← Plus » → « ← Retour » sur les 6 écrans enfants de l'onglet Plus (main.js + documents/inaptitudes/sequences/reglages/sauvegarde.js). Motif : « Plus » (menu) se lit mal comme cible de retour ; les retours nommant une section réelle sont gardés. Bump → 0.9.5, push main + gh-pages. Vérifié preview (les 6 affichent « ← Retour »).

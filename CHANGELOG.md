@@ -2,6 +2,12 @@
 
 Historique des changements notables. Format : date — résumé. Le détail vit dans `docs/journal.md`.
 
+## 2026-06-13 — v0.9.6 : Largeur d'écran sur PC
+
+- Sur grand écran, les vues à fort contenu **appel**, **récapitulatif** et **relevé** utilisent désormais toute la largeur disponible (classe `vue-large` ajoutée par ces vues ; `afficherVue` réinitialise la classe à chaque rendu). Les formulaires et le texte restent **plafonnés à 900 px** (lisibilité).
+- **Grille d'appel en colonnes auto-remplies** (`repeat(auto-fill, minmax(160px, 1fr))`) : 2 colonnes sur mobile, et davantage dès qu'il y a de la place — ex. **7 colonnes** sur un écran 1600 px → 28 élèves en 4 rangées au lieu de 7 (moins de défilement). Les récap/relevés prennent toute la largeur (moins de défilement horizontal).
+- Bump SW + `VERSION_APP` → 0.9.6 ; redéployé. Vérifié en preview (appel 1360 px/7 col, formulaire 900 px, console propre).
+
 ## 2026-06-13 — v0.9.5 : Libellé du bouton retour
 
 - Le bouton retour des écrans ouverts depuis l'onglet « Plus » (Inaptitudes, Séquences, Documents, Sauvegarde, Réglages, Aide) passe de « ← Plus » à **« ← Retour »** : « Plus » (menu fourre-tout) se lisait mal comme destination de retour. Les retours qui nomment une vraie section (« ← Classes », « ← Appel », « ← Notes », « ← Inaptitudes »…) sont conservés.
