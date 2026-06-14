@@ -3,10 +3,11 @@
 // Règles métier : docs/fonctionnalites.md §1 — minimisation RGPD (jamais d'INE ni d'adresse),
 // suppression d'un élève = cascade documentée (io.supprimerEleveEnCascade).
 
-import { enregistrerVue, el, carte, champTexte, champSelect, champZone } from '../ui.js';
+import { enregistrerVue, el, carte, champTexte, champSelect, champZone, confirmer } from '../ui.js';
 import {
   tous, lire, parIndex, enregistrer, supprimer, lireMeta,
   parserCSV, lireTexteCSV, supprimerEleveEnCascade,
+  apercuSuppressionEleve, detailSuppression,
 } from '../io.js';
 import { STATUTS, SEUIL_ALERTE, dateFR } from '../metier.js';
 import { stockerFichier, supprimerFichier, urlDuFichier } from '../media.js';
@@ -169,7 +170,7 @@ async function vueClasse(c, id) {
   if (!eleves.length) {
     const btnSuppr = el('button', { class: 'btn btn-danger' }, 'Supprimer la classe');
     btnSuppr.addEventListener('click', async () => {
-      if (!confirm(`Supprimer définitivement la classe ${classe.nom} (vide) ?`)) return;
+      if (!(await confirmer({ titre: 'Supprimer la classe', message: `Supprimer définitivement la classe ${classe.nom} (vide) ?` }))) return;
       await supprimer('classes', classe.id);
       location.hash = '#/eleves';
     });
@@ -407,8 +408,12 @@ async function vueFiche(c, id) {
   const carteSuppr = carte('Supprimer cet élève', 'Supprime l’élève et TOUT son historique (appels, inaptitudes, certificats, notes). Pensez à faire une sauvegarde avant (Plus → Sauvegarde).');
   const btnSuppr = el('button', { class: 'btn btn-danger' }, 'Supprimer définitivement');
   btnSuppr.addEventListener('click', async () => {
-    if (!confirm(`Supprimer ${eleve.nom} ${eleve.prenom} et tout son historique ?`)) return;
-    if (!confirm('Cette action est DÉFINITIVE (aucune corbeille). Confirmer ?')) return;
+    const comptes = await apercuSuppressionEleve(eleve.id);
+    if (!(await confirmer({
+      titre: `Supprimer ${eleve.prenom} ${eleve.nom} ?`,
+      message: 'L’élève et tout son historique seront supprimés. Action définitive.',
+      detail: detailSuppression(comptes),
+    }))) return;
     await supprimerEleveEnCascade(eleve.id);
     location.hash = `#/eleves/classe/${eleve.classeId}`;
   });

@@ -3,10 +3,11 @@
 // Le numéro d'une séance est calculé par ordre de date (pas de renumérotation à gérer).
 // Le bilan de séance se saisira depuis l'écran d'appel (phase 4).
 
-import { enregistrerVue, el, carte, champTexte, champSelect, champZone } from '../ui.js';
+import { enregistrerVue, el, carte, champTexte, champSelect, champZone, confirmer } from '../ui.js';
 import {
   tous, lire, parIndex, enregistrer,
   supprimerSeanceEnCascade, supprimerSequenceEnCascade,
+  apercuSuppressionSequence, detailSuppression,
 } from '../io.js';
 
 const APSA_COURANTES = [
@@ -183,7 +184,7 @@ async function vueDetail(c, id) {
     seances.forEach((s, idx) => {
       const btnSuppr = el('button', { class: 'btn btn-mini', 'aria-label': `Supprimer la séance du ${dateFR(s.date)}` }, '✕');
       btnSuppr.addEventListener('click', async () => {
-        if (!confirm(`Supprimer la séance ${idx + 1}/${total} du ${dateFR(s.date)} (et son appel éventuel) ?`)) return;
+        if (!(await confirmer({ titre: 'Supprimer la séance', message: `Séance ${idx + 1}/${total} du ${dateFR(s.date)} — son appel éventuel sera supprimé.` }))) return;
         await supprimerSeanceEnCascade(s.id);
         rafraichir();
       });
@@ -202,8 +203,12 @@ async function vueDetail(c, id) {
   const carteSuppr = carte('Supprimer la séquence', 'Supprime la séquence, ses séances, leurs appels, ses évaluations et leurs notes. Pensez à une sauvegarde avant (Plus → Sauvegarde).');
   const btnSuppr = el('button', { class: 'btn btn-danger' }, 'Supprimer définitivement');
   btnSuppr.addEventListener('click', async () => {
-    if (!confirm(`Supprimer la séquence ${sequence.apsa} (${classe?.nom || '?'}) et tout son contenu ?`)) return;
-    if (!confirm('Cette action est DÉFINITIVE (aucune corbeille). Confirmer ?')) return;
+    const comptes = await apercuSuppressionSequence(id);
+    if (!(await confirmer({
+      titre: `Supprimer la séquence ${sequence.apsa} ?`,
+      message: `Classe ${classe?.nom || '?'}. Action définitive.`,
+      detail: detailSuppression(comptes),
+    }))) return;
     await supprimerSequenceEnCascade(id);
     location.hash = '#/sequences';
   });

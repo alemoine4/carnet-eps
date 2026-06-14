@@ -4,6 +4,15 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-06-13 — v0.10.0 : Suppressions sécurisées (phase 1 — confirmation cohérente)
+
+Première étape du chantier « sécurité des données » (AVIS_ANNULATION_SUPPRESSIONS.md).
+- **Fin des `confirm()` natifs** : les 11 confirmations de suppression (élève, classe, séquence, séance, évaluation, inaptitude, document, créneau EDT, import, purge ×2) passent par un helper `confirmer()` en `<dialog>` natif : **focus initial sur « Annuler »** (anti-mauvais-tap), bouton d'action en rouge, Échap / clic sur le fond = Annuler, accessible (cohérent avec le menu d'appel).
+- **Impact des cascades affiché** : ex. « Seront aussi supprimés : 1 appel, 1 inaptitude, 1 note. » (helpers `apercuSuppressionEleve`/`apercuSuppressionSequence`/`detailSuppression` dans io.js). Les doubles `confirm()` (élève, séquence) sont fusionnés en une seule boîte claire.
+- Vérifié en preview : ouverture, focus Annuler, Annuler ne supprime pas, Supprimer supprime + cascade + redirection ; console propre.
+- **À suivre (v0.10.1)** : filet « Supprimé — Annuler » (restauration 8 s). Corbeille persistante = plus tard (nouveau store → migration).
+- Bump SW + `VERSION_APP` → 0.10.0 ; redéployé.
+
 ## 2026-06-13 — v0.9.9 : Alignement audit (finitions)
 
 Comble les écarts restants du lot d'audit, sans toucher aux chantiers structurels :

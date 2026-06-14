@@ -333,3 +333,35 @@ export async function supprimerEleveEnCascade(eleveId) {
   await supprimer('eleves', eleveId);
   return comptes;
 }
+
+// ---------------------------------------------------------------------------
+// Aperçu des suppressions en cascade (pour afficher l'impact dans la confirmation).
+// ---------------------------------------------------------------------------
+
+export async function apercuSuppressionEleve(eleveId) {
+  return {
+    appels: (await parIndex('appels', 'eleveId', eleveId)).length,
+    inaptitudes: (await parIndex('inaptitudes', 'eleveId', eleveId)).length,
+    certificats: (await parIndex('certificats', 'eleveId', eleveId)).length,
+    notes: (await parIndex('notes', 'eleveId', eleveId)).length,
+  };
+}
+
+export async function apercuSuppressionSequence(sequenceId) {
+  const seances = await parIndex('seances', 'sequenceId', sequenceId);
+  let appels = 0;
+  for (const s of seances) appels += (await parIndex('appels', 'seanceId', s.id)).length;
+  const evaluations = await parIndex('evaluations', 'sequenceId', sequenceId);
+  let notes = 0;
+  for (const ev of evaluations) notes += (await parIndex('notes', 'evaluationId', ev.id)).length;
+  return { seances: seances.length, appels, evaluations: evaluations.length, notes };
+}
+
+// { appels: 12, notes: 4 } → « Seront aussi supprimés : 12 appels, 4 notes. » (ignore les zéros).
+export function detailSuppression(comptes) {
+  const noms = { seances: 'séance', appels: 'appel', notes: 'note', inaptitudes: 'inaptitude', certificats: 'certificat', evaluations: 'évaluation', fichiers: 'pièce jointe' };
+  const parts = Object.entries(comptes)
+    .filter(([, n]) => n > 0)
+    .map(([k, n]) => `${n} ${noms[k] || k}${n > 1 ? 's' : ''}`);
+  return parts.length ? `Seront aussi supprimés : ${parts.join(', ')}.` : '';
+}

@@ -100,3 +100,31 @@ export function ouvrirFeuille({ titre = '', label = '', contenu }) {
   dlg.querySelector('button, [href], input, select, textarea')?.focus();
   return dlg;
 }
+
+// Confirmation modale cohérente (remplace confirm() natif). Échap / clic sur le fond = Annuler,
+// focus initial sur « Annuler » (anti-mauvais-tap), action en rouge par défaut.
+// Retourne Promise<boolean>. Usage : if (!(await confirmer({ titre, message, detail }))) return;
+export function confirmer({ titre, message = '', detail = '', action = 'Supprimer', danger = true }) {
+  return new Promise((resoudre) => {
+    const declencheur = document.activeElement;
+    const dlg = el('dialog', { class: 'feuille feuille-confirm', 'aria-label': titre });
+    let ok = false;
+    const btnAnnuler = el('button', { class: 'btn', type: 'button' }, 'Annuler');
+    const btnAction = el('button', { class: danger ? 'btn btn-danger' : 'btn btn-principal', type: 'button' }, action);
+    btnAnnuler.addEventListener('click', () => dlg.close());
+    btnAction.addEventListener('click', () => { ok = true; dlg.close(); });
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); }); // clic sur le fond = Annuler
+    dlg.addEventListener('close', () => {
+      dlg.remove();
+      if (declencheur?.isConnected) declencheur.focus();
+      resoudre(ok);
+    });
+    dlg.append(el('h3', {}, titre));
+    if (message) dlg.append(el('p', {}, message));
+    if (detail) dlg.append(el('p', { class: 'confirm-detail' }, detail));
+    dlg.append(el('div', { class: 'rang-btn' }, btnAnnuler, btnAction));
+    document.body.append(dlg);
+    dlg.showModal();
+    btnAnnuler.focus();
+  });
+}

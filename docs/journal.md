@@ -14,6 +14,20 @@ Modèle d'entrée :
 
 ---
 
+## 2026-06-13 (16) — Suppressions sécurisées, phase 1 (v0.10.0)
+
+**Contexte** : démarrage du chantier roadmap « sécurité des données » en tant qu'architecte, par versions courtes. Renumérotation : la « 0.9.9 sécurité » du plan utilisateur devient **0.10.0** (0.9.x déjà pris).
+
+**Fait** (phase 1 de `AVIS_ANNULATION_SUPPRESSIONS.md`) :
+- Helper `confirmer({titre,message,detail,action,danger})` dans `ui.js` : `<dialog>` natif, focus sur « Annuler », action rouge, Échap/clic-fond = Annuler, focus rendu au déclencheur. Retourne `Promise<boolean>`.
+- io.js : `apercuSuppressionEleve`, `apercuSuppressionSequence`, `detailSuppression()` (impact cascade).
+- Remplacement des **11 `confirm()` natifs** (eleves ×2, sequences ×2, documents, edt, notes, inaptitudes, sauvegarde ×4) par `await confirmer(...)`. Doubles confirms (élève/séquence) fusionnés en 1 boîte avec détail.
+- CSS `.confirm-detail` + `dialog.feuille-confirm .rang-btn`.
+
+**Vérifié** (preview, après avoir corrigé un faux positif de test dû à des dialogs leftover de mes evals) : mécanisme open/close/remove OK en isolation ; suppression élève bout-en-bout = dialog unique, élève + cascade (appels/inaptitudes) supprimés, redirection, dialog retiré ; console propre.
+
+**Prochaine étape** : v0.10.1 — toast « Supprimé — Annuler » (restauration 8 s) ; puis v0.10.2 smoke-tests ; puis onglet « Suivi » (AVIS IA nav).
+
 ## 2026-06-13 (15) — Alignement audit : finitions (v0.9.9)
 
 **Fait** (comble les écarts du prompt d'audit affiné, sans structurel) :

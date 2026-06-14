@@ -5,7 +5,7 @@
 // (codes ABS/DISP/NN laissés en lignes vides + liste à saisir à la main, garde-fou effectif) ;
 // voie B = CSV Nom;Prénom;Note. Type « afl » = positionnement libre, non exportable vers Pronote.
 
-import { enregistrerVue, el, carte, champTexte } from '../ui.js';
+import { enregistrerVue, el, carte, champTexte, confirmer } from '../ui.js';
 import { tous, lire, parIndex, enregistrer, supprimer, telechargerTexte, champCSV } from '../io.js';
 import { isoAujourdhui, dateFR } from '../metier.js';
 import { sauverPrefs } from '../state.js';
@@ -301,7 +301,11 @@ async function vueEval(c, evalId) {
   const carteS = carte('Supprimer cette évaluation', 'Supprime l’évaluation et toutes ses notes.');
   const btnSuppr = el('button', { class: 'btn btn-danger' }, 'Supprimer définitivement');
   btnSuppr.addEventListener('click', async () => {
-    if (!confirm(`Supprimer « ${ev.titre} » et ses ${notesMap.size} notes ?`)) return;
+    if (!(await confirmer({
+      titre: 'Supprimer l’évaluation',
+      message: `Supprimer « ${ev.titre} » ?`,
+      detail: notesMap.size ? `Seront aussi supprimées : ${notesMap.size} note${notesMap.size > 1 ? 's' : ''}.` : '',
+    }))) return;
     for (const n of await parIndex('notes', 'evaluationId', evalId)) await supprimer('notes', n.id);
     await supprimer('evaluations', evalId);
     location.hash = '#/notes';
