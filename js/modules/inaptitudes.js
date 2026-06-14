@@ -3,7 +3,7 @@
 // Règles : pré-remplit l'appel (statut « inapte », géré par appel.js via inaptitudesActives) ;
 // alerte J-7 avant expiration ; inaptitude > 3 mois → rappel médecin scolaire (réglementation).
 
-import { enregistrerVue, el, carte, champTexte, champSelect, champZone, confirmer } from '../ui.js';
+import { enregistrerVue, el, carte, champTexte, champSelect, champZone, confirmer, toast } from '../ui.js';
 import { tous, lire, parIndex, enregistrer, supprimer } from '../io.js';
 import { stockerFichier, supprimerFichier, urlDuFichier, ouvrirVisionneuse } from '../media.js';
 import { isoAujourdhui, dateFR } from '../metier.js';
@@ -338,12 +338,24 @@ async function vueDetail(c, id) {
       message: `Inaptitude de ${eleve ? eleve.prenom + ' ' + eleve.nom : 'cet élève'}.`,
       detail: inapt.certificatId ? 'La pièce jointe (certificat) sera supprimée aussi.' : '',
     }))) return;
+    let certSupp = null;
+    let fichSupp = null;
     if (inapt.certificatId) {
-      const cert = await lire('certificats', inapt.certificatId);
-      if (cert) { await supprimerFichier(cert.fichierId); await supprimer('certificats', cert.id); }
+      certSupp = await lire('certificats', inapt.certificatId);
+      if (certSupp) {
+        if (certSupp.fichierId) fichSupp = await lire('fichiers', certSupp.fichierId);
+        await supprimerFichier(certSupp.fichierId);
+        await supprimer('certificats', certSupp.id);
+      }
     }
     await supprimer('inaptitudes', id);
     location.hash = '#/inaptitudes';
+    toast('Inaptitude supprimée', { action: async () => {
+      if (fichSupp) await enregistrer('fichiers', fichSupp);
+      if (certSupp) await enregistrer('certificats', certSupp);
+      await enregistrer('inaptitudes', inapt);
+      location.hash = `#/inaptitudes/${id}`;
+    } });
   });
   carteS.append(el('div', { class: 'rang-btn' }, btnSuppr));
   c.append(carteS);

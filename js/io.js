@@ -280,58 +280,75 @@ export function parserCSV(texte) {
 // règles documentées dans docs/modele-donnees.md.
 // ---------------------------------------------------------------------------
 
+// Les fonctions de cascade renvoient { <store>: [records supprimés] } pour permettre la
+// restauration (undo) via restaurer().
 export async function supprimerSeanceEnCascade(seanceId) {
-  const comptes = { appels: 0 };
+  const objets = { appels: [], seances: [] };
   for (const a of await parIndex('appels', 'seanceId', seanceId)) {
+    objets.appels.push(a);
     await supprimer('appels', a.id);
-    comptes.appels++;
   }
-  await supprimer('seances', seanceId);
-  return comptes;
+  const seance = await lire('seances', seanceId);
+  if (seance) { objets.seances.push(seance); await supprimer('seances', seanceId); }
+  return objets;
 }
 
 export async function supprimerSequenceEnCascade(sequenceId) {
-  const comptes = { seances: 0, appels: 0, evaluations: 0, notes: 0 };
+  const objets = { seances: [], appels: [], evaluations: [], notes: [], sequences: [] };
   for (const s of await parIndex('seances', 'sequenceId', sequenceId)) {
-    const c = await supprimerSeanceEnCascade(s.id);
-    comptes.seances++;
-    comptes.appels += c.appels;
+    const o = await supprimerSeanceEnCascade(s.id);
+    objets.seances.push(...o.seances);
+    objets.appels.push(...o.appels);
   }
   for (const ev of await parIndex('evaluations', 'sequenceId', sequenceId)) {
     for (const n of await parIndex('notes', 'evaluationId', ev.id)) {
+      objets.notes.push(n);
       await supprimer('notes', n.id);
-      comptes.notes++;
     }
+    objets.evaluations.push(ev);
     await supprimer('evaluations', ev.id);
-    comptes.evaluations++;
   }
-  await supprimer('sequences', sequenceId);
-  return comptes;
+  const sequence = await lire('sequences', sequenceId);
+  if (sequence) { objets.sequences.push(sequence); await supprimer('sequences', sequenceId); }
+  return objets;
 }
 
 export async function supprimerEleveEnCascade(eleveId) {
-  const comptes = { appels: 0, inaptitudes: 0, certificats: 0, notes: 0, fichiers: 0 };
+  const objets = { appels: [], inaptitudes: [], certificats: [], notes: [], fichiers: [], eleves: [] };
   for (const a of await parIndex('appels', 'eleveId', eleveId)) {
+    objets.appels.push(a);
     await supprimer('appels', a.id);
-    comptes.appels++;
   }
   for (const i of await parIndex('inaptitudes', 'eleveId', eleveId)) {
+    objets.inaptitudes.push(i);
     await supprimer('inaptitudes', i.id);
-    comptes.inaptitudes++;
   }
   for (const c of await parIndex('certificats', 'eleveId', eleveId)) {
-    if (c.fichierId) { await supprimer('fichiers', c.fichierId); comptes.fichiers++; }
+    if (c.fichierId) {
+      const f = await lire('fichiers', c.fichierId);
+      if (f) { objets.fichiers.push(f); await supprimer('fichiers', c.fichierId); }
+    }
+    objets.certificats.push(c);
     await supprimer('certificats', c.id);
-    comptes.certificats++;
   }
   for (const n of await parIndex('notes', 'eleveId', eleveId)) {
+    objets.notes.push(n);
     await supprimer('notes', n.id);
-    comptes.notes++;
   }
   const eleve = await lire('eleves', eleveId);
-  if (eleve?.photoFichierId) { await supprimer('fichiers', eleve.photoFichierId); comptes.fichiers++; }
-  await supprimer('eleves', eleveId);
-  return comptes;
+  if (eleve?.photoFichierId) {
+    const f = await lire('fichiers', eleve.photoFichierId);
+    if (f) { objets.fichiers.push(f); await supprimer('fichiers', eleve.photoFichierId); }
+  }
+  if (eleve) { objets.eleves.push(eleve); await supprimer('eleves', eleveId); }
+  return objets;
+}
+
+// Restaure des enregistrements supprimés (undo) : objets = { store: [records...] }.
+export async function restaurer(objets) {
+  for (const [store, records] of Object.entries(objets || {})) {
+    for (const rec of records) await enregistrer(store, rec);
+  }
 }
 
 // ---------------------------------------------------------------------------

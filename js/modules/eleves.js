@@ -3,11 +3,11 @@
 // Règles métier : docs/fonctionnalites.md §1 — minimisation RGPD (jamais d'INE ni d'adresse),
 // suppression d'un élève = cascade documentée (io.supprimerEleveEnCascade).
 
-import { enregistrerVue, el, carte, champTexte, champSelect, champZone, confirmer } from '../ui.js';
+import { enregistrerVue, el, carte, champTexte, champSelect, champZone, confirmer, toast } from '../ui.js';
 import {
   tous, lire, parIndex, enregistrer, supprimer, lireMeta,
   parserCSV, lireTexteCSV, supprimerEleveEnCascade,
-  apercuSuppressionEleve, detailSuppression,
+  apercuSuppressionEleve, detailSuppression, restaurer,
 } from '../io.js';
 import { STATUTS, SEUIL_ALERTE, dateFR } from '../metier.js';
 import { stockerFichier, supprimerFichier, urlDuFichier } from '../media.js';
@@ -173,6 +173,7 @@ async function vueClasse(c, id) {
       if (!(await confirmer({ titre: 'Supprimer la classe', message: `Supprimer définitivement la classe ${classe.nom} (vide) ?` }))) return;
       await supprimer('classes', classe.id);
       location.hash = '#/eleves';
+      toast(`Classe ${classe.nom} supprimée`, { action: async () => { await restaurer({ classes: [classe] }); location.hash = `#/eleves/classe/${classe.id}`; } });
     });
     actions.append(btnSuppr);
   }
@@ -414,8 +415,9 @@ async function vueFiche(c, id) {
       message: 'L’élève et tout son historique seront supprimés. Action définitive.',
       detail: detailSuppression(comptes),
     }))) return;
-    await supprimerEleveEnCascade(eleve.id);
+    const objets = await supprimerEleveEnCascade(eleve.id);
     location.hash = `#/eleves/classe/${eleve.classeId}`;
+    toast(`${eleve.prenom} ${eleve.nom} supprimé`, { action: async () => { await restaurer(objets); location.hash = `#/eleves/fiche/${eleve.id}`; } });
   });
   carteSuppr.append(el('div', { class: 'rang-btn' }, btnSuppr));
   c.append(carteSuppr);
