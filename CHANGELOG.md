@@ -2,6 +2,8 @@
 
 Historique des changements notables. Format : date — résumé. Le détail vit dans `docs/journal.md`.
 
+> 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
+
 ## 2026-06-13 — v0.9.6 : Largeur d'écran sur PC
 
 - Sur grand écran, les vues à fort contenu **appel**, **récapitulatif** et **relevé** utilisent désormais toute la largeur disponible (classe `vue-large` ajoutée par ces vues ; `afficherVue` réinitialise la classe à chaque rendu). Les formulaires et le texte restent **plafonnés à 900 px** (lisibilité).
