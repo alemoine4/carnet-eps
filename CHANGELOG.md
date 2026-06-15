@@ -4,6 +4,16 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-06-15 — v0.11.0 : Onglet « Suivi » (navigation EPS)
+
+Priorité roadmap n°3 — rendre le suivi EPS visible (avis : `AVIS_SUIVI_NAVIGATION.md`, option A).
+- **Nouvel onglet « Suivi »** dans la barre, à la place d'**EDT** (déplacé dans le menu « Plus »). On reste à **6 onglets**.
+- L'onglet Suivi regroupe les **alertes élèves** (inaptitudes expirant / réintégrations, seuils d'oublis de tenue et de dispenses, évaluations non remontées) + un accès direct **Inaptitudes & certificats**.
+- **Refactor sans changement de comportement** : la logique d'alertes est extraite vers `metier.js` (`collecterAlertes()`), partagée par l'accueil et le Suivi (l'accueil affiche les 8 premières, le Suivi toutes).
+- Les inaptitudes sont désormais frontées par « Suivi » (`PARENT.inaptitudes = 'suivi'`) ; sur `#/edt` c'est l'onglet « Plus » qui s'active.
+- Smoke-tests : +1 (onglet Suivi + EDT dans Plus) → **7/7 verts**. Vue Suivi définie en inline dans `main.js` (pas de nouveau fichier → SW `ASSETS` inchangé).
+- Bump SW + `VERSION_APP` → 0.11.0 ; redéployé. Vérifié preview (nav, accueil, Suivi, EDT via Plus, console propre).
+
 ## 2026-06-15 — Outils : smoke-tests Playwright (dev, l'app n'est pas modifiée)
 
 - Ajout d'un harnais de tests **Playwright en dépendance de DEV** (validé explicitement ; gratuit Apache-2.0 ; jamais livré — `gh-pages` ne déploie que `app/`, `node_modules/` ignoré). L'application reste **sans dépendance runtime** (BIBLE règle 1).

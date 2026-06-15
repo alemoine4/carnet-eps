@@ -14,6 +14,19 @@ Modèle d'entrée :
 
 ---
 
+## 2026-06-15 (19) — Onglet « Suivi » (v0.11.0)
+
+**Fait** (option A de `AVIS_SUIVI_NAVIGATION.md`, validée) :
+- `metier.js` : `collecterAlertes()` (extraction de la logique d'alertes de `accueil.js`, sans changement de comportement).
+- `accueil.js` : `carteAlertes` consomme `collecterAlertes()` ; imports `dateFR`/`SEUIL_ALERTE` retirés (déplacés dans metier).
+- `index.html` : onglet EDT → **Suivi** (icône pouls Lucide).
+- `main.js` : route `suivi` + vue inline (alertes complètes + lien Inaptitudes) ; `PARENT.edt='plus'`, `PARENT.inaptitudes='suivi'` ; `TITRES.suivi` ; carte EDT ajoutée au menu « Plus » (Inaptitudes retirée de Plus, fronté par Suivi).
+- Tests : route `suivi` ajoutée au test 1 + nouveau test (Suivi rend les alertes ; EDT accessible via Plus). **7/7 verts.**
+
+**Vérifié preview** : nav = Aujourd'hui/Appel/Élèves/Notes/Suivi/Plus ; accueil garde ses alertes (refactor OK) ; Suivi affiche les alertes + lien Inaptitudes ; sur `#/edt` l'onglet actif = Plus ; console propre. Pas de nouveau fichier → SW ASSETS inchangé.
+
+**Prochaine étape** : observations (notes terrain) → **AVIS modèle de données d'abord** (nouveau store IndexedDB → migration).
+
 ## 2026-06-15 (18) — Smoke-tests Playwright (dev)
 
 **Fait** : harnais de tests automatisés, validé par l'utilisateur (Playwright = dépendance **de dev** ; gratuité OK ; app `app/` toujours sans dépendance runtime ; non déployé).

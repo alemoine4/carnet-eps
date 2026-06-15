@@ -19,7 +19,7 @@ test.beforeEach(async ({ page }) => {
 test('1. chargement sans erreur console + navigation complète', async ({ page }) => {
   const erreurs = [];
   page.on('console', (m) => { if (m.type() === 'error') erreurs.push(m.text()); });
-  for (const r of ['accueil', 'appel', 'eleves', 'notes', 'edt', 'plus', 'aide',
+  for (const r of ['accueil', 'appel', 'eleves', 'notes', 'edt', 'plus', 'suivi', 'aide',
     'reglages', 'sauvegarde', 'sequences', 'inaptitudes', 'documents']) {
     await page.goto('/#/' + r);
     await expect(page.locator('#vue')).not.toBeEmpty();
@@ -82,6 +82,14 @@ test('5. suppression d’élève + annulation (undo restaure la cascade)', async
     return { eleve: !!(await io.lire('eleves', 'e1')), appels: (await io.parIndex('appels', 'eleveId', 'e1')).length };
   });
   expect(restau).toEqual({ eleve: true, appels: 1 });
+});
+
+test('7. onglet Suivi + EDT déplacé dans « Plus »', async ({ page }) => {
+  await page.goto('/#/suivi');
+  await expect(page.locator('#vue')).toContainText(/Alertes du suivi|Rien à signaler/);
+  await page.goto('/#/plus');
+  await page.getByRole('link', { name: /Emploi du temps/ }).click();
+  await expect(page).toHaveURL(/#\/edt$/);
 });
 
 test('6. export / import JSON sans perte (round-trip)', async ({ page }) => {
