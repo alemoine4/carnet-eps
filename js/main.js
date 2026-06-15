@@ -4,6 +4,7 @@
 import { enregistrerVue, afficherVue, carte, el } from './ui.js';
 import { etat, abonner, estLocalhost } from './state.js';
 import { ouvrirDB } from './io.js';
+import { collecterAlertes } from './metier.js';
 import { initialiser as initAccueil } from './modules/accueil.js';
 import { initialiser as initSauvegarde } from './modules/sauvegarde.js';
 import { initialiser as initReglages } from './modules/reglages.js';
@@ -16,11 +17,12 @@ import { initialiser as initNotes } from './modules/notes.js';
 import { initialiser as initDocuments } from './modules/documents.js';
 
 // Routes principales (onglets) + routes enfants (accessibles depuis « Plus »).
-const ROUTES = ['accueil', 'appel', 'eleves', 'notes', 'edt', 'plus', 'sauvegarde', 'reglages', 'sequences', 'inaptitudes', 'documents', 'aide'];
-const PARENT = { sauvegarde: 'plus', reglages: 'plus', sequences: 'plus', inaptitudes: 'plus', documents: 'plus', aide: 'plus' };
+const ROUTES = ['accueil', 'appel', 'eleves', 'notes', 'edt', 'plus', 'suivi', 'sauvegarde', 'reglages', 'sequences', 'inaptitudes', 'documents', 'aide'];
+// EDT déplacé sous « Plus » ; les inaptitudes sont désormais frontées par l'onglet « Suivi ».
+const PARENT = { sauvegarde: 'plus', reglages: 'plus', sequences: 'plus', inaptitudes: 'suivi', documents: 'plus', aide: 'plus', edt: 'plus' };
 // Nom accessible de la zone de contenu par route → annoncé au lecteur d'écran à chaque navigation
 // (la zone #vue reçoit le focus dans afficherVue).
-const TITRES = { accueil: 'Aujourd’hui', appel: 'Appel', eleves: 'Élèves', notes: 'Notes', edt: 'Emploi du temps', plus: 'Plus', sauvegarde: 'Sauvegarde', reglages: 'Réglages', sequences: 'Séquences', inaptitudes: 'Inaptitudes', documents: 'Documents', aide: 'Aide' };
+const TITRES = { accueil: 'Aujourd’hui', appel: 'Appel', eleves: 'Élèves', notes: 'Notes', edt: 'Emploi du temps', plus: 'Plus', suivi: 'Suivi', sauvegarde: 'Sauvegarde', reglages: 'Réglages', sequences: 'Séquences', inaptitudes: 'Inaptitudes', documents: 'Documents', aide: 'Aide' };
 
 // ---- Vue « Plus » (menu des modules secondaires) ----
 
@@ -28,7 +30,7 @@ enregistrerVue('plus', (c) => {
   const lien = (route, carteElem) => el('a', { class: 'carte-lien', href: `#/${route}` }, carteElem);
   const liste = el('div', { class: 'liste-cartes' });
   liste.append(
-    lien('inaptitudes', carte('Inaptitudes & certificats', 'Totales/partielles, photo du certificat, alertes d’expiration et > 3 mois.')),
+    lien('edt', carte('Emploi du temps', 'Créneaux hebdomadaires, semaines A/B, installations.')),
     lien('sequences', carte('Séquences & séances', 'APSA, champs d’apprentissage, séances numérotées automatiquement.')),
     lien('documents', carte('Documents', 'Bibliothèque locale : fiches, protocoles, convocations — photo, PDF ou lien.')),
     lien('sauvegarde', carte('Sauvegarde', 'Export / import JSON complet — le transfert PC ↔ Android et le filet de sécurité.')),
@@ -36,6 +38,32 @@ enregistrerVue('plus', (c) => {
     lien('aide', carte('Aide & rentrée', 'Prise en main, procédure de rentrée en 6 étapes, bons réflexes de l’année.')),
   );
   c.append(liste, el('p', { class: 'note-discrete' }, '100 % local · hors ligne · aucune donnée ne quitte cet appareil'));
+});
+
+// ---- Vue « Suivi » (suivi EPS : alertes élèves + accès inaptitudes) ----
+
+enregistrerVue('suivi', async (c) => {
+  const alertes = await collecterAlertes();
+  const carteA = carte('Alertes du suivi');
+  if (!alertes.length) {
+    carteA.append(el('p', {}, 'Rien à signaler ✓'));
+  } else {
+    for (const a of alertes) {
+      carteA.append(el('a', { class: 'ligne-eleve', href: a.href },
+        el('span', { class: 'badge' + (a.grave ? ' badge-alerte' : '') }, a.grave ? '⚠' : 'ℹ'),
+        el('span', { class: 'ligne-eleve-nom' }, a.texte),
+        el('span', { class: 'chevron pousse-droite', 'aria-hidden': 'true' }, '›'),
+      ));
+    }
+  }
+  c.append(carteA);
+
+  const liste = el('div', { class: 'liste-cartes' });
+  liste.append(
+    el('a', { class: 'carte-lien', href: '#/inaptitudes' },
+      carte('Inaptitudes & certificats', 'Totales/partielles, photo du certificat, alertes d’expiration et > 3 mois. + Nouvelle inaptitude.')),
+  );
+  c.append(liste);
 });
 
 // ---- Vue « Aide » (prise en main + rentrée, intégrée et disponible hors ligne) ----

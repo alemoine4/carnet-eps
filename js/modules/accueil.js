@@ -7,7 +7,7 @@
 
 import { enregistrerVue, el, carte } from '../ui.js';
 import { tous, lire, parIndex, enregistrer } from '../io.js';
-import { coursDuJour, semaineCourante, enMinutes, isoAujourdhui, dateFR, SEUIL_ALERTE } from '../metier.js';
+import { coursDuJour, semaineCourante, enMinutes, isoAujourdhui, collecterAlertes } from '../metier.js';
 import { etat } from '../state.js';
 
 // ---------------------------------------------------------------------------
@@ -100,59 +100,7 @@ async function carteMaintenant() {
 // ---------------------------------------------------------------------------
 
 async function carteAlertes() {
-  const auj = isoAujourdhui();
-  const [inaptitudes, eleves, classes, appels, evaluations, notes, sequences] = await Promise.all([
-    tous('inaptitudes'), tous('eleves'), tous('classes'), tous('appels'),
-    tous('evaluations'), tous('notes'), tous('sequences'),
-  ]);
-  const eleveDe = (id) => eleves.find((e) => e.id === id);
-  const classeDe = (id) => classes.find((cl) => cl.id === id);
-  const nomComplet = (e) => `${e.prenom} ${e.nom}${classeDe(e.classeId) ? ' (' + classeDe(e.classeId).nom + ')' : ''}`;
-  const jours = (de, a) => Math.round((new Date(`${a}T12:00:00`) - new Date(`${de}T12:00:00`)) / 86400000);
-  const alertes = [];
-
-  // Inaptitudes : expirant sous 7 j, ou terminées depuis ≤ 7 j (réintégration)
-  for (const i of inaptitudes) {
-    const e = eleveDe(i.eleveId);
-    if (!e) continue;
-    const active = (!i.dateDebut || i.dateDebut <= auj) && (!i.dateFin || auj <= i.dateFin);
-    if (active && i.dateFin) {
-      const restants = jours(auj, i.dateFin);
-      if (restants <= 7) {
-        alertes.push({ grave: true, href: `#/inaptitudes/${i.id}`, texte: `${nomComplet(e)} — inaptitude : ${restants <= 0 ? 'dernier jour' : `fin dans ${restants} j`}` });
-      }
-    } else if (i.dateFin && i.dateFin < auj && jours(i.dateFin, auj) <= 7) {
-      alertes.push({ grave: false, href: `#/inaptitudes/${i.id}`, texte: `${nomComplet(e)} — redevient apte (inaptitude finie le ${dateFR(i.dateFin)})` });
-    }
-  }
-
-  // Seuils oublis de tenue / dispenses « mot »
-  const cumul = new Map();
-  for (const a of appels) {
-    if (a.statut !== 'oubli_tenue' && a.statut !== 'dispense') continue;
-    if (!cumul.has(a.eleveId)) cumul.set(a.eleveId, { oubli_tenue: 0, dispense: 0 });
-    cumul.get(a.eleveId)[a.statut]++;
-  }
-  for (const [eleveId, c] of cumul) {
-    if (c.oubli_tenue < SEUIL_ALERTE && c.dispense < SEUIL_ALERTE) continue;
-    const e = eleveDe(eleveId);
-    if (!e) continue;
-    const morceaux = [];
-    if (c.oubli_tenue >= SEUIL_ALERTE) morceaux.push(`${c.oubli_tenue} oublis de tenue`);
-    if (c.dispense >= SEUIL_ALERTE) morceaux.push(`${c.dispense} dispenses « mot »`);
-    alertes.push({ grave: true, href: `#/eleves/fiche/${e.id}`, texte: `${nomComplet(e)} — ${morceaux.join(' · ')}` });
-  }
-
-  // Évaluations notées mais jamais remontées vers Pronote
-  const nbNotes = new Map();
-  for (const n of notes) nbNotes.set(n.evaluationId, (nbNotes.get(n.evaluationId) || 0) + 1);
-  for (const ev of evaluations) {
-    if (ev.publieePronote || ev.type === 'afl' || !(nbNotes.get(ev.id) > 0)) continue;
-    const seq = sequences.find((s) => s.id === ev.sequenceId);
-    const cl = seq ? classeDe(seq.classeId) : null;
-    alertes.push({ grave: false, href: `#/notes/eval/${ev.id}`, texte: `« ${ev.titre} »${cl ? ' (' + cl.nom + ')' : ''} — pas encore remontée vers Pronote` });
-  }
-
+  const alertes = await collecterAlertes();
   const carteA = carte('Alertes');
   if (!alertes.length) {
     carteA.append(el('p', {}, 'Rien à signaler ✓'));
