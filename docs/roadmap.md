@@ -68,6 +68,16 @@ Corrections post-v1 issues de l'audit (détail : `AVIS_APPEL_ACCESSIBILITE.md`).
 - ✅ Confort (v0.9.3) : pastille de statut thématisée (clair + sombre) + raccourcis clavier PC sur l'appel.
 - **Déployé en ligne (v0.9.3)** : https://alemoine4.github.io/carnet-eps/ — reste les validations terrain (`docs/test-terrain.md`).
 
+## 🔶 Feuille de route post-v1 (pilotage architecte, 2026-06)
+
+Versions courtes, vérifiées (smoke-tests Playwright), taguées (rollback : `docs/deploiement.md`).
+- ✅ **Sécurité des suppressions** : v0.10.0 confirmation `<dialog>` + v0.10.1 annulation « Annuler » 8 s (restaure la cascade).
+- ✅ **Smoke-tests** Playwright (dev) — 7 parcours critiques.
+- ✅ **Onglet « Suivi »** (v0.11.0) — alertes EPS + inaptitudes sorties de « Plus » ; EDT déplacé dans « Plus ».
+- 🔲 **Observations** (notes terrain) — **AVIS modèle de données d'abord** (nouveau store IndexedDB → migration).
+- 🔲 Dashboard enrichi · évaluations EPS A1–A5 · Pronote/appréciations · exports PDF (via impression) · corbeille persistante → jalon **1.0**.
+- ⛔ Différé (anti-usine-à-gaz) : cloud, comptes, IA, refonte design-system, tableur avancé.
+
 ---
 
 ## Backlog (non planifié — y piocher, ne pas s'y perdre)
