@@ -4,6 +4,16 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-06-15 — v0.12.0 : Observations (notes terrain) — socle + 1er lot
+
+Première brique « noter en 2 taps » (avis : `AVIS_OBSERVATIONS_MODELE.md`).
+- **Nouvelle entité `observations`** (store IndexedDB, index `eleveId`) : type, ton (positif/neutre/vigilance), tags, texte, date, séance liée. **Migration `DB_VERSION 1 → 2` purement additive** (le `onupgradeneeded` crée le store manquant ; aucune donnée existante touchée — vérifié).
+- **Fiche élève** : carte **« Observations »** = timeline (triée récente d'abord, badge de type coloré par ton) + bouton **« + Observation »** ouvrant une feuille (type, ton, **phrases rapides**, **étiquettes**, dictée via le micro natif du clavier). Suppression d'une observation avec **annulation** (toast).
+- **Cohérence** : suppression d'élève en cascade inclut les observations (+ aperçu, détail, **undo**) ; export/import JSON les couvrent automatiquement (`schemaVersion` → 2).
+- Vocabulaire (types, tons, tags, modèles de phrases) dans `metier.js` ; module `js/modules/observations.js` (ajouté au cache SW).
+- Smoke-tests : +1 (ajouter une observation + cascade) → **8/8 verts**. Migration v1→v2 vérifiée en preview (14 stores, données préservées).
+- Bump SW + `VERSION_APP` → 0.12.0 ; redéployé.
+
 ## 2026-06-15 — v0.11.0 : Onglet « Suivi » (navigation EPS)
 
 Priorité roadmap n°3 — rendre le suivi EPS visible (avis : `AVIS_SUIVI_NAVIGATION.md`, option A).

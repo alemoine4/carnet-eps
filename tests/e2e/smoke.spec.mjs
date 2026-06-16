@@ -92,6 +92,27 @@ test('7. onglet Suivi + EDT déplacé dans « Plus »', async ({ page }) => {
   await expect(page).toHaveURL(/#\/edt$/);
 });
 
+test('8. ajouter une observation + cascade à la suppression de l’élève', async ({ page }) => {
+  await page.evaluate(async () => {
+    const io = await import('/js/io.js');
+    await io.enregistrer('classes', { id: 'c1', nom: '6A', archivee: false });
+    await io.enregistrer('eleves', { id: 'e1', classeId: 'c1', nom: 'Martin', prenom: 'Inès', actif: true });
+  });
+  await page.goto('/#/eleves/fiche/e1');
+  await page.getByRole('button', { name: '+ Observation' }).click();
+  await page.locator('dialog.feuille textarea').fill('Très bon engagement aujourd’hui');
+  await page.locator('dialog.feuille').getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(page.locator('#vue')).toContainText('Très bon engagement');
+  await expect(page.locator('dialog.feuille')).toHaveCount(0); // la feuille se ferme après enregistrement
+  // cascade : supprimer l'élève supprime ses observations
+  const restant = await page.evaluate(async () => {
+    const io = await import('/js/io.js');
+    await io.supprimerEleveEnCascade('e1');
+    return (await io.parIndex('observations', 'eleveId', 'e1')).length;
+  });
+  expect(restant).toBe(0);
+});
+
 test('6. export / import JSON sans perte (round-trip)', async ({ page }) => {
   const res = await page.evaluate(async () => {
     const io = await import('/js/io.js');

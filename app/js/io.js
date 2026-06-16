@@ -3,7 +3,7 @@
 // Schéma et règles d'intégrité : docs/modele-donnees.md.
 
 const DB_NOM = 'carnet-eps';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 // store -> keyPath + index. Toute évolution = migration cumulative dans onupgradeneeded
 // (switch sur e.oldVersion, sans break) + export JSON automatique préalable (BIBLE).
@@ -21,6 +21,7 @@ const SCHEMA = {
   evaluations: { keyPath: 'id', index: ['sequenceId'] },
   notes: { keyPath: 'id', index: ['evaluationId', 'eleveId'] },
   documents: { keyPath: 'id' },
+  observations: { keyPath: 'id', index: ['eleveId'] }, // v2 — notes terrain par élève
 };
 
 export const STORES = Object.keys(SCHEMA);
@@ -33,7 +34,8 @@ export function ouvrirDB() {
     const req = indexedDB.open(DB_NOM, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
-      // v1 : création de tous les stores et index.
+      // Création additive des stores manquants (v1 = tous ; v2 = ajout de « observations »).
+      // Migration purement additive → aucune donnée existante n'est touchée.
       for (const [nom, def] of Object.entries(SCHEMA)) {
         if (!db.objectStoreNames.contains(nom)) {
           const store = db.createObjectStore(nom, { keyPath: def.keyPath });
@@ -314,7 +316,7 @@ export async function supprimerSequenceEnCascade(sequenceId) {
 }
 
 export async function supprimerEleveEnCascade(eleveId) {
-  const objets = { appels: [], inaptitudes: [], certificats: [], notes: [], fichiers: [], eleves: [] };
+  const objets = { appels: [], inaptitudes: [], certificats: [], notes: [], observations: [], fichiers: [], eleves: [] };
   for (const a of await parIndex('appels', 'eleveId', eleveId)) {
     objets.appels.push(a);
     await supprimer('appels', a.id);
@@ -334,6 +336,10 @@ export async function supprimerEleveEnCascade(eleveId) {
   for (const n of await parIndex('notes', 'eleveId', eleveId)) {
     objets.notes.push(n);
     await supprimer('notes', n.id);
+  }
+  for (const o of await parIndex('observations', 'eleveId', eleveId)) {
+    objets.observations.push(o);
+    await supprimer('observations', o.id);
   }
   const eleve = await lire('eleves', eleveId);
   if (eleve?.photoFichierId) {
@@ -361,6 +367,7 @@ export async function apercuSuppressionEleve(eleveId) {
     inaptitudes: (await parIndex('inaptitudes', 'eleveId', eleveId)).length,
     certificats: (await parIndex('certificats', 'eleveId', eleveId)).length,
     notes: (await parIndex('notes', 'eleveId', eleveId)).length,
+    observations: (await parIndex('observations', 'eleveId', eleveId)).length,
   };
 }
 
@@ -376,7 +383,7 @@ export async function apercuSuppressionSequence(sequenceId) {
 
 // { appels: 12, notes: 4 } → « Seront aussi supprimés : 12 appels, 4 notes. » (ignore les zéros).
 export function detailSuppression(comptes) {
-  const noms = { seances: 'séance', appels: 'appel', notes: 'note', inaptitudes: 'inaptitude', certificats: 'certificat', evaluations: 'évaluation', fichiers: 'pièce jointe' };
+  const noms = { seances: 'séance', appels: 'appel', notes: 'note', inaptitudes: 'inaptitude', certificats: 'certificat', evaluations: 'évaluation', observations: 'observation', fichiers: 'pièce jointe' };
   const parts = Object.entries(comptes)
     .filter(([, n]) => n > 0)
     .map(([k, n]) => `${n} ${noms[k] || k}${n > 1 ? 's' : ''}`);

@@ -14,6 +14,22 @@ Modèle d'entrée :
 
 ---
 
+## 2026-06-15 (20) — Observations : socle + 1er lot (v0.12.0)
+
+**Fait** (option du socle de `AVIS_OBSERVATIONS_MODELE.md` : modèle OK avec `ton`, migration additive sans auto-export forcé, 1er lot = socle + bouton + timeline) :
+- `io.js` : `SCHEMA.observations` (index `eleveId`) + `DB_VERSION = 2` (migration additive : le `onupgradeneeded` crée les stores manquants → données préservées). Cascade élève + `restaurer` + `apercu` + `detail` incluent `observations`.
+- `metier.js` : `TYPES_OBSERVATION`, `TONS_OBSERVATION`, `TAGS_OBSERVATION`, `MODELES_PHRASES`.
+- `modules/observations.js` (nouveau) : `carteObservations(eleveId, rafraichir)` (timeline + « + Observation » + suppression avec toast undo) ; formulaire en `<dialog>` (type/ton/phrases/étiquettes). Ajouté au cache SW.
+- `eleves.js` : carte observations sur la fiche.
+- CSS `.obs-*` ; **badge de ton figé** (`#0f7a46`/`#a35f00`, AA blanc dans les 2 thèmes) — corrigé après avoir vu que `var(--c-ok)` vire au vert clair en sombre.
+- Tests : +1 (ajout observation + fermeture feuille + cascade) → **8/8 verts**.
+
+**Vérifié preview** : migration v1→v2 (db.version 2, 14 stores, données conservées) ; timeline + formulaire (phrase rapide, tag, enregistrement) ; badge `rgb(15,122,70)` même en sombre.
+
+**Piège environnement (consigné)** : le navigateur **du preview** ne déclenche pas l'événement `close` d'un `<dialog>` sur `close()` programmatique → les feuilles « semblent » ne pas se fermer en preview. **Faux positif** : le vrai Chromium (Playwright) et Chrome le déclenchent (test 8 `toHaveCount(0)` vert, test 5 clique sous le modal). Ne pas se fier au preview pour la fermeture des `<dialog>`.
+
+**Prochaine étape** : enrichir (observation depuis l'appel/la séance du jour), puis dashboard « Aujourd'hui » enrichi.
+
 ## 2026-06-15 (19) — Onglet « Suivi » (v0.11.0)
 
 **Fait** (option A de `AVIS_SUIVI_NAVIGATION.md`, validée) :

@@ -794,6 +794,41 @@ dialog.visionneuse::backdrop {
   cursor: pointer;
 }
 
+/* ---- Observations (timeline fiche élève) ---- */
+.obs-ligne {
+  border-top: 1px solid var(--c-bordure);
+  padding: 10px 0;
+}
+
+.obs-tete {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.obs-ligne p {
+  margin: 4px 0 0;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.obs-tags {
+  color: var(--c-texte-2);
+  font-size: 0.82rem;
+}
+
+/* Couleur du badge de type selon le ton (couleurs figées AA blanc/fond dans les 2 thèmes,
+   sans liseré — anti-pattern). On n'utilise pas var(--c-ok) car sa variante sombre est claire. */
+.obs-ligne[data-ton="positif"] .badge {
+  background: #0f7a46;
+  color: #fff;
+}
+
+.obs-ligne[data-ton="vigilance"] .badge {
+  background: #a35f00;
+  color: #fff;
+}
+
 /* ---- Toast de mise à jour ---- */
 .toast {
   position: fixed;

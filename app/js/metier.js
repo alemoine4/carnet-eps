@@ -21,6 +21,23 @@ export const CYCLE_TAP = ['present', 'absent', 'oubli_tenue'];
 // Seuil de signalement (oublis de tenue / dispenses « mot »).
 export const SEUIL_ALERTE = 3;
 
+// ---- Observations (notes terrain, v2) ----
+export const TYPES_OBSERVATION = ['Engagement', 'Comportement', 'Progrès', 'Sécurité', 'Oubli de tenue', 'Inaptitude', 'Autonomie', 'Coopération', 'Remarque'];
+export const TONS_OBSERVATION = [
+  { cle: 'positif', libelle: 'Positif' },
+  { cle: 'neutre', libelle: 'Neutre' },
+  { cle: 'vigilance', libelle: 'Vigilance' },
+];
+export const TAGS_OBSERVATION = ['tenue', 'sécurité', 'engagement', 'progrès', 'comportement', 'conseil', 'bulletin'];
+export const MODELES_PHRASES = [
+  'Très bon engagement aujourd’hui.',
+  'Besoin d’être relancé régulièrement.',
+  'Attention au respect des consignes de sécurité.',
+  'Oubli de tenue répété.',
+  'Beau progrès constaté.',
+  'Bonne coopération avec le groupe.',
+];
+
 // ---- Dates & heures ----
 export const isoAujourdhui = () => new Date().toISOString().slice(0, 10);
 export const dateFR = (iso) => (iso ? new Date(`${iso}T12:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) : '?');
