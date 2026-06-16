@@ -67,6 +67,25 @@ documents     { id, titre, type, tags[], classeIds[], fichierId?, url?, dateAjou
 - Supprimer une **évaluation/séquence/séance** → cascade sur notes/séances/appels avec récapitulatif avant confirmation.
 - Une **inaptitude active** à une date D = `dateDebut ≤ D ≤ dateFin` → pré-remplit le statut d'appel et affiche la pastille.
 
+## Observations (v2)
+
+Store **`observations`** (schéma v2), index `eleveId`. Notes de suivi terrain.
+
+| Champ | Type | Notes |
+|---|---|---|
+| `id` | uuid | clé |
+| `eleveId` | string (indexé) | élève concerné |
+| `date` | ISO `YYYY-MM-DD` | date de l'observation |
+| `type` | string | Engagement, Comportement, Progrès, Sécurité, Oubli de tenue, Inaptitude, Autonomie, Coopération, Remarque |
+| `ton` | `positif \| neutre \| vigilance` | couleur du badge / sens (bulletins) |
+| `tags` | string[] | `tenue`, `sécurité`, `engagement`, `progrès`, `comportement`, `conseil`, `bulletin` |
+| `texte` | string | contenu (dictée via micro natif possible) |
+| `seanceId` | string \| null | séance liée (optionnel) |
+| `dateAjout` | ISO datetime | horodatage |
+
+- **Cascade** : suppression d'un élève → ses observations (incluses dans `supprimerEleveEnCascade`, l'aperçu, le détail et l'undo). Supprimer une séance **ne** supprime **pas** les observations.
+- **Migration `DB_VERSION 1 → 2`** : **additive** (création du store via `onupgradeneeded`, aucune donnée existante modifiée — voir décision D009).
+
 ## Sauvegarde / restauration
 
 - **Export JSON** : `{ app:"carnet-eps", schemaVersion, dateExport, stores:{...} }` ; blobs sérialisés en base64 (option « sans pièces jointes »). Nom de fichier : `carnet-eps_sauvegarde_YYYY-MM-DD.json`.

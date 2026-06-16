@@ -41,3 +41,11 @@ Nav 6 onglets : Aujourd'hui, Appel, Élèves, Notes, EDT, Plus. Serveur `server-
 ## D008 — 2026-06-11 — Service-worker actif uniquement hors localhost
 
 `network-first` sur `index.html`/manifest, `cache-first` sur les assets, version explicite, nettoyage des vieux caches (BIBLE règle 5). Non enregistré sur localhost pour un dev sans cache fantôme. Hébergement du **code seul** possible sur GitHub Pages (public) : aucune donnée n'est embarquée, les données restent dans le navigateur de chaque appareil.
+
+## D009 — 2026-06-15 — Migrations de schéma IndexedDB additives (v2 : observations)
+
+`onupgradeneeded` crée uniquement les **stores manquants** (jamais de suppression/transformation) → toute montée de version préserve les données existantes par construction. La v2 ajoute le store `observations` (notes terrain, index `eleveId`). Pas d'export auto **forcé** avant migration tant que les migrations restent additives (l'export reste recommandé et disponible). Une vraie transformation de données (future) imposerait, elle, l'export de sécurité préalable (BIBLE) et un `switch (e.oldVersion)`. Réexamen si une migration non additive devient nécessaire.
+
+## D010 — 2026-06-15 — Tests : Playwright en dépendance de DEV uniquement
+
+Smoke-tests des parcours critiques via Playwright (`tests/e2e/`). Dépendance **de dev** (gratuite, Apache-2.0) : jamais livrée (gh-pages ne déploie que `app/`, `node_modules/` ignoré) → l'app reste sans dépendance runtime (BIBLE règle 1). Le navigateur **du preview** ne déclenche pas l'événement `close` d'un `<dialog>` sur `close()` programmatique : se fier à Playwright/au vrai Chrome, pas au preview, pour la fermeture des feuilles.
