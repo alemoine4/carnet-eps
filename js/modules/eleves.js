@@ -11,6 +11,7 @@ import {
 } from '../io.js';
 import { STATUTS, SEUIL_ALERTE, dateFR } from '../metier.js';
 import { stockerFichier, supprimerFichier, urlDuFichier } from '../media.js';
+import { carteObservations } from './observations.js';
 import { sauverPrefs } from '../state.js';
 
 const PALETTE = ['#1d5fd6', '#178a52', '#c97a06', '#7c3aed', '#d03a3a', '#0e7490', '#be185d', '#4d7c0f'];
@@ -405,6 +406,7 @@ async function vueFiche(c, id) {
   }
 
   c.append(carteAp, carteIn, carteNo);
+  c.append(await carteObservations(id, rafraichir));
 
   const carteSuppr = carte('Supprimer cet élève', 'Supprime l’élève et TOUT son historique (appels, inaptitudes, certificats, notes). Pensez à faire une sauvegarde avant (Plus → Sauvegarde).');
   const btnSuppr = el('button', { class: 'btn btn-danger' }, 'Supprimer définitivement');
