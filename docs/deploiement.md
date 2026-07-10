@@ -28,6 +28,7 @@
 
 | Version | Tag | Commit main | Résumé |
 |---|---|---|---|
+| v0.12.2 | `v0.12.2` | `1be32fc` | Arbitrage audit A12/A13/A14 (D011) : toasts empilés, « publiée » sur preuve de copie + marquage manuel, pré-remplissage inapte limité au jour même |
 | v0.12.1 | `v0.12.1` | `13c81ff` | Corrections de l'audit 2026-07-10 (A1→A11, A15, A16) : résumé sauvegarde complet, erreurs photo visibles, dates locales, garde-fous EDT/accueil |
 | v0.12.0 | `v0.12.0` | `6650338` | Observations (notes terrain) : store IndexedDB v2 (migration additive) + timeline fiche élève |
 | v0.11.0 | `v0.11.0` | `9794150` | Onglet « Suivi » (alertes EPS + inaptitudes) à la place d'EDT (→ menu Plus) |
