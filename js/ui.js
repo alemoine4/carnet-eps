@@ -136,17 +136,25 @@ export function confirmer({ titre, message = '', detail = '', action = 'Supprime
 }
 
 // Notification brève avec action optionnelle (ex. « Supprimé — Annuler »), auto-disparition.
+// Les toasts S'EMPILENT (max 3, le plus ancien cède la place — audit A12) : un « Annuler »
+// n'est plus perdu quand deux suppressions s'enchaînent. duree: Infinity = reste affiché.
 export function toast(message, { action, libelleAction = 'Annuler', duree = 8000 } = {}) {
-  document.querySelector('.toast')?.remove();
+  let pile = document.querySelector('.toasts');
+  if (!pile) { pile = el('div', { class: 'toasts' }); document.body.append(pile); }
+  while (pile.children.length >= 3) pile.firstChild.remove();
   const t = el('div', { class: 'toast', role: 'status' }, el('span', {}, message));
   let timer;
-  const fermer = () => { clearTimeout(timer); t.remove(); };
+  const fermer = () => {
+    clearTimeout(timer);
+    t.remove();
+    if (!pile.children.length) pile.remove();
+  };
   if (action) {
     const btn = el('button', { class: 'btn btn-principal', type: 'button' }, libelleAction);
     btn.addEventListener('click', async () => { fermer(); await action(); });
     t.append(btn);
   }
-  document.body.append(t);
-  timer = setTimeout(fermer, duree);
+  pile.append(t);
+  if (Number.isFinite(duree)) timer = setTimeout(fermer, duree);
   return t;
 }
