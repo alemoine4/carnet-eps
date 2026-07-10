@@ -28,6 +28,7 @@
 
 | Version | Tag | Commit main | Résumé |
 |---|---|---|---|
+| v0.12.1 | `v0.12.1` | `13c81ff` | Corrections de l'audit 2026-07-10 (A1→A11, A15, A16) : résumé sauvegarde complet, erreurs photo visibles, dates locales, garde-fous EDT/accueil |
 | v0.12.0 | `v0.12.0` | `6650338` | Observations (notes terrain) : store IndexedDB v2 (migration additive) + timeline fiche élève |
 | v0.11.0 | `v0.11.0` | `9794150` | Onglet « Suivi » (alertes EPS + inaptitudes) à la place d'EDT (→ menu Plus) |
 | v0.10.1 | `v0.10.1` | `8e264fb` | Annulation des suppressions (phase 2) : toast « Supprimé — Annuler » (8 s, restaure la cascade) |
