@@ -1,7 +1,7 @@
 // main.js — démarrage, routes, thème, enregistrement du service-worker.
 // Toutes les vues sont fournies par les modules (js/modules/*.js).
 
-import { enregistrerVue, afficherVue, carte, el } from './ui.js';
+import { enregistrerVue, afficherVue, carte, el, toast } from './ui.js';
 import { etat, abonner, estLocalhost } from './state.js';
 import { ouvrirDB } from './io.js';
 import { collecterAlertes } from './metier.js';
@@ -170,12 +170,12 @@ if (navigator.storage?.persist) {
 // Service-worker : jamais sur localhost (décision D008 — pas de cache fantôme en dev).
 // Le SW fait skipWaiting + clients.claim : quand une nouvelle version prend le contrôle
 // en cours d'utilisation, on propose de recharger (BIBLE règle 5 — MAJ visible).
+let toastMajAffiche = false;
 function afficherToastMaj() {
-  if (document.querySelector('.toast')) return;
-  const btn = el('button', { class: 'btn btn-principal' }, 'Recharger');
-  btn.addEventListener('click', () => location.reload());
-  document.body.append(el('div', { class: 'toast', role: 'status' },
-    el('span', {}, 'Nouvelle version installée.'), btn));
+  if (toastMajAffiche) return;
+  toastMajAffiche = true;
+  // duree: Infinity → reste affiché jusqu'au clic (et survit aux autres toasts, pile A12).
+  toast('Nouvelle version installée.', { action: () => location.reload(), libelleAction: 'Recharger', duree: Infinity });
 }
 
 if ('serviceWorker' in navigator && !estLocalhost()) {

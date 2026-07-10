@@ -252,9 +252,33 @@ async function vueEval(c, evalId) {
       return { texte: lignes.join('\r\n'), codes };
     };
 
+    // « Publiée » n'est marquée que sur PREUVE de copie (presse-papiers réussi, ou copie
+    // effective depuis la zone de secours) — audit A13. Le CSV ne marque plus ; un bouton
+    // de marquage manuel couvre les autres workflows (et corrige un marquage erroné).
+    const majBadgePubliee = () => {
+      carteTete.querySelector('h2 .badge')?.remove();
+      if (ev.publieePronote) carteTete.querySelector('h2').append(el('span', { class: 'badge' }, `publiée ${dateFR(ev.publieePronote)} ✓`));
+    };
+    const btnMarquer = el('button', { class: 'btn' }, '');
+    const majMarquer = () => {
+      btnMarquer.textContent = ev.publieePronote
+        ? `Annuler le marquage « publiée le ${dateFR(ev.publieePronote)} »`
+        : 'Marquer remontée dans Pronote (manuel)';
+    };
+    majMarquer();
+    btnMarquer.addEventListener('click', async () => {
+      ev.publieePronote = ev.publieePronote ? null : isoAujourdhui();
+      await sauverEv();
+      if (!ev.publieePronote) zoneRecap.replaceChildren();
+      majBadgePubliee();
+      majMarquer();
+    });
+
     const apresExport = async (codes) => {
       ev.publieePronote = isoAujourdhui();
       await sauverEv();
+      majBadgePubliee();
+      majMarquer();
       zoneRecap.replaceChildren(
         el('p', { class: 'statut statut-ok' },
           `${eleves.length} lignes (ordre alphabétique). Garde-fou : vérifiez que le service Pronote compte bien ${eleves.length} élèves et le barème /${bareme}.`),
@@ -270,30 +294,34 @@ async function vueEval(c, evalId) {
         statutExp.textContent = 'Colonne copiée dans le presse-papiers ✓';
         statutExp.className = 'statut statut-ok';
         zoneSecours.replaceChildren();
+        await apresExport(codes); // copie réussie = preuve
       } catch {
-        // Pas de presse-papiers (http réseau local…) : afficher la colonne à copier à la main.
+        // Pas de presse-papiers (http réseau local…) : colonne à copier à la main.
+        // « Publiée » ne sera marquée qu'à la copie réelle (événement copy).
         const zone = el('textarea', { rows: 8, 'aria-label': 'Colonne à copier' });
         zone.value = texte;
-        zoneSecours.replaceChildren(el('p', {}, 'Copie automatique indisponible : sélectionnez tout puis copiez.'), zone);
+        zone.addEventListener('copy', () => { apresExport(codes); }, { once: true });
+        zoneSecours.replaceChildren(
+          el('p', {}, 'Copie automatique indisponible : sélectionnez tout puis copiez (Ctrl+C) — l’évaluation sera alors marquée « publiée ».'),
+          zone);
         zone.focus(); zone.select();
         statutExp.textContent = '';
       }
-      await apresExport(codes);
-      carteTete.querySelector('h2 .badge')?.remove();
-      carteTete.querySelector('h2').append(el('span', { class: 'badge' }, `publiée ${dateFR(ev.publieePronote)} ✓`));
     });
 
-    btnCSV.addEventListener('click', async () => {
+    btnCSV.addEventListener('click', () => {
       const lignes = eleves.map((e) => {
         const v = notesMap.get(e.id)?.valeur;
         return [e.nom, e.prenom, typeof v === 'number' ? formatFR(v) : v || ''].map(champCSV).join(';');
       });
       telechargerTexte(`notes_${classe.nom}_${ev.titre.replace(/[^\wàâéèêëîïôùûç -]/gi, '')}_${isoAujourdhui()}.csv`,
         [['Nom', 'Prénom', 'Note'].map(champCSV).join(';'), ...lignes].join('\r\n'));
-      await apresExport([]);
+      statutExp.textContent = 'CSV téléchargé. (Le CSV ne marque pas « publiée » : utilisez la copie Pronote ou le marquage manuel.)';
+      statutExp.className = 'statut statut-ok';
     });
 
-    carteExp.append(el('div', { class: 'rang-btn' }, btnCopier, btnCSV), statutExp, zoneSecours, zoneRecap);
+    carteExp.append(el('div', { class: 'rang-btn' }, btnCopier, btnCSV), statutExp, zoneSecours, zoneRecap,
+      el('div', { class: 'rang-btn' }, btnMarquer));
     c.append(carteExp);
   }
 

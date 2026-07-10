@@ -829,13 +829,21 @@ dialog.visionneuse::backdrop {
   color: #fff;
 }
 
-/* ---- Toast de mise à jour ---- */
-.toast {
+/* ---- Toasts (pile : le conteneur porte le positionnement, audit A12) ---- */
+.toasts {
   position: fixed;
   left: 50%;
   bottom: calc(var(--h-nav) + 16px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 24px);
+}
+
+.toast {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -845,7 +853,7 @@ dialog.visionneuse::backdrop {
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
   font-size: 0.9rem;
-  max-width: calc(100vw - 24px);
+  max-width: 100%;
 }
 
 /* ---- Impression (récap, listes) ---- */

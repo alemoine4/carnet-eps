@@ -49,3 +49,10 @@ Nav 6 onglets : Aujourd'hui, Appel, Élèves, Notes, EDT, Plus. Serveur `server-
 ## D010 — 2026-06-15 — Tests : Playwright en dépendance de DEV uniquement
 
 Smoke-tests des parcours critiques via Playwright (`tests/e2e/`). Dépendance **de dev** (gratuite, Apache-2.0) : jamais livrée (gh-pages ne déploie que `app/`, `node_modules/` ignoré) → l'app reste sans dépendance runtime (BIBLE règle 1). Le navigateur **du preview** ne déclenche pas l'événement `close` d'un `<dialog>` sur `close()` programmatique : se fier à Playwright/au vrai Chrome, pas au preview, pour la fermeture des feuilles.
+
+## D011 — 2026-07-10 — Arbitrage audit A12/A13/A14 (v0.12.2)
+
+Trois comportements tranchés « au mieux de l'usage terrain » (audit du 2026-07-10, validation utilisateur « fait le mieux ») :
+- **A12 — toasts empilés** : les toasts s'empilent (conteneur `.toasts`, max 3, le plus ancien cède la place) au lieu de se remplacer → un « Supprimé — Annuler » n'est plus perdu quand deux suppressions s'enchaînent. `duree: Infinity` = toast persistant (utilisé par le toast de mise à jour, qui ne peut plus être écrasé).
+- **A13 — « publiée » sur preuve seulement** : une évaluation n'est marquée « publiée le … » que sur preuve de copie (presse-papiers réussi, ou événement `copy` réel sur la zone de secours). L'export CSV ne marque plus. Un bouton manuel « Marquer remontée / Annuler le marquage » couvre les autres workflows et corrige les erreurs → l'alerte « pas encore remontée vers Pronote » redevient fiable.
+- **A14 — consulter ≠ modifier** : le pré-remplissage « inapte » à l'ouverture d'un écran d'appel n'écrit en base que pour la **séance du jour**. Consulter un appel passé n'écrit plus rien (la pastille 🩺 reste affichée ; le statut peut toujours être posé à la main).

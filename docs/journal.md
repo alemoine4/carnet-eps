@@ -35,9 +35,14 @@ Modèle d'entrée :
 
 **Vérifié** : chaque correctif exercé en preview réel (résumé complet avec « 1 observation », photo piégée → « Photo non enregistrée : image illisible… », lien `javascript:` refusé, toast chevauchement EDT, ⚠ 2 séquences actives, renommage doublon bloqué, navigation rapide sans entrelacement, Réglages fonctionnels ✓) ; **smoke-tests 8/8 verts** ; console sans erreur.
 
-**Décidé** : A12/A13/A14 = décisions produit **en attente d'arbitrage utilisateur** (toasts empilés ? « publiée » seulement après copie réussie ? pré-remplissage inapte limité à la séance du jour ?) — reportées, rien codé.
+**Décidé (2e partie de session, « fait le mieux ») → v0.12.2, décision D011** :
+- **A12** : toasts empilés — `ui.js` crée un conteneur `.toasts` (fixe, colonne, max 3, le plus ancien évincé), `.toast` devient un bloc simple ; `duree: Infinity` = persistant ; `main.js` afficherToastMaj passe par `toast()` (garde anti-doublon par drapeau).
+- **A13** : `notes.js` — « publiée » marquée seulement sur preuve : presse-papiers réussi, ou événement `copy` réel sur la zone de secours (`once: true`) ; le CSV ne marque plus (message explicite) ; bouton « Marquer remontée dans Pronote (manuel) / Annuler le marquage » (toggle, efface le récap au dé-marquage).
+- **A14** : `appel.js` — pré-remplissage « inapte » conditionné à `seance.date === isoAujourdhui()` ; pastille 🩺 conservée sur les séances passées.
 
-**Prochaine étape** : arbitrer A12/A13/A14, puis reprendre la roadmap post-v1 (observation depuis l'appel, dashboard enrichi).
+**Vérifié (v0.12.2)** : 3 tests Playwright dédiés écrits puis supprimés (`verif-v0122.spec.mjs`) — pile de 3 toasts avec éviction + persistant ; séance passée = 0 écriture + 🩺 visible, séance du jour = pré-remplie « I » ; CSV → `publieePronote` reste null, copie → marquée + presse-papiers exact (« 15 »), toggle manuel réversible. **3/3 puis smoke-tests 8/8.** ⚠ Le pilotage navigateur par extension (claude-in-chrome) a gelé sur `import()` dynamique en éval — vérifier via Playwright dans ce cas (même leçon que D010).
+
+**Prochaine étape** : reprendre la roadmap post-v1 (observation depuis l'appel/séance du jour, dashboard enrichi, évals EPS A1–A5).
 
 ## 2026-06-15 (20) — Observations : socle + 1er lot (v0.12.0)
 

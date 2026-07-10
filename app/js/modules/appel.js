@@ -138,16 +138,21 @@ async function vueAppel(c, seanceId) {
 
   // Pré-remplissage : inaptitude active à la date de la séance → statut « inapte » d'office
   // (modifiable comme les autres — docs/fonctionnalites.md §4).
+  // UNIQUEMENT pour la séance du JOUR (audit A14) : consulter après coup un appel passé
+  // ne doit rien écrire en base. La pastille 🩺 reste affichée dans tous les cas.
+  const estSeanceDuJour = seance.date === isoAujourdhui();
   const actives = await inaptitudesActives(seance.date);
   const inaptesSet = new Set(actives.map((i) => i.eleveId));
-  for (const eleve of eleves) {
-    if (inaptesSet.has(eleve.id) && !enregs.has(eleve.id)) {
-      const rec = {
-        id: `${seanceId}_${eleve.id}`, seanceId, eleveId: eleve.id,
-        statut: 'inapte', minutesRetard: null, commentaire: 'Inaptitude en cours',
-      };
-      await enregistrer('appels', rec);
-      enregs.set(eleve.id, rec);
+  if (estSeanceDuJour) {
+    for (const eleve of eleves) {
+      if (inaptesSet.has(eleve.id) && !enregs.has(eleve.id)) {
+        const rec = {
+          id: `${seanceId}_${eleve.id}`, seanceId, eleveId: eleve.id,
+          statut: 'inapte', minutesRetard: null, commentaire: 'Inaptitude en cours',
+        };
+        await enregistrer('appels', rec);
+        enregs.set(eleve.id, rec);
+      }
     }
   }
 
@@ -169,7 +174,7 @@ async function vueAppel(c, seanceId) {
   const btnTerminer = el('button', { class: 'btn btn-principal' }, 'Terminer l’appel (le reste = présents)');
   const carteTete = carte(`${classe.nom} — ${sequence.apsa}`, '', dateFR(seance.date));
   carteTete.append(
-    el('p', {}, `Séance ${numero}/${total}${seance.theme ? ' · ' + seance.theme : ''}${seance.date === isoAujourdhui() ? '' : ' · ⚠ séance passée'}`),
+    el('p', {}, `Séance ${numero}/${total}${seance.theme ? ' · ' + seance.theme : ''}${estSeanceDuJour ? '' : ' · ⚠ séance passée'}`),
     compteursEl,
   );
   c.append(carteTete);

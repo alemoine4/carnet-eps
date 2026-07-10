@@ -4,6 +4,13 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-07-10 — v0.12.2 : Arbitrage des 3 décisions produit de l'audit (A12/A13/A14 — décision D011)
+
+- **Toasts empilés (A12)** : les toasts s'empilent (max 3) au lieu de se remplacer — deux suppressions rapprochées gardent chacune leur « Annuler » ; le toast « Nouvelle version installée » est persistant et ne peut plus être écrasé.
+- **« Publiée » sur preuve (A13)** : le marquage « publiée le … » n'a lieu que sur copie réussie (presse-papiers, ou copie réelle depuis la zone de secours) ; l'export CSV ne marque plus ; **bouton manuel** « Marquer remontée / Annuler le marquage » → l'alerte « pas encore remontée » redevient fiable.
+- **Consulter ≠ modifier (A14)** : le pré-remplissage « inapte » n'écrit en base que pour la séance du **jour** ; ouvrir un appel passé n'écrit plus rien (pastille 🩺 conservée).
+- Vérifié : 3 tests Playwright dédiés (pile de toasts, séance passée/du jour, CSV/copie/toggle) + smoke-tests **8/8**. Bump SW + `VERSION_APP` → 0.12.2 ; redéployé. **L'audit du 2026-07-10 est entièrement soldé.**
+
 ## 2026-07-10 — v0.12.1 : Corrections de l'audit complet (A1→A11, A15, A16)
 
 Audit 5 phases du 2026-07-10 (rapport `_TEMPO\DEV_APP\AUDIT_DEV_APP_2026-07-10.md`) : **0 critique**, lot validé « GO » :

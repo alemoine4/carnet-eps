@@ -9,7 +9,7 @@ Vue d'ensemble des phases : `docs/roadmap.md`.
 
 ### Audit /audit-projet du 2026-07-10 (rapport : `_TEMPO\DEV_APP\AUDIT_DEV_APP_2026-07-10.md`)
 - [x] 2026-07-10 — **Lot validé « GO »** (A1→A11, A15, A16) corrigé en v0.12.1 : observations dans le résumé sauvegarde/import + accords (A1/A2), erreurs visibles sur photo/pièce illisible (A3), date « aujourd'hui » en heure locale (A4), helpers dédupliqués sequences/reglages (A5), `numero` de séance documenté comme indicatif (A6), liens externes limités à http(s) (A7), fin des `alert()` natifs (A8), routeur protégé contre les rendus concurrents (A9), doublon bloqué au renommage de classe (A10), chevauchements EDT signalés (A11), conflit de séquences actives signalé sur l'accueil (A15), TODO nettoyé (A16).
-- [ ] **Décisions produit en attente (audit A12/A13/A14)** : empiler les toasts d'annulation ? ne marquer « publiée » qu'après copie Pronote réussie ? limiter le pré-remplissage « inapte » à la séance du jour ?
+- [x] 2026-07-10 — **A12/A13/A14 arbitrés et livrés en v0.12.2** (décision D011) : toasts empilés (max 3, persistant possible), « publiée » sur preuve de copie + marquage manuel réversible, pré-remplissage « inapte » limité à la séance du jour. Vérifié Playwright 3/3 + smoke 8/8. **Audit du 2026-07-10 entièrement soldé.**
 
 ### Audit UX du 2026-06-13 (skill impeccable « critique », 31/40 « Bon »)
 - [x] 2026-06-13 — **P1 accessibilité de l'appel** : `<dialog>` natif (helper `ouvrirFeuille` dans `ui.js`) + bouton « ⋯ » visible sur chaque carte élève → les 7 statuts au clavier + lecteur d'écran ; Échap, piège de focus, focus rendu au déclencheur. Tap-cycle + appui long conservés. Vérifié en preview. Voir `AVIS_APPEL_ACCESSIBILITE.md`.
