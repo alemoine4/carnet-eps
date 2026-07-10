@@ -14,6 +14,31 @@ Modèle d'entrée :
 
 ---
 
+## 2026-07-10 (21) — Audit complet /audit-projet + corrections (v0.12.1)
+
+**Fait** :
+- **Audit 5 phases** du périmètre `DEV_APP` entier (cartographie → priorisation → plan chiffré) : rapport **`_TEMPO\DEV_APP\AUDIT_DEV_APP_2026-07-10.md`**. Résultat : **0 constat critique**, 16 constats (A1–A16, dont 2 🟠). Vérifs en conditions réelles : console propre, 375 px sans débordement, sombre OK, dialogs accessibles, cibles ≥ 44 px, git = origin, gh-pages = v0.12.0, template sans dérive.
+- **Corrections validées « GO » (A1→A11, A15, A16), livrées en v0.12.1** — backup préalable dans `archives/2026-07-10/` :
+  - A1/A2 `sauvegarde.js` : `LIBELLES` complété (`observations`) + accord singulier/pluriel → le résumé avant import (destructif) est complet et correct.
+  - A3 `media.js` + `eleves.js` + `inaptitudes.js` : `compresserImage` lève des erreurs claires (bitmap illisible, toBlob null) ; try/catch + message `statut-erreur` sur photo de fiche et remplacement de pièce (l'ancienne pièce n'est supprimée qu'après stockage réussi de la nouvelle).
+  - A4 `metier.js` : `isoAujourdhui()` en **heure locale** (plus de bascule « hier » entre minuit et 1-2 h).
+  - A5 : `sequences.js` importe `dateFR`/`isoAujourdhui` de metier.js ; `reglages.js` utilise le `champTexte` d'ui.js (doublons supprimés).
+  - A6 `docs/modele-donnees.md` : `seances.numero` documenté comme figé/indicatif (les affichages recalculent par tri de date).
+  - A7 `documents.js` : liens limités à `https?://` (à la saisie **et** à l'ouverture — défense contre une sauvegarde JSON tierce).
+  - A8 : les 3 `alert()` restants → `toast` (import/purge : toast puis reload à 900 ms).
+  - A9 `ui.js` : `afficherVue` remplace le nœud `#vue` à chaque navigation (clone) + jeton de génération → un rendu async obsolète écrit dans un nœud détaché, plus de mélange possible.
+  - A10 `eleves.js` : contrôle de doublon au **renommage** de classe (toast + valeur rétablie).
+  - A11 `edt.js` : chevauchement de créneaux détecté (jour + plages + compat A/B/AB) → enregistré quand même + toast ⚠ (2 classes en barrette restent possibles).
+  - A15 `accueil.js` : ⚠ si plusieurs séquences actives se chevauchent pour la classe du moment (laquelle est utilisée + renvoi vers Séquences).
+  - A16 `TODO.md` : sections périmées nettoyées (publication déjà faite, Playwright validé, phases 4→9 livrées).
+- `.gitignore` : + `archives/` (backups locaux, pas dans le dépôt).
+
+**Vérifié** : chaque correctif exercé en preview réel (résumé complet avec « 1 observation », photo piégée → « Photo non enregistrée : image illisible… », lien `javascript:` refusé, toast chevauchement EDT, ⚠ 2 séquences actives, renommage doublon bloqué, navigation rapide sans entrelacement, Réglages fonctionnels ✓) ; **smoke-tests 8/8 verts** ; console sans erreur.
+
+**Décidé** : A12/A13/A14 = décisions produit **en attente d'arbitrage utilisateur** (toasts empilés ? « publiée » seulement après copie réussie ? pré-remplissage inapte limité à la séance du jour ?) — reportées, rien codé.
+
+**Prochaine étape** : arbitrer A12/A13/A14, puis reprendre la roadmap post-v1 (observation depuis l'appel, dashboard enrichi).
+
 ## 2026-06-15 (20) — Observations : socle + 1er lot (v0.12.0)
 
 **Fait** (option du socle de `AVIS_OBSERVATIONS_MODELE.md` : modèle OK avec `ton`, migration additive sans auto-export forcé, 1er lot = socle + bouton + timeline) :

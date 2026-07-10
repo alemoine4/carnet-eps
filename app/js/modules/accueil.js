@@ -47,6 +47,10 @@ async function carteMaintenant() {
   const sequences = (await parIndex('sequences', 'classeId', creneau.classeId))
     .filter((s) => (!s.dateDebut || s.dateDebut <= isoJour) && (!s.dateFin || isoJour <= s.dateFin));
   const sequence = sequences[0];
+  if (sequences.length > 1) {
+    cM.append(el('p', { class: 'note-discrete' },
+      `⚠ ${sequences.length} séquences actives pour cette classe (dates qui se chevauchent) — « ${sequence.apsa} » est utilisée. À vérifier dans Plus → Séquences.`));
+  }
 
   if (!sequence) {
     cM.append(

@@ -3,9 +3,13 @@
 État courant + prochaines actions. À mettre à jour à **chaque session** (voir rituel dans CLAUDE.md).
 Vue d'ensemble des phases : `docs/roadmap.md`.
 
-## 🎒 Jalon rentrée 2026 : phases 1→6 TERMINÉES (v0.7.0) — reste les validations terrain ci-dessous
+## 🎒 Jalon rentrée 2026 : phases 1→9 TERMINÉES — app EN LIGNE (https://alemoine4.github.io/carnet-eps/) — restent les validations terrain ci-dessous
 
-## Phase active : post-v1 — corrections de l'audit UX (2026-06-13)
+## Phase active : post-v1 — audit complet du 2026-07-10 (corrections v0.12.1)
+
+### Audit /audit-projet du 2026-07-10 (rapport : `_TEMPO\DEV_APP\AUDIT_DEV_APP_2026-07-10.md`)
+- [x] 2026-07-10 — **Lot validé « GO »** (A1→A11, A15, A16) corrigé en v0.12.1 : observations dans le résumé sauvegarde/import + accords (A1/A2), erreurs visibles sur photo/pièce illisible (A3), date « aujourd'hui » en heure locale (A4), helpers dédupliqués sequences/reglages (A5), `numero` de séance documenté comme indicatif (A6), liens externes limités à http(s) (A7), fin des `alert()` natifs (A8), routeur protégé contre les rendus concurrents (A9), doublon bloqué au renommage de classe (A10), chevauchements EDT signalés (A11), conflit de séquences actives signalé sur l'accueil (A15), TODO nettoyé (A16).
+- [ ] **Décisions produit en attente (audit A12/A13/A14)** : empiler les toasts d'annulation ? ne marquer « publiée » qu'après copie Pronote réussie ? limiter le pré-remplissage « inapte » à la séance du jour ?
 
 ### Audit UX du 2026-06-13 (skill impeccable « critique », 31/40 « Bon »)
 - [x] 2026-06-13 — **P1 accessibilité de l'appel** : `<dialog>` natif (helper `ouvrirFeuille` dans `ui.js`) + bouton « ⋯ » visible sur chaque carte élève → les 7 statuts au clavier + lecteur d'écran ; Échap, piège de focus, focus rendu au déclencheur. Tap-cycle + appui long conservés. Vérifié en preview. Voir `AVIS_APPEL_ACCESSIBILITE.md`.
@@ -32,7 +36,7 @@ Vue d'ensemble des phases : `docs/roadmap.md`.
 
 - [ ] **Pronote réel** : import d'un export élèves du collège (phase 2) + collage d'une colonne de notes dans un service (phase 6) — checklist complète dans `docs/pronote.md`
 - [ ] **Android réel** : navigation au pouce, chrono appel 28 élèves < 40 s (phase 4), capture caméra du certificat (phase 5)
-- [ ] **Installation PWA** : dire « publie sur GitHub Pages » quand tu veux (HTTPS requis)
+- [ ] **Installation PWA** : installer depuis https://alemoine4.github.io/carnet-eps/ (PC + Android, guide : `docs/guide-installation.md`)
 - [ ] Impression papier : récap absences + relevé de notes
 
 ## Reliquats phase 5 (validation terrain)
@@ -53,22 +57,14 @@ Vue d'ensemble des phases : `docs/roadmap.md`.
 ## Reliquat phase 1 (dépend d'Alexandre)
 
 - [ ] **Vérifier le shell sur Android réel** (Chrome) : nav tactile, zones 44 px, clavier
-- [ ] **Tester l'installation PWA** sur Android et PC : nécessite HTTPS → publier `app/` sur GitHub Pages (me dire « publie sur GitHub Pages » quand tu veux)
-- [ ] Premier test Playwright — ⚠ dépendance npm : à valider explicitement avant installation (BIBLE) ; alternative en place : vérifs preview_eval scriptées
-- [ ] Toast « nouvelle version disponible » quand un SW est en attente (le bouton MAJ existe déjà dans Réglages)
+- [x] 2026-06-13 — Publication GitHub Pages (l'installation PWA réelle reste dans « Validations terrain » ci-dessus)
+- [x] 2026-06-15 — Tests Playwright : dépendance dev validée, harnais + 8 smoke-tests verts (`npm test`)
+- [x] 2026-06-12 — Toast « Nouvelle version installée — Recharger » sur `controllerchange` (v0.9.0)
 
 ## Reliquat phase 2 (validation terrain)
 
 - [ ] **Valider l'import avec un vrai export Pronote du collège** (encodage, en-têtes réels, effectif complet) — critère de sortie officiel de la phase 2, checklist dans `docs/pronote.md`
-- [ ] Photo de l'élève sur la fiche (pipeline photo/compression mutualisé avec les certificats, prévu phase 5)
-
-## À faire ensuite (phases 4+, voir roadmap)
-- [ ] Phase 4 — Appel : écran tactile, statuts, historique, stats tenue
-- [ ] Phase 5 — Inaptitudes & certificats : photos compressées, alertes d'expiration
-- [ ] Phase 6 — Notes : saisie grille + **export Pronote** (presse-papiers + CSV) à valider sur le Pronote de l'établissement
-- [ ] Phase 7 — Documents + tableau de bord « Aujourd'hui »
-- [ ] Phase 8 — QA : checklist complète, axe-core, Lighthouse, volumétrie, round-trip sauvegarde avec vraies photos
-- [ ] Phase 9 — Distribution : guide d'installation + procédure de rentrée
+- [x] 2026-06-12 — Photo de l'élève sur la fiche (pipeline mutualisé avec les certificats, livré en v0.6.0)
 
 ## En attente / réflexion
 

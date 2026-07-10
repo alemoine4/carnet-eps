@@ -9,7 +9,7 @@ import {
   parserCSV, lireTexteCSV, supprimerEleveEnCascade,
   apercuSuppressionEleve, detailSuppression, restaurer,
 } from '../io.js';
-import { STATUTS, SEUIL_ALERTE, dateFR } from '../metier.js';
+import { STATUTS, SEUIL_ALERTE, dateFR, isoAujourdhui } from '../metier.js';
 import { stockerFichier, supprimerFichier, urlDuFichier } from '../media.js';
 import { carteObservations } from './observations.js';
 import { sauverPrefs } from '../state.js';
@@ -157,7 +157,16 @@ async function vueClasse(c, id) {
   inpCouleur.value = classe.couleur || PALETTE[0];
   inpCouleur.addEventListener('change', async () => { classe.couleur = inpCouleur.value; await enregistrer('classes', classe); });
   carteCl.append(
-    champTexte({ id: 'cl-nom', libelle: 'Nom', valeur: classe.nom, onChange: async (v) => { if (v) { classe.nom = v; await enregistrer('classes', classe); } } }),
+    champTexte({ id: 'cl-nom', libelle: 'Nom', valeur: classe.nom, onChange: async (v) => {
+      if (!v) return;
+      // Même contrôle de doublon qu'à la création (vueListeClasses).
+      if ((await tous('classes')).some((cl) => cl.id !== classe.id && cleTexte(cl.nom) === cleTexte(v))) {
+        toast(`Une classe « ${v} » existe déjà — nom non modifié.`);
+        rafraichir();
+        return;
+      }
+      classe.nom = v; await enregistrer('classes', classe);
+    } }),
     champTexte({ id: 'cl-niveau', libelle: 'Niveau', valeur: classe.niveau || '', onChange: async (v) => { classe.niveau = v; await enregistrer('classes', classe); } }),
     el('div', { class: 'champ' }, el('label', { for: 'cl-couleur' }, 'Couleur'), inpCouleur),
   );
@@ -270,14 +279,20 @@ async function vueFiche(c, id) {
   }
   if (!photoOK) h2Fiche.prepend(avatar(eleve, classe?.couleur));
   const inpPhoto = el('input', { type: 'file', accept: 'image/*', capture: 'user', hidden: true });
+  const statutPhoto = el('p', { class: 'statut' });
   inpPhoto.addEventListener('change', async () => {
     const f = inpPhoto.files[0];
     if (!f) return;
-    const rec = await stockerFichier(f);
-    if (eleve.photoFichierId) await supprimerFichier(eleve.photoFichierId);
-    eleve.photoFichierId = rec.id;
-    await sauver();
-    rafraichir();
+    try {
+      const rec = await stockerFichier(f);
+      if (eleve.photoFichierId) await supprimerFichier(eleve.photoFichierId);
+      eleve.photoFichierId = rec.id;
+      await sauver();
+      rafraichir();
+    } catch (e) {
+      statutPhoto.textContent = `Photo non enregistrée : ${e.message}`;
+      statutPhoto.className = 'statut statut-erreur';
+    }
   });
   const rangPhoto = el('div', { class: 'rang-btn' }, el('label', { class: 'btn' }, photoOK ? 'Changer la photo' : 'Ajouter une photo', inpPhoto));
   if (photoOK) {
@@ -290,7 +305,7 @@ async function vueFiche(c, id) {
     });
     rangPhoto.append(btnRetirer);
   }
-  carteId.append(rangPhoto);
+  carteId.append(rangPhoto, statutPhoto);
   carteId.append(
     champTexte({ id: 'f-nom', libelle: 'Nom', valeur: eleve.nom, onChange: async (v) => { if (v) { eleve.nom = v; await sauver(); } } }),
     champTexte({ id: 'f-prenom', libelle: 'Prénom', valeur: eleve.prenom, onChange: async (v) => { if (v) { eleve.prenom = v; await sauver(); } } }),
@@ -353,7 +368,7 @@ async function vueFiche(c, id) {
   const inaptE = (await parIndex('inaptitudes', 'eleveId', id))
     .sort((a, b) => String(b.dateDebut).localeCompare(String(a.dateDebut)));
   const carteIn = carte('Inaptitudes & certificats');
-  const aujF = new Date().toISOString().slice(0, 10);
+  const aujF = isoAujourdhui();
   if (!inaptE.length) {
     carteIn.append(el('p', {}, 'Aucune inaptitude enregistrée.'));
   } else {

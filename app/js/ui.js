@@ -9,9 +9,15 @@ export function enregistrerVue(id, rendu) {
   vues.set(id, rendu);
 }
 
+let generation = 0; // deux navigations très rapprochées : seule la plus récente garde la main
+
 export async function afficherVue(id, params = []) {
-  const conteneur = document.getElementById('vue');
-  conteneur.innerHTML = '';
+  const gen = ++generation;
+  // Conteneur NEUF à chaque navigation : un rendu async devenu obsolète continue d'écrire
+  // dans l'ancien nœud détaché au lieu de se mélanger à la vue courante.
+  const ancien = document.getElementById('vue');
+  const conteneur = ancien.cloneNode(false); // mêmes attributs (id, tabindex, aria-label), vide
+  ancien.replaceWith(conteneur);
   conteneur.className = 'vue'; // réinitialise (une vue peut ajouter 'vue-large' pour s'élargir sur PC)
   const rendu = vues.get(id);
   if (!rendu) {
@@ -19,7 +25,7 @@ export async function afficherVue(id, params = []) {
     return;
   }
   await rendu(conteneur, params);
-  conteneur.focus({ preventScroll: true });
+  if (gen === generation) conteneur.focus({ preventScroll: true });
 }
 
 // el('button', { class: 'btn', onclick: fn }, 'Texte') — création DOM concise et sûre

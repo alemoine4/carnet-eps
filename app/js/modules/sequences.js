@@ -9,6 +9,7 @@ import {
   supprimerSeanceEnCascade, supprimerSequenceEnCascade,
   apercuSuppressionSequence, detailSuppression, restaurer,
 } from '../io.js';
+import { dateFR, isoAujourdhui } from '../metier.js';
 
 const APSA_COURANTES = [
   'Demi-fond', 'Course de haies', 'Relais-vitesse', 'Javelot', 'Saut en hauteur', 'Natation de vitesse',
@@ -26,8 +27,6 @@ const CA_OPTIONS = [
 ];
 
 const trierClasses = (a, b) => a.nom.localeCompare(b.nom, 'fr', { numeric: true });
-const dateFR = (iso) => (iso ? new Date(`${iso}T12:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) : '?');
-const isoAujourdhui = () => new Date().toISOString().slice(0, 10);
 
 function estActive(s, jour = isoAujourdhui()) {
   return (!s.dateDebut || s.dateDebut <= jour) && (!s.dateFin || jour <= s.dateFin);

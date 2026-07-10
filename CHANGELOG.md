@@ -4,6 +4,18 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-07-10 — v0.12.1 : Corrections de l'audit complet (A1→A11, A15, A16)
+
+Audit 5 phases du 2026-07-10 (rapport `_TEMPO\DEV_APP\AUDIT_DEV_APP_2026-07-10.md`) : **0 critique**, lot validé « GO » :
+- **Sauvegarde** : le résumé (écran + confirmation d'import) inclut désormais les **observations** et accorde le singulier (A1/A2).
+- **Photos/pièces** : une image illisible (HEIC, fichier corrompu) affiche un **message d'erreur clair** au lieu d'échouer en silence (fiche élève + remplacement de pièce) ; garde-fou `toBlob` null (A3).
+- **Dates** : « aujourd'hui » calculé en **heure locale** (plus de bascule à la veille entre minuit et 1-2 h) (A4).
+- **Robustesse** : routeur protégé contre les rendus concurrents (navigation très rapide) (A9) ; doublon bloqué au renommage de classe (A10).
+- **Garde-fous EDT/accueil** : chevauchement de créneaux signalé (toast, non bloquant) (A11) ; ⚠ si 2 séquences actives se chevauchent pour la classe en cours (A15).
+- **Divers** : liens de documents limités à http(s) (A7), `alert()` → toasts (A8), helpers dédupliqués (A5), `seances.numero` documenté comme indicatif (A6), TODO.md dépoussiéré (A16).
+- Vérifié : preview réel correctif par correctif + **smoke-tests 8/8**. Bump SW + `VERSION_APP` → 0.12.1 ; redéployé.
+- En attente d'arbitrage (audit A12/A13/A14) : toasts empilés, « publiée » après copie réussie seulement, pré-remplissage inapte limité au jour même.
+
 ## 2026-06-15 — v0.12.0 : Observations (notes terrain) — socle + 1er lot
 
 Première brique « noter en 2 taps » (avis : `AVIS_OBSERVATIONS_MODELE.md`).

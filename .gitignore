@@ -9,3 +9,6 @@ test-results/
 playwright-report/
 blob-report/
 .playwright/
+
+# Backups locaux avant corrections (convention audit) — pas dans le dépôt
+archives/

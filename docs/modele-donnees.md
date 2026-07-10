@@ -24,6 +24,9 @@ edt           { id, jour (1=lundi…7), heureDebut, heureFin, classeId*, semaine
 sequences     { id, classeId*, apsa, ca (1-4), afl[], dateDebut, dateFin, nbSeancesPrevu, objectifs, bilan }
 
 seances       { id, sequenceId*, date*, edtId?, numero, theme, bilan, annulee }
+              ⚠ numero = valeur figée à la création, jamais recalculée (insérer une séance
+              antérieure la rend fausse). Les affichages recalculent tous le numéro par tri
+              de date : ne pas se fier au champ stocké (audit 2026-07-10, A6).
 
 appels        { id, seanceId*, eleveId*, statut, minutesRetard?, commentaire }
               statut ∈ present | absent | retard | dispense | inapte | oubli_tenue | infirmerie

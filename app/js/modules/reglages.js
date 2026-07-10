@@ -1,21 +1,9 @@
 // modules/reglages.js — réglages (phase 1) : établissement, année scolaire,
 // thème, stockage, version et mises à jour (BIBLE règle 5 : bouton MAJ visible).
 
-import { enregistrerVue, el, carte } from '../ui.js';
+import { enregistrerVue, el, carte, champTexte } from '../ui.js';
 import { lireMeta, ecrireMeta } from '../io.js';
 import { etat, sauverPrefs, estLocalhost, VERSION_APP } from '../state.js';
-
-function champTexte(id, libelle, valeur, placeholder, onChange) {
-  const input = el('input', { type: 'text', id, placeholder, autocomplete: 'off' });
-  input.value = valeur;
-  const retour = el('span', { class: 'statut statut-ok', role: 'status' });
-  input.addEventListener('change', async () => {
-    await onChange(input.value.trim());
-    retour.textContent = '✓ enregistré';
-    setTimeout(() => { retour.textContent = ''; }, 2000);
-  });
-  return el('div', { class: 'champ' }, el('label', { for: id }, libelle, ' ', retour), input);
-}
 
 function octetsLisibles(n) {
   if (!Number.isFinite(n)) return '?';
@@ -30,8 +18,8 @@ export function initialiser() {
     // ---- Établissement ----
     const carteEtab = carte('Établissement');
     carteEtab.append(
-      champTexte('reg-etab', 'Nom de l’établissement', await lireMeta('etablissement'), 'Collège…', (v) => ecrireMeta('etablissement', v)),
-      champTexte('reg-annee', 'Année scolaire', await lireMeta('anneeScolaire'), '2026-2027', (v) => ecrireMeta('anneeScolaire', v)),
+      champTexte({ id: 'reg-etab', libelle: 'Nom de l’établissement', valeur: await lireMeta('etablissement'), placeholder: 'Collège…', onChange: (v) => ecrireMeta('etablissement', v) }),
+      champTexte({ id: 'reg-annee', libelle: 'Année scolaire', valeur: await lireMeta('anneeScolaire'), placeholder: '2026-2027', onChange: (v) => ecrireMeta('anneeScolaire', v) }),
     );
     c.append(carteEtab);
 

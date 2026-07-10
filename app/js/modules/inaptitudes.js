@@ -286,23 +286,29 @@ async function vueDetail(c, id) {
 
   // --- Certificat ---
   const carteC = carte('Certificat / pièce jointe', '');
+  const statutPiece = el('p', { class: 'statut' });
   const inpRemplace = el('input', { type: 'file', accept: 'image/*,.pdf,application/pdf', capture: 'environment', hidden: true });
   inpRemplace.addEventListener('change', async () => {
     const f = inpRemplace.files[0];
     if (!f) return;
-    const rec = await stockerFichier(f);
-    if (inapt.certificatId) {
-      const ancien = await lire('certificats', inapt.certificatId);
-      if (ancien) { await supprimerFichier(ancien.fichierId); await supprimer('certificats', ancien.id); }
+    try {
+      const rec = await stockerFichier(f); // d'abord stocker la nouvelle pièce : si ça échoue, l'ancienne reste en place
+      if (inapt.certificatId) {
+        const ancien = await lire('certificats', inapt.certificatId);
+        if (ancien) { await supprimerFichier(ancien.fichierId); await supprimer('certificats', ancien.id); }
+      }
+      const certificatId = crypto.randomUUID();
+      await enregistrer('certificats', {
+        id: certificatId, eleveId: inapt.eleveId, dateDepot: isoAujourdhui(),
+        dateDebut: inapt.dateDebut, dateFin: inapt.dateFin, fichierId: rec.id, commentaire: '',
+      });
+      inapt.certificatId = certificatId;
+      await sauver();
+      rafraichir();
+    } catch (e) {
+      statutPiece.textContent = `Pièce non enregistrée : ${e.message}`;
+      statutPiece.className = 'statut statut-erreur';
     }
-    const certificatId = crypto.randomUUID();
-    await enregistrer('certificats', {
-      id: certificatId, eleveId: inapt.eleveId, dateDepot: isoAujourdhui(),
-      dateDebut: inapt.dateDebut, dateFin: inapt.dateFin, fichierId: rec.id, commentaire: '',
-    });
-    inapt.certificatId = certificatId;
-    await sauver();
-    rafraichir();
   });
   if (inapt.certificatId) {
     const cert = await lire('certificats', inapt.certificatId);
@@ -326,7 +332,7 @@ async function vueDetail(c, id) {
     carteC.append(el('p', {}, 'Aucune pièce jointe pour cette inaptitude.'));
   }
   const labelAjout = el('label', { class: 'btn' }, inapt.certificatId ? 'Remplacer la pièce' : 'Ajouter une photo / un PDF', inpRemplace);
-  carteC.append(el('div', { class: 'rang-btn' }, labelAjout));
+  carteC.append(el('div', { class: 'rang-btn' }, labelAjout), statutPiece);
   c.append(carteC);
 
   // --- Suppression ---
