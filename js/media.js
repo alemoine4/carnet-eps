@@ -5,7 +5,13 @@
 import { enregistrer, lire, supprimer } from './io.js';
 
 export async function compresserImage(fichier, { maxDim = 1600, cibleOctets = 300 * 1024 } = {}) {
-  const bitmap = await createImageBitmap(fichier);
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(fichier);
+  } catch {
+    // HEIC d'iPhone sur PC, fichier tronqué… : message clair plutôt qu'un rejet muet.
+    throw new Error(`image illisible sur cet appareil (format non pris en charge ?) — ${fichier.name || 'fichier'}`);
+  }
   const ratio = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement('canvas');
   canvas.width = Math.max(1, Math.round(bitmap.width * ratio));
@@ -17,6 +23,7 @@ export async function compresserImage(fichier, { maxDim = 1600, cibleOctets = 30
     dernier = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', qualite));
     if (dernier && dernier.size <= cibleOctets) break;
   }
+  if (!dernier) throw new Error('compression impossible (image non convertible en JPEG)');
   return dernier;
 }
 

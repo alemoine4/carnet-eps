@@ -99,7 +99,7 @@ async function vueEDT(c) {
       statutForm.className = 'statut statut-erreur';
       return;
     }
-    await enregistrer('edt', {
+    const rec = {
       id: enEdition?.id || crypto.randomUUID(),
       jour: Number(selJour.value),
       heureDebut: inpDebut.value,
@@ -107,8 +107,18 @@ async function vueEDT(c) {
       classeId: selClasse.value,
       semaine: selSemaine.value,
       installation: inpInstal.value.trim(),
-    });
+    };
+    // Chevauchement (même jour, plages qui se croisent, semaines compatibles A/B/AB) :
+    // on enregistre quand même — un prof peut avoir 2 classes en barrette — mais on prévient.
+    const chevauche = creneaux.find((cr) => cr.id !== rec.id && cr.jour === rec.jour
+      && (cr.semaine === 'AB' || rec.semaine === 'AB' || cr.semaine === rec.semaine)
+      && enMinutes(rec.heureDebut) < enMinutes(cr.heureFin) && enMinutes(cr.heureDebut) < enMinutes(rec.heureFin));
+    await enregistrer('edt', rec);
     rafraichir();
+    if (chevauche) {
+      const cl = classes.find((x) => x.id === chevauche.classeId);
+      toast(`⚠ Ce créneau chevauche ${JOURS[chevauche.jour]} ${chevauche.heureDebut}–${chevauche.heureFin} (${cl?.nom || '?'}). Enregistré quand même.`);
+    }
   });
   btnSupprimer.addEventListener('click', async () => {
     if (!enEdition) return;

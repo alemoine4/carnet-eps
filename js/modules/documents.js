@@ -67,6 +67,7 @@ async function vueDocuments(c) {
     const f = inpFichier.files[0];
     const url = inpUrl.value.trim();
     if (!f && !url) { statutForm.textContent = 'Choisissez un fichier ou indiquez un lien.'; statutForm.className = 'statut statut-erreur'; return; }
+    if (!f && !/^https?:\/\//i.test(url)) { statutForm.textContent = 'Le lien doit commencer par http:// ou https://.'; statutForm.className = 'statut statut-erreur'; return; }
     btnCreer.disabled = true;
     try {
       let fichierId = null;
@@ -117,9 +118,14 @@ async function vueDocuments(c) {
       el('span', { class: 'note-inline pousse-droite' }, dateFR(doc.dateAjout)),
     );
     btnOuvrir.addEventListener('click', async () => {
-      if (doc.url) { window.open(doc.url, '_blank', 'noopener'); return; }
+      if (doc.url) {
+        // Défense en profondeur : un lien non http(s) (sauvegarde JSON venue d'ailleurs) n'est pas ouvert.
+        if (/^https?:\/\//i.test(doc.url)) window.open(doc.url, '_blank', 'noopener');
+        else toast('Lien non ouvert : adresse non http/https.');
+        return;
+      }
       const fichier = await lire('fichiers', doc.fichierId);
-      if (!fichier) { alert('Fichier introuvable (supprimé ?).'); return; }
+      if (!fichier) { toast('Fichier introuvable (supprimé ?).'); return; }
       ouvrirVisionneuse(c, fichier);
     });
     const btnSuppr = el('button', { class: 'btn btn-mini', 'aria-label': `Supprimer ${doc.titre}` }, '✕');

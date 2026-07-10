@@ -39,7 +39,11 @@ export const MODELES_PHRASES = [
 ];
 
 // ---- Dates & heures ----
-export const isoAujourdhui = () => new Date().toISOString().slice(0, 10);
+// Date LOCALE (pas toISOString/UTC : entre minuit et 1-2 h du matin, l'UTC est encore « hier »).
+export const isoAujourdhui = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 export const dateFR = (iso) => (iso ? new Date(`${iso}T12:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) : '?');
 export const enMinutes = (hm) => {
   const [h, m] = String(hm || '0:0').split(':').map(Number);

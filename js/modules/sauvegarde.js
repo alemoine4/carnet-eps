@@ -2,28 +2,31 @@
 // L'export est LE mécanisme de transfert PC ↔ Android et le filet de sécurité
 // avant toute opération destructrice (BIBLE règle 4).
 
-import { enregistrerVue, el, carte, confirmer } from '../ui.js';
+import { enregistrerVue, el, carte, confirmer, toast } from '../ui.js';
 import { exporterJSON, importerJSON, validerExport, telechargerJSON, compterTout, vider, STORES } from '../io.js';
 
+// [singulier, pluriel] par store — tout store de données doit figurer ici (sinon il
+// disparaît du résumé affiché avant un import qui REMPLACE tout). `meta` exclu (réglages).
 const LIBELLES = {
-  classes: 'classes',
-  eleves: 'élèves',
-  edt: 'créneaux EDT',
-  sequences: 'séquences',
-  seances: 'séances',
-  appels: 'appels',
-  inaptitudes: 'inaptitudes',
-  certificats: 'certificats',
-  fichiers: 'pièces jointes',
-  evaluations: 'évaluations',
-  notes: 'notes',
-  documents: 'documents',
+  classes: ['classe', 'classes'],
+  eleves: ['élève', 'élèves'],
+  edt: ['créneau EDT', 'créneaux EDT'],
+  sequences: ['séquence', 'séquences'],
+  seances: ['séance', 'séances'],
+  appels: ['appel', 'appels'],
+  inaptitudes: ['inaptitude', 'inaptitudes'],
+  certificats: ['certificat', 'certificats'],
+  fichiers: ['pièce jointe', 'pièces jointes'],
+  evaluations: ['évaluation', 'évaluations'],
+  notes: ['note', 'notes'],
+  documents: ['document', 'documents'],
+  observations: ['observation', 'observations'],
 };
 
 function resumeComptes(comptes) {
   const parties = Object.entries(LIBELLES)
     .filter(([nom]) => comptes[nom] > 0)
-    .map(([nom, libelle]) => `${comptes[nom]} ${libelle}`);
+    .map(([nom, [sing, plur]]) => `${comptes[nom]} ${comptes[nom] > 1 ? plur : sing}`);
   return parties.length ? parties.join(' · ') : 'aucune donnée pour l’instant';
 }
 
@@ -93,8 +96,8 @@ export function initialiser() {
         });
         if (!ok2) return;
         await importerJSON(objet);
-        alert('Import terminé. L’application va se recharger.');
-        location.reload();
+        toast('Import terminé — rechargement…');
+        setTimeout(() => location.reload(), 900);
       } catch (e) {
         statut(statutImp, `Import impossible : ${e.message}`, false);
       } finally {
@@ -122,8 +125,8 @@ export function initialiser() {
       });
       if (!ok2) return;
       for (const nom of STORES) await vider(nom);
-      alert('Données effacées. L’application va se recharger.');
-      location.reload();
+      toast('Données effacées — rechargement…');
+      setTimeout(() => location.reload(), 900);
     });
     cartePurge.append(el('div', { class: 'rang-btn' }, btnPurge));
     c.append(cartePurge);
