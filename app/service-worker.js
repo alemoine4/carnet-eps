@@ -4,7 +4,7 @@
    ⚠ Incrémenter VERSION à chaque déploiement (synchroniser avec VERSION_APP de main.js).
    Non enregistré sur localhost (voir main.js, décision D008). */
 
-const VERSION = '0.12.2';
+const VERSION = '0.12.3';
 const CACHE = `carnet-eps-${VERSION}`;
 const ASSETS = [
   './',

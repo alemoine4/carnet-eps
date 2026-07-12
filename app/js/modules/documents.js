@@ -65,9 +65,11 @@ async function vueDocuments(c) {
     const titre = inpTitre.value.trim();
     if (!titre) { statutForm.textContent = 'Le titre est obligatoire.'; statutForm.className = 'statut statut-erreur'; return; }
     const f = inpFichier.files[0];
-    const url = inpUrl.value.trim();
+    let url = inpUrl.value.trim();
     if (!f && !url) { statutForm.textContent = 'Choisissez un fichier ou indiquez un lien.'; statutForm.className = 'statut statut-erreur'; return; }
-    if (!f && !/^https?:\/\//i.test(url)) { statutForm.textContent = 'Le lien doit commencer par http:// ou https://.'; statutForm.className = 'statut statut-erreur'; return; }
+    // « www.site.fr » (sans schéma) → https:// d'office ; tout autre schéma que http(s) est refusé.
+    if (!f && url && !/^[a-z][a-z0-9+.-]*:/i.test(url)) url = `https://${url}`;
+    if (!f && !/^https?:\/\//i.test(url)) { statutForm.textContent = 'Le lien doit commencer par http:// ou https:// (ou coller l’adresse sans préfixe).'; statutForm.className = 'statut statut-erreur'; return; }
     btnCreer.disabled = true;
     try {
       let fichierId = null;

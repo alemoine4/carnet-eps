@@ -3,14 +3,17 @@
 > Le carnet de bord numérique du professeur d'EPS — **PC + Android**, 100 % local, hors ligne, gratuit.
 > Équivalent libre des applications iOS type « Tablette EPS », avec passerelle **Pronote** (import élèves, export notes).
 
-## Ce que fera l'application
+**➡️ Application en ligne : https://alemoine4.github.io/carnet-eps/** — installable en PWA (PC + Android), guide : `docs/guide-installation.md`.
+
+## Ce que fait l'application
 
 | Module | En bref |
 |---|---|
 | 🏠 Aujourd'hui | Cours du jour, alertes (certificats qui expirent, inaptitudes en cours, oublis de tenue répétés) |
 | 📅 EDT | Emploi du temps EPS : créneaux, semaines A/B, périodes, installations (gymnase, piscine…) |
 | ✋ Appel | Appel tactile rapide : présent / absent / retard / dispensé / inapte / oubli de tenue / infirmerie |
-| 👥 Élèves | Classes et élèves importés depuis Pronote (CSV), fiche élève avec historique complet |
+| 👥 Élèves | Classes et élèves importés depuis Pronote (CSV), fiche élève avec historique complet et **observations** (notes terrain en 2 taps) |
+| 📈 Suivi | Alertes élèves agrégées : inaptitudes qui expirent, seuils d'oublis de tenue/dispenses, notes non remontées |
 | 🩺 Inaptitudes | Inaptitudes totales/partielles, dates, restrictions, photo du certificat médical, alertes d'expiration |
 | 📊 Notes | Évaluations par séquence (note /20, barème, AFL), saisie en grille, **export vers Pronote** |
 | 📁 Documents | Bibliothèque locale : fiches, projets de séquence, convocations… |
@@ -63,16 +66,16 @@ carnet-eps/
 │   ├── decisions.md         décisions actées (D001…)
 │   └── journal.md           journal de bord des sessions
 │
-├── tests/               ← checklist manuelle + e2e Playwright (à venir)
+├── tests/               ← checklist manuelle + smoke-tests e2e Playwright (npm test)
 ├── archives/            ← versions gelées (ne pas toucher)
 └── .claude/             ← commandes (/cadrer, /dev-feature…) et skills
 ```
 
 ## État du projet
 
-**v0.8.1 — phases 0→8 terminées (2026-06-12)** : tous les modules du tableau ci-dessus sont fonctionnels et vérifiés (🎒 jalon rentrée 2026 atteint). QA passée : Lighthouse Perf 97 / A11y 100 / BP 100, année complète simulée fluide (< 50 ms par écran), restauration intégrale en ~2 s — détail dans `tests/checklist.md`.
+**v0.12.3 — en ligne et fonctionnelle (2026-07-12)** : phases 0→9 livrées (🎒 jalon rentrée 2026), tous les modules du tableau ci-dessus sont fonctionnels, vérifiés et **publiés** sur https://alemoine4.github.io/carnet-eps/. QA : Lighthouse Perf 97 / A11y 100 / BP 100, année complète simulée fluide (< 50 ms par écran), 8 smoke-tests Playwright (`npm test`), **audit complet du 2026-07-10 entièrement soldé** (16 constats corrigés, v0.12.1 → v0.12.2). Historique des versions et retour arrière : `docs/deploiement.md`.
 
-Restent : la **phase 9** (publication GitHub Pages + guides d'installation et de rentrée) et les **validations terrain** (Pronote réel, Android réel, impression) listées en tête de `TODO.md`.
+Restent : les **validations terrain** (Pronote réel, Android réel, impression) listées en tête de `TODO.md`.
 
 ## Limites de sécurité à connaître (app 100 % locale)
 

@@ -5,7 +5,7 @@
 import { test, expect } from '@playwright/test';
 
 const STORES = ['meta', 'classes', 'eleves', 'edt', 'sequences', 'seances', 'appels',
-  'inaptitudes', 'certificats', 'fichiers', 'evaluations', 'notes', 'documents'];
+  'inaptitudes', 'certificats', 'fichiers', 'evaluations', 'notes', 'documents', 'observations'];
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -49,7 +49,9 @@ test('3. import Pronote (collage CSV)', async ({ page }) => {
 test('4. faire l’appel (tap + Terminer)', async ({ page }) => {
   await page.evaluate(async () => {
     const io = await import('/js/io.js');
-    const today = new Date().toISOString().slice(0, 10);
+    // Date LOCALE, comme l'app (isoAujourdhui) — toISOString/UTC donnerait « hier » entre minuit et 2 h.
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     await io.enregistrer('classes', { id: 'c1', nom: '6A', archivee: false });
     for (let i = 0; i < 4; i++) {
       await io.enregistrer('eleves', { id: 'e' + i, classeId: 'c1', nom: 'N' + i, prenom: 'P' + i, actif: true });

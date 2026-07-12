@@ -14,6 +14,21 @@ Modèle d'entrée :
 
 ---
 
+## 2026-07-12 (22) — Finitions post-audit (v0.12.3)
+
+Suite de la session d'audit : revue « tu vois autre chose ? » → 5 petits points, tous traités.
+
+**Fait** :
+- `ui.js` : l'éviction de la pile de toasts saute les toasts marqués `data-persistant` (durée Infinity) — micro-défaut de ma v0.12.2 : le toast de MAJ pouvait être évincé par 3 notifications et ne revenait pas (drapeau anti-doublon).
+- `documents.js` : lien sans schéma auto-préfixé `https://` (le rejet de « www.site.fr » était une friction née du correctif A7).
+- `README.md` : était resté à « v0.8.1, publication GitHub Pages à venir » — URL de l'app en tête, tableau des modules complété (Suivi + observations), « Ce que fait » au présent, `tests/` à jour, état v0.12.3.
+- `docs/roadmap.md` : Observations (v0.12.0) et audit 2026-07-10 cochés, smoke-tests 7 → 8.
+- `tests/e2e/smoke.spec.mjs` : date locale au lieu d'UTC (aligné sur `isoAujourdhui()` post-A4 — un `npm test` entre minuit et 2 h aurait échoué) ; `observations` ajouté aux stores purgés en `beforeEach`.
+
+**Vérifié** : 2 tests Playwright dédiés (spec temporaire supprimé) — toast persistant épargné par l'éviction (le plus ancien fini part à sa place), « www.ffbad.org » enregistré en `https://www.ffbad.org` ; puis smoke-tests **8/8**.
+
+**Prochaine étape** : roadmap post-v1 (observation depuis l'appel, dashboard enrichi, évals EPS A1–A5) + validations terrain avant la rentrée.
+
 ## 2026-07-10 (21) — Audit complet /audit-projet + corrections (v0.12.1)
 
 **Fait** :

@@ -4,6 +4,15 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-07-12 — v0.12.3 : Finitions post-audit (revue « autre chose ? »)
+
+- **Toasts** : l'éviction (pile pleine) épargne désormais les toasts **persistants** — le « Nouvelle version installée » survit à une rafale de suppressions.
+- **Documents** : un lien saisi sans schéma (« www.site.fr ») est auto-préfixé en `https://` au lieu d'être rejeté.
+- **README dépoussiéré** (vitrine GitHub) : URL de l'app en tête, tableau des modules complété (Suivi, observations), état v0.12.3 (il annonçait encore « v0.8.1, publication à venir »).
+- **Roadmap** : Observations (v0.12.0) et audit 2026-07-10 cochés ; smoke-tests 7 → 8.
+- **Smoke-tests** : date « aujourd'hui » calculée en heure **locale** comme l'app (un run entre minuit et 2 h n'échouera plus) ; store `observations` ajouté à la purge entre tests.
+- Vérifié : 2 tests Playwright dédiés (toast persistant épargné, URL auto-préfixée) + smoke-tests **8/8**. Bump SW + `VERSION_APP` → 0.12.3 ; redéployé.
+
 ## 2026-07-10 — v0.12.2 : Arbitrage des 3 décisions produit de l'audit (A12/A13/A14 — décision D011)
 
 - **Toasts empilés (A12)** : les toasts s'empilent (max 3) au lieu de se remplacer — deux suppressions rapprochées gardent chacune leur « Annuler » ; le toast « Nouvelle version installée » est persistant et ne peut plus être écrasé.

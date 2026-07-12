@@ -72,9 +72,10 @@ Corrections post-v1 issues de l'audit (détail : `AVIS_APPEL_ACCESSIBILITE.md`).
 
 Versions courtes, vérifiées (smoke-tests Playwright), taguées (rollback : `docs/deploiement.md`).
 - ✅ **Sécurité des suppressions** : v0.10.0 confirmation `<dialog>` + v0.10.1 annulation « Annuler » 8 s (restaure la cascade).
-- ✅ **Smoke-tests** Playwright (dev) — 7 parcours critiques.
+- ✅ **Smoke-tests** Playwright (dev) — 8 parcours critiques.
 - ✅ **Onglet « Suivi »** (v0.11.0) — alertes EPS + inaptitudes sorties de « Plus » ; EDT déplacé dans « Plus ».
-- 🔲 **Observations** (notes terrain) — **AVIS modèle de données d'abord** (nouveau store IndexedDB → migration).
+- ✅ **Observations** (notes terrain, v0.12.0) — store IndexedDB v2 (migration additive, D009), timeline + formulaire sur la fiche élève.
+- ✅ **Audit complet /audit-projet** (2026-07-10, rapport `_TEMPO\DEV_APP\AUDIT_DEV_APP_2026-07-10.md`) — 16 constats soldés en v0.12.1 (corrections) + v0.12.2 (arbitrages D011).
 - 🔲 Dashboard enrichi · évaluations EPS A1–A5 · Pronote/appréciations · exports PDF (via impression) · corbeille persistante → jalon **1.0**.
 - ⛔ Différé (anti-usine-à-gaz) : cloud, comptes, IA, refonte design-system, tableur avancé.
 

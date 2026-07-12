@@ -141,8 +141,15 @@ export function confirmer({ titre, message = '', detail = '', action = 'Supprime
 export function toast(message, { action, libelleAction = 'Annuler', duree = 8000 } = {}) {
   let pile = document.querySelector('.toasts');
   if (!pile) { pile = el('div', { class: 'toasts' }); document.body.append(pile); }
-  while (pile.children.length >= 3) pile.firstChild.remove();
+  // L'éviction n'emporte que les toasts à durée finie : le toast persistant
+  // (ex. « Nouvelle version installée ») survit à une rafale de notifications.
+  while (pile.children.length >= 3) {
+    const victime = [...pile.children].find((x) => !('persistant' in x.dataset));
+    if (!victime) break;
+    victime.remove();
+  }
   const t = el('div', { class: 'toast', role: 'status' }, el('span', {}, message));
+  if (!Number.isFinite(duree)) t.dataset.persistant = '';
   let timer;
   const fermer = () => {
     clearTimeout(timer);
