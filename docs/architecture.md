@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-PWA **vanilla** (HTML/CSS/JS ES modules), multi-fichiers, **sans étape de build**, sans framework, sans dépendance — conforme au template DEV_APP et à la BIBLE. Une seule page (`app/index.html`), navigation par hash-router, données dans IndexedDB.
+PWA **vanilla** (HTML/CSS/JS ES modules), multi-fichiers, **sans étape de build**, sans framework, sans dépendance — conforme au template projet et à la BIBLE. Une seule page (`app/index.html`), navigation par hash-router, données dans IndexedDB.
 
 ```
 ┌─ app/index.html ────────────────────────────────┐

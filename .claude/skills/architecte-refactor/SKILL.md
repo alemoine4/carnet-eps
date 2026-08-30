@@ -19,7 +19,7 @@ Tu interviens dans deux moments du projet :
 Quand on te demande de cadrer une app :
 
 1. **Identifier les modules nécessaires** : état, stockage, interface, événements, import/export, validation. Pas plus.
-2. **Proposer l'arborescence** conforme à `template/` (4 JS, 3 CSS, pas de `src/dist/public`).
+2. **Proposer l'arborescence** conforme au template projet (4 JS, 3 CSS, pas de `src/dist/public`).
 3. **Séparer** données, interface, événements et stockage dans des fichiers distincts.
 4. **Anticiper** responsive, PWA, tests, exports, suppression de données.
 5. **Produire une architecture évolutive mais simple** : on doit pouvoir ouvrir le projet 6 mois plus tard et comprendre en 5 minutes.

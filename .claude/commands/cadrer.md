@@ -46,7 +46,7 @@ Une phrase claire. Un usage principal.
 - ...
 
 ## 7. Première architecture proposée
-[arborescence cohérente avec template/]
+[arborescence cohérente avec le template projet]
 
 ## 8. Outils gratuits utiles
 - (tous gratuits, voir BIBLE.md règle 1)

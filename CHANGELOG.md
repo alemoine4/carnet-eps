@@ -4,6 +4,15 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-08-30 — Rangement du dépôt (documentation uniquement, aucun code touché)
+
+- **Template générique sorti du projet** : `template/` (squelette réutilisable : BIBLE, CLAUDE.md, 5 commandes, 3 skills) était rangé à côté du dépôt sous « CARNET EPS », donc invisible depuis les autres projets → déplacé dans `30_APPLICATIONS/RESSOURCES_IA/template-projet` (14 fichiers, empreintes MD5 vérifiées identiques).
+- **Deux documents rapatriés dans le dépôt** (ils vivaient hors git, donc non sauvegardés sur GitHub alors que le CHANGELOG et `docs/decisions.md` les citent) : `AUDIT_DEV_APP_2026-07-10.md` → `docs/audit-2026-07-10.md`, `AVIS_EXPERT_STRATEGIE.md` → `docs/strategie.md`. Chacun reçoit une note de datation en tête (les chemins qu'ils décrivent sont ceux de leur époque).
+- **Racine dégagée** : les 5 `AVIS_*.md` rejoignent `docs/avis/` (`git mv`, historique conservé) — la racine ne garde que les 5 fichiers pilotes.
+- **Chemins périmés corrigés** (19 occurrences) : `_TEMPO\DEV_APP` et `_TEMPO/.claude/launch.json` n'existaient plus ; le lancement documenté (`node server-carnet.mjs`) ne dépendait déjà d'aucun chemin absolu.
+- **README** : le bloc « Structure du projet » décrit enfin `docs/` en entier (déploiement, guides, avis, audit, stratégie).
+- Vérifié : `app/` **strictement intact** (0 fichier modifié) → gh-pages et l'app en ligne inchangées ; serveur local relancé et testé (index, JS, manifest, service-worker, garde anti-traversée `404`). Smoke-tests **non exécutables** : binaire navigateur Playwright absent (`npx playwright install` requis) — sans rapport avec ce rangement.
+
 ## 2026-07-12 — v0.12.3 : Finitions post-audit (revue « autre chose ? »)
 
 - **Toasts** : l'éviction (pile pleine) épargne désormais les toasts **persistants** — le « Nouvelle version installée » survit à une rafale de suppressions.
@@ -22,7 +31,7 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 ## 2026-07-10 — v0.12.1 : Corrections de l'audit complet (A1→A11, A15, A16)
 
-Audit 5 phases du 2026-07-10 (rapport `_TEMPO\DEV_APP\AUDIT_DEV_APP_2026-07-10.md`) : **0 critique**, lot validé « GO » :
+Audit 5 phases du 2026-07-10 (rapport `docs/audit-2026-07-10.md`) : **0 critique**, lot validé « GO » :
 - **Sauvegarde** : le résumé (écran + confirmation d'import) inclut désormais les **observations** et accorde le singulier (A1/A2).
 - **Photos/pièces** : une image illisible (HEIC, fichier corrompu) affiche un **message d'erreur clair** au lieu d'échouer en silence (fiche élève + remplacement de pièce) ; garde-fou `toBlob` null (A3).
 - **Dates** : « aujourd'hui » calculé en **heure locale** (plus de bascule à la veille entre minuit et 1-2 h) (A4).
@@ -220,8 +229,8 @@ Lot de corrections rapides issues de l'audit multi-perspectives :
 
 ## 2026-06-11 — Phase 0 : création du projet
 
-- Instanciation depuis `DEV_APP/template` (BIBLE, commandes, skills conservés verbatim).
+- Instanciation depuis le template projet — aujourd'hui `30_APPLICATIONS/RESSOURCES_IA/template-projet` (BIBLE, commandes, skills conservés verbatim).
 - Cadrage complet dans `docs/` : brief, fonctionnalités, architecture, modèle de données, échanges Pronote, roadmap (phases 0→9), décisions D001–D008, journal.
 - Squelette applicatif `app/` : shell PWA navigable (6 onglets), tokens CSS clair/sombre, wrapper IndexedDB (13 stores), manifest, service-worker versionné network-first (enregistré uniquement hors localhost).
 - Jeu d'essai `app/data/exemple_eleves_pronote.csv` (données fictives).
-- Serveur de dev `server-carnet.mjs` (port 8160) + config `carnet-eps` dans `_TEMPO/.claude/launch.json`.
+- Serveur de dev `server-carnet.mjs` (port 8160) : `node server-carnet.mjs` à la racine du dépôt.

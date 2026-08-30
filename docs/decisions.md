@@ -5,9 +5,9 @@ Une décision actée ne se rediscute pas à chaque session ; on la rouvre si ses
 
 ---
 
-## D001 — 2026-06-11 — Repartir du template DEV_APP tel quel
+## D001 — 2026-06-11 — Repartir du template projet tel quel
 
-Le projet instancie `DEV_APP/template` : BIBLE, commandes (`/cadrer`, `/dev-feature`…), skills (`architecte-refactor`, `pwa-offline`, `qualite-frontend`) conservés verbatim. Évite une convention parallèle.
+Le projet instancie le template projet (aujourd'hui `30_APPLICATIONS/RESSOURCES_IA/template-projet`) : BIBLE, commandes (`/cadrer`, `/dev-feature`…), skills (`architecte-refactor`, `pwa-offline`, `qualite-frontend`) conservés verbatim. Évite une convention parallèle.
 
 ## D002 — 2026-06-11 — PWA vanilla multi-fichiers, sans build, sans framework
 
@@ -34,7 +34,7 @@ Pas d'API Pronote publique côté prof. Import élèves : CSV/collage tolérant 
 
 Carnet EPS ne remplace pas l'appel vie scolaire et **ne remonte rien automatiquement**. Il trace le suivi EPS fin (tenue, inapte, infirmerie, dispense « mot ») et produit des récaps imprimables. Évite tout enjeu réglementaire et tout couplage fragile.
 
-## D007 — 2026-06-11 — Nom « Carnet EPS », dossier `DEV_APP/carnet-eps`, port 8160
+## D007 — 2026-06-11 — Nom « Carnet EPS », dossier `carnet-eps`, port 8160
 
 Nav 6 onglets : Aujourd'hui, Appel, Élèves, Notes, EDT, Plus. Serveur `server-carnet.mjs`, config preview `carnet-eps` (8160 — premier port libre après 8150/edt-eps).
 

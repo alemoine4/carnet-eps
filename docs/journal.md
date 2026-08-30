@@ -4,7 +4,20 @@ Une entrée par session de travail, la plus récente **en haut**. C'est la mémo
 
 Modèle d'entrée :
 
-```md
+```md## 2026-08-30 — Rangement du dépôt et sortie du template générique
+
+**Fait** :
+- Recherche exhaustive préalable des références au chemin du projet : dépôt (md/js/mjs/json/html), `playwright.config.mjs`, `server-carnet.mjs`, workflows GitHub (**aucun** : pas de CI), `.vscode` (**aucun**), `~/.claude/settings*.json` (**aucune**), raccourci bureau « Carnet EPS.lnk » (→ pointe la **PWA en ligne**, `msedge_proxy --app-url=https://alemoine4.github.io/carnet-eps/`, donc indépendant du dossier local).
+- `template/` → `30_APPLICATIONS/RESSOURCES_IA/template-projet` (copie vérifiée par MD5 avant retrait de l'original) ; ses propres références `DEV_APP` corrigées (README, CLAUDE.md).
+- `AUDIT_DEV_APP_2026-07-10.md` → `docs/audit-2026-07-10.md` et `AVIS_EXPERT_STRATEGIE.md` → `docs/strategie.md` (copie + vérification `cmp` + `git add` **avant** suppression de l'original). Les 5 `AVIS_*.md` → `docs/avis/` en `git mv` (renommages détectés `R`, contenu à 0 ligne de diff).
+- 19 corrections de chemins (`_TEMPO\DEV_APP`, `launch.json`) dans CHANGELOG, CLAUDE.md, README, TODO, architecture, decisions (D001/D007), roadmap, journal, checklist, `/cadrer`, skill architecte-refactor, deploiement.
+
+**Décidé** : ne **pas** aplatir `CARNET EPS/carnet-eps` pour l'instant (demande explicite). L'analyse montre que l'aplatissement serait techniquement sans risque — aucun chemin absolu nulle part, `server-carnet.mjs` se localise via `import.meta.url`, Playwright et `git subtree push --prefix app` sont relatifs à la racine du dépôt — mais le gain est cosmétique et l'opération n'est pas urgente.
+
+**Coincé / à vérifier** : les smoke-tests n'ont pas pu tourner — le binaire navigateur Playwright manque (`chromium_headless_shell-1223` absent de `~/AppData/Local/ms-playwright`). Dérive d'environnement, sans lien avec ce rangement ; à relancer après `npx playwright install`. Aucun fichier de `app/` n'ayant été touché, le risque de régression applicative est nul.
+
+**Prochaine étape** : réinstaller le navigateur Playwright et repasser les 8 smoke-tests ; trancher l'aplatissement du double niveau.
+
 ## AAAA-MM-JJ — titre court
 **Fait** : …
 **Décidé** : … (reporter dans decisions.md si structurant)
@@ -32,7 +45,7 @@ Suite de la session d'audit : revue « tu vois autre chose ? » → 5 petits poi
 ## 2026-07-10 (21) — Audit complet /audit-projet + corrections (v0.12.1)
 
 **Fait** :
-- **Audit 5 phases** du périmètre `DEV_APP` entier (cartographie → priorisation → plan chiffré) : rapport **`_TEMPO\DEV_APP\AUDIT_DEV_APP_2026-07-10.md`**. Résultat : **0 constat critique**, 16 constats (A1–A16, dont 2 🟠). Vérifs en conditions réelles : console propre, 375 px sans débordement, sombre OK, dialogs accessibles, cibles ≥ 44 px, git = origin, gh-pages = v0.12.0, template sans dérive.
+- **Audit 5 phases** du périmètre du dossier projet entier (cartographie → priorisation → plan chiffré) : rapport **`docs/audit-2026-07-10.md`**. Résultat : **0 constat critique**, 16 constats (A1–A16, dont 2 🟠). Vérifs en conditions réelles : console propre, 375 px sans débordement, sombre OK, dialogs accessibles, cibles ≥ 44 px, git = origin, gh-pages = v0.12.0, template sans dérive.
 - **Corrections validées « GO » (A1→A11, A15, A16), livrées en v0.12.1** — backup préalable dans `archives/2026-07-10/` :
   - A1/A2 `sauvegarde.js` : `LIBELLES` complété (`observations`) + accord singulier/pluriel → le résumé avant import (destructif) est complet et correct.
   - A3 `media.js` + `eleves.js` + `inaptitudes.js` : `compresserImage` lève des erreurs claires (bitmap illisible, toBlob null) ; try/catch + message `statut-erreur` sur photo de fiche et remplacement de pièce (l'ancienne pièce n'est supprimée qu'après stockage réussi de la nouvelle).
@@ -379,10 +392,10 @@ Suite de la session d'audit : revue « tu vois autre chose ? » → 5 petits poi
 ## 2026-06-11 — Phase 0 : naissance du projet
 
 **Fait** :
-- Projet créé dans `DEV_APP/carnet-eps` depuis le template (BIBLE, commandes, skills verbatim).
+- Projet créé dans `carnet-eps` depuis le template projet (BIBLE, commandes, skills verbatim).
 - Cadrage complet : `brief.md` (5 scénarios de référence), `fonctionnalites.md` (10 modules priorisés), `architecture.md`, `modele-donnees.md` (13 stores), `pronote.md` (import élèves / export notes + checklist d'établissement), `roadmap.md` (phases 0→9 avec critères de sortie), `decisions.md` (D001–D008).
 - Squelette `app/` : shell 6 onglets (hash-router), tokens CSS clair/sombre, wrapper IndexedDB, manifest, SW versionné network-first (hors localhost), icône SVG, jeu d'essai CSV fictif.
-- `server-carnet.mjs` (8160) + config `carnet-eps` dans `_TEMPO/.claude/launch.json` ; rendu vérifié via preview (snapshot).
+- `server-carnet.mjs` (8160), lancé par `node server-carnet.mjs` à la racine ; rendu vérifié via preview (snapshot).
 
 **Décidé** : D001 à D008 — voir `decisions.md`. Points saillants : pas de build ni framework ; wrapper IndexedDB maison ; Pronote par CSV/presse-papiers ; appel réglementaire laissé à Pronote ; SW inactif sur localhost.
 

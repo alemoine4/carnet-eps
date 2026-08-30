@@ -22,7 +22,7 @@
    git push origin v0.9.X
    ```
 
-> ⚠ La branche **`gh-pages`** contient uniquement le dossier `app/` (pas `docs/`, pas les `AVIS_*`). C'est elle qui est publiée.
+> ⚠ La branche **`gh-pages`** contient uniquement le dossier `app/` (pas `docs/`, donc ni les avis ni les rapports d'audit). C'est elle qui est publiée.
 
 ## Historique des versions (tag → commit `main`)
 

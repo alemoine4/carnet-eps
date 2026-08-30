@@ -45,7 +45,7 @@ Cadrage : `docs/brief.md` + `docs/fonctionnalites.md`. Avancement : `docs/roadma
 | Quoi | Où |
 |---|---|
 | Code actif | `app/` (entrée : `app/index.html`) |
-| Serveur local | `server-carnet.mjs` — port **8160** — config `carnet-eps` dans `_TEMPO/.claude/launch.json` |
+| Serveur local | `server-carnet.mjs` — port **8160** — `node server-carnet.mjs` à la racine du dépôt |
 | Vérification rendu | `preview_start` (config `carnet-eps`) puis `preview_snapshot` / `preview_eval` — `preview_screenshot` time out sur ce poste |
 | Modèle de données | `docs/modele-donnees.md` — IndexedDB `carnet-eps`, wrapper maison dans `app/js/io.js` |
 | Service worker | enregistré **uniquement hors localhost** → jamais de cache pendant le dev |

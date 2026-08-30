@@ -1,6 +1,6 @@
 # Checklist QA — Carnet EPS
 
-> Adaptée du template DEV_APP au projet réel. Deux types de cases :
+> Adaptée du template projet au projet réel. Deux types de cases :
 > ✅ = vérifié automatiquement en preview le **2026-06-12** (QA phase 8, v0.8.1, données = 1 année complète simulée)
 > 🔲 = à vérifier **sur appareil réel** par Alexandre (PC + Android) — refaire à chaque palier important.
 

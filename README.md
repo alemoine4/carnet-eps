@@ -32,7 +32,7 @@
 node server-carnet.mjs          # sert app/ sur http://localhost:8160
 ```
 
-ou via la config `carnet-eps` de `_TEMPO/.claude/launch.json` (outils preview Claude).
+À lancer depuis la racine du dépôt : le serveur se repère tout seul (chemin relatif à `server-carnet.mjs`), le dossier peut donc être déplacé sans rien reconfigurer.
 
 Aucune installation, aucun `npm install` : ouvrir `http://localhost:8160` dans Chrome/Edge.
 
@@ -56,7 +56,7 @@ carnet-eps/
 │   ├── assets/icons/
 │   └── data/  (jeux d'essai CSV — données fictives uniquement)
 │
-├── docs/                ← cadrage et suivi
+├── docs/                ← cadrage, suivi et documents de décision
 │   ├── brief.md             vision, utilisateurs, périmètre
 │   ├── fonctionnalites.md   spécification détaillée par module
 │   ├── architecture.md      choix techniques, couches, PWA
@@ -64,7 +64,12 @@ carnet-eps/
 │   ├── pronote.md           import/export Pronote (formats, limites)
 │   ├── roadmap.md           phases 0 → 9 avec critères de sortie
 │   ├── decisions.md         décisions actées (D001…)
-│   └── journal.md           journal de bord des sessions
+│   ├── journal.md           journal de bord des sessions
+│   ├── deploiement.md       mise en ligne, historique des versions, rollback
+│   ├── guide-installation.md · guide-rentree.md · test-terrain.md
+│   ├── strategie.md         avis fondateur (méthode, outillage)
+│   ├── audit-2026-07-10.md  rapport d'audit complet (16 constats, soldés)
+│   └── avis/                avis avant application (AVIS_*.md, cf. BIBLE)
 │
 ├── tests/               ← checklist manuelle + smoke-tests e2e Playwright (npm test)
 ├── archives/            ← versions gelées (ne pas toucher)
