@@ -29,6 +29,7 @@
 
 | Version | Tag | Commit main | Résumé |
 |---|---|---|---|
+| v0.12.4 | *(à poser au déploiement)* | `28732ad` | **Non déployée au 2026-09-05** — 4e audit (34 constats, 30 correctifs) : grille d'appel 2 colonnes à 360 px, import JSON altéré refusé avant écriture, élève « parti », contrastes du thème sombre, appui long vs défilement, double tap/double clic, 13 tests de non-régression |
 | v0.12.3 | `v0.12.3` | `633c2da` | Finitions post-audit : toast persistant épargné par l'éviction, lien document auto-préfixé https://, README/roadmap/smoke-tests à jour |
 | v0.12.2 | `v0.12.2` | `1be32fc` | Arbitrage audit A12/A13/A14 (D011) : toasts empilés, « publiée » sur preuve de copie + marquage manuel, pré-remplissage inapte limité au jour même |
 | v0.12.1 | `v0.12.1` | `13c81ff` | Corrections de l'audit 2026-07-10 (A1→A11, A15, A16) : résumé sauvegarde complet, erreurs photo visibles, dates locales, garde-fous EDT/accueil |
