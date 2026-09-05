@@ -43,8 +43,15 @@ export function ouvrirDB() {
         }
       }
     };
-    req.onsuccess = () => resoudre(req.result);
+    req.onsuccess = () => {
+      const db = req.result;
+      // Un autre onglet monte le schéma : on libère la connexion (sinon il reste bloqué) et
+      // la prochaine opération rouvrira la base à jour (audit 2026-09-05, B16).
+      db.onversionchange = () => { db.close(); dbPromesse = null; };
+      resoudre(db);
+    };
     req.onerror = () => rejeter(req.error);
+    req.onblocked = () => rejeter(new Error('base de données verrouillée par un autre onglet de l’app — fermez-le puis rechargez'));
   });
   return dbPromesse;
 }
@@ -142,14 +149,27 @@ export async function exporterJSON({ avecFichiers = true } = {}) {
 
 // Vérifie qu'un objet est bien une sauvegarde Carnet EPS lisible. Retourne { date, comptes }.
 export function validerExport(objet) {
-  if (!objet || objet.app !== 'carnet-eps' || typeof objet.stores !== 'object') {
+  if (!objet || objet.app !== 'carnet-eps' || !objet.stores || typeof objet.stores !== 'object') {
     throw new Error('fichier non reconnu (ce n’est pas une sauvegarde Carnet EPS)');
   }
   if (objet.schemaVersion > DB_VERSION) {
     throw new Error(`sauvegarde issue d’une version plus récente de l’app (schéma ${objet.schemaVersion} > ${DB_VERSION})`);
   }
+  // Chaque enregistrement doit porter sa clé : un `put` sans clé lève une DataError SYNCHRONE
+  // qui laissait la transaction valider son `clear()` → store vidé, base à moitié remplacée
+  // (audit 2026-09-05, B02). On refuse donc le fichier AVANT toute écriture.
   const comptes = {};
-  for (const nom of STORES) comptes[nom] = (objet.stores[nom] || []).length;
+  for (const nom of STORES) {
+    const liste = objet.stores[nom] ?? [];
+    if (!Array.isArray(liste)) throw new Error(`sauvegarde altérée : « ${nom} » n’est pas une liste`);
+    const cle = SCHEMA[nom].keyPath;
+    liste.forEach((enreg, i) => {
+      if (!enreg || typeof enreg !== 'object' || typeof enreg[cle] !== 'string' || !enreg[cle]) {
+        throw new Error(`sauvegarde altérée : « ${nom} » ligne ${i + 1} sans « ${cle} »`);
+      }
+    });
+    comptes[nom] = liste.length;
+  }
   return { date: (objet.dateExport || '').slice(0, 10) || 'date inconnue', comptes };
 }
 
@@ -179,10 +199,16 @@ export async function importerJSON(objet) {
     await new Promise((resoudre, rejeter) => {
       const tx = db.transaction(nom, 'readwrite');
       const store = tx.objectStore(nom);
-      store.clear();
-      for (const enreg of lots[nom]) store.put(enreg);
       tx.oncomplete = resoudre;
       tx.onerror = () => rejeter(tx.error);
+      tx.onabort = () => rejeter(tx.error || new Error(`restauration de « ${nom} » interrompue`));
+      try {
+        store.clear();
+        for (const enreg of lots[nom]) store.put(enreg);
+      } catch (e) {
+        tx.abort(); // erreur synchrone (clé absente…) : annule aussi le clear() (B02)
+        rejeter(e);
+      }
     });
   }
 }

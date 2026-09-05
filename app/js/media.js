@@ -69,8 +69,12 @@ export function revoquerURL(url) {
 // `conteneur` est conservé pour compatibilité d'appel mais inutile : le <dialog> vit
 // dans le top-layer du navigateur.
 export function ouvrirVisionneuse(conteneur, fichier) {
-  const url = URL.createObjectURL(fichier.blob);
-  if (fichier.mime === 'application/pdf') {
+  // Le type servi est le mime DÉCLARÉ à l'enregistrement, pas celui porté par le blob (qui peut
+  // venir d'une sauvegarde JSON tierce) ; tout ce qui n'est ni image ni PDF est servi en flux
+  // binaire (téléchargement) au lieu d'une image cassée (audit 2026-09-05, B18).
+  const mime = /^(image\/[a-z0-9.+-]+|application\/pdf)$/i.test(fichier.mime || '') ? fichier.mime : 'application/octet-stream';
+  const url = URL.createObjectURL(new Blob([fichier.blob], { type: mime }));
+  if (!mime.startsWith('image/')) {
     window.open(url, '_blank');
     revoquerURL(url);
     return;

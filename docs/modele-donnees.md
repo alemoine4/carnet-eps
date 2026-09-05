@@ -5,7 +5,7 @@
 - `id` : `crypto.randomUUID()` — keyPath de tous les stores (sauf `meta` : keyPath `cle`).
 - Dates : chaînes ISO `YYYY-MM-DD` (tri lexicographique = tri chronologique) ; heures `HH:MM`.
 - Champs marqués `*` : indexés (requêtes fréquentes).
-- `DB_VERSION` (entier) dans `io.js` ; migrations dans `onupgradeneeded` par `switch` sans `break` (cumulatives), **toujours** précédées d'un export JSON automatique (BIBLE).
+- `DB_VERSION` (entier, **2** depuis v0.12.0) dans `io.js` ; `onupgradeneeded` crée les stores **manquants** (migration additive, décision D009 — jamais de suppression ni de transformation). Une future migration non additive imposerait un `switch (oldVersion)` et l'export JSON automatique préalable (BIBLE). ⚠ Ne jamais redéployer une version dont le `DB_VERSION` est inférieur à celui déjà ouvert sur les appareils (`indexedDB.open` échouerait en `VersionError`) — voir `deploiement.md`.
 
 ## Stores (schéma v1)
 
@@ -17,6 +17,8 @@ classes       { id, nom, niveau, anneeScolaire, couleur, ordre, archivee }
 
 eleves        { id, classeId*, nom, prenom, sexe?, dateNaissance?, notesPerso, photoFichierId?, actif }
               notesPerso : texte libre court (PAI, asthme…) — PAS d'INE, PAS d'adresse (minimisation)
+              actif : false = élève « parti » (fiche élève → « Dans la classe », v0.12.4) : masqué à
+              l'appel, aux notes et aux effectifs, historique conservé. Absent/undefined = actif.
 
 edt           { id, jour (1=lundi…7), heureDebut, heureFin, classeId*, semaine ("AB"|"A"|"B"),
                 installation, dateDebut?, dateFin? }
@@ -36,7 +38,7 @@ inaptitudes   { id, eleveId*, type ("totale"|"partielle"), dateDebut, dateFin, o
                 ("certificat"|"mot"|"infirmerie"), restrictions[], certificatId?, commentaire }
               restrictions ∈ course, sauts, lancers, appuis, natation, port_de_charge, autre
 
-certificats   { id, eleveId*, dateDepot, dateDebut?, dateFin?, fichierId*, commentaire }
+certificats   { id, eleveId*, dateDepot, dateDebut?, dateFin?, fichierId, commentaire }
 
 fichiers      { id, blob, mime, nom, taille, dateAjout }
               → photos certificats, photos élèves, documents. Photos compressées canvas→JPEG ≤ ~300 Ko.
@@ -93,7 +95,7 @@ Store **`observations`** (schéma v2), index `eleveId`. Notes de suivi terrain.
 
 - **Export JSON** : `{ app:"carnet-eps", schemaVersion, dateExport, stores:{...} }` ; blobs sérialisés en base64 (option « sans pièces jointes »). Nom de fichier : `carnet-eps_sauvegarde_YYYY-MM-DD.json`.
 - **Import** : vérification `app` + `schemaVersion` (migration à l'import si version antérieure), double confirmation, export de sécurité automatique avant remplacement.
-- **Purge fin d'année** : suppression par `anneeScolaire` après export d'archive obligatoire.
+- **Purge fin d'année** : purge **totale** (écran Sauvegarde, double confirmation, export de sécurité automatique avant). La purge par `anneeScolaire` prévue au cadrage n'est pas implémentée en v1 (le rituel de rentrée = export d'archive puis purge totale, cf. `guide-rentree.md`).
 
 ## RGPD (BIBLE règle 4) — registre local
 
@@ -103,5 +105,5 @@ Store **`observations`** (schéma v2), index `eleveId`. Notes de suivi terrain.
 | Où | IndexedDB du navigateur de l'appareil — **jamais transmis** |
 | Finalité | Suivi pédagogique et sécurité des élèves en EPS par leur professeur |
 | Durée | Année scolaire ; purge guidée à chaque rentrée |
-| Suppression | Purge totale ou par année dans Réglages ; cascade documentée ci-dessus |
+| Suppression | Purge totale (Plus → Sauvegarde) ; suppressions unitaires en cascade documentées ci-dessus (avec annulation 8 s) |
 | Limites | Pas de chiffrement fort sans clé utilisateur → verrouillage de session obligatoire (voir README) |

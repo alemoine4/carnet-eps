@@ -77,6 +77,9 @@ async function carteMaintenant() {
     const numero = seances.filter((s) => s.date < isoJour).length + 1;
     const btnCreer = el('button', { class: 'btn btn-principal' }, `Créer la séance ${numero}/${total} et faire l’appel`);
     btnCreer.addEventListener('click', async () => {
+      btnCreer.disabled = true; // anti double-tap : deux séances le même jour (audit 2026-09-05, B05)
+      const existante = (await parIndex('seances', 'sequenceId', sequence.id)).find((s) => s.date === isoJour);
+      if (existante) { location.hash = `#/appel/${existante.id}`; return; }
       const nouvelle = {
         id: crypto.randomUUID(), sequenceId: sequence.id, date: isoJour,
         edtId: creneau.id, numero, theme: '', bilan: '', annulee: false,
@@ -90,11 +93,17 @@ async function carteMaintenant() {
     );
   }
 
-  const suivants = cours.filter((cr) => enMinutes(cr.heureDebut) > enMinutes(creneau.heureDebut));
-  if (suivants.length) {
+  // Autres cours du jour : ceux qui suivent, et ceux qui commencent EN MÊME TEMPS (deux classes
+  // en barrette) — avant, la 2e classe du créneau n'apparaissait nulle part (audit 2026-09-05, B24).
+  const autres = cours.filter((cr) => cr !== creneau && enMinutes(cr.heureDebut) >= enMinutes(creneau.heureDebut));
+  if (autres.length) {
     const classes = await tous('classes');
     const nomDe = (id) => classes.find((cl) => cl.id === id)?.nom || '?';
-    cM.append(el('p', { class: 'note-discrete' }, 'Ensuite : ' + suivants.map((cr) => `${cr.heureDebut} ${nomDe(cr.classeId)}`).join(' · ')));
+    const enParallele = autres.filter((cr) => cr.heureDebut === creneau.heureDebut);
+    const suivants = autres.filter((cr) => cr.heureDebut !== creneau.heureDebut);
+    const libelle = (cr) => `${cr.heureDebut} ${nomDe(cr.classeId)}`;
+    if (enParallele.length) cM.append(el('p', { class: 'note-discrete' }, 'En parallèle : ' + enParallele.map(libelle).join(' · ') + ' (voir l’onglet Appel)'));
+    if (suivants.length) cM.append(el('p', { class: 'note-discrete' }, 'Ensuite : ' + suivants.map(libelle).join(' · ')));
   }
   return cM;
 }

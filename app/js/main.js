@@ -83,7 +83,7 @@ enregistrerVue('aide', (c) => {
     ['Archiver l’année passée', 'Sauvegarde → Télécharger (avec pièces), ranger le fichier, puis Effacer toutes les données. (À sauter la toute première fois.)'],
     ['Régler l’année', 'Réglages : année scolaire, établissement, thème.'],
     ['Importer les élèves', 'Élèves → Importer depuis Pronote : coller le tableau ou le CSV → Analyser → vérifier les colonnes → Importer. Les classes se créent seules, les doublons sont ignorés.'],
-    ['Saisir l’EDT', 'EDT : si alternance, renseigner « un lundi de semaine A », puis ajouter chaque créneau (jour, heures, classe, semaine, installation).'],
+    ['Saisir l’EDT', 'Plus → Emploi du temps : si alternance, renseigner « un lundi de semaine A », puis ajouter chaque créneau (jour, heures, classe, semaine, installation).'],
     ['Créer les séquences', 'Séquences → Nouvelle, pour chaque classe (APSA, dates, nombre de séances). Pas besoin de créer les séances : l’accueil propose celle du jour.'],
     ['Vérifier', 'L’accueil affiche le bon cours, les effectifs sont complets, puis exporter une première sauvegarde de l’année neuve.'],
   ]) ol.append(el('li', {}, el('strong', {}, `${t} — `), d));
@@ -98,7 +98,8 @@ enregistrerVue('aide', (c) => {
   const ul = el('ul', { class: 'liste-aide' });
   for (const r of [
     'Exporter une sauvegarde chaque semaine (10 s) — seule protection contre la perte de l’appareil.',
-    'Certificat reçu → Inaptitudes → Nouvelle (avec photo) : l’élève sera signalé à l’appel tout seul.',
+    'Certificat reçu → Suivi → Inaptitudes → Nouvelle (photo ou PDF) : l’élève sera signalé à l’appel tout seul.',
+    'Élève parti en cours d’année → sa fiche → « Dans la classe : Parti » : il disparaît de l’appel et des notes, son historique reste.',
     'Fin de cycle → saisir les notes → « Copier pour Pronote » au bureau.',
     'L’accueil rappelle le reste : inaptitudes qui expirent, seuils de tenue, notes non remontées.',
   ]) ul.append(el('li', {}, r));
@@ -107,6 +108,20 @@ enregistrerVue('aide', (c) => {
 
   c.append(el('p', { class: 'note-discrete' }, 'Installation sur le téléphone et transfert PC ↔ Android : voir le guide d’installation fourni avec l’app.'));
 });
+
+// ---- Repli hors contexte sécurisé ----
+// crypto.randomUUID n'existe qu'en HTTPS / localhost : en test sur un téléphone via
+// http://192.168.x.x:8160, toute création d'enregistrement échouait (audit 2026-09-05, B15).
+// getRandomValues, lui, est disponible partout → UUID v4 équivalent.
+if (typeof crypto.randomUUID !== 'function') {
+  crypto.randomUUID = () => {
+    const b = crypto.getRandomValues(new Uint8Array(16));
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+  };
+}
 
 // ---- Initialisation des modules ----
 

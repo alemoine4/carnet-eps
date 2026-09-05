@@ -4,7 +4,7 @@
 // ou tap sur un statut hors cycle) = menu complet. Chaque changement est enregistré immédiatement.
 // Rappel D006 : l'appel réglementaire reste fait dans Pronote — ici on trace le suivi EPS.
 
-import { enregistrerVue, el, carte, champZone, ouvrirFeuille } from '../ui.js';
+import { enregistrerVue, el, carte, champZone, ouvrirFeuille, toast } from '../ui.js';
 import { tous, lire, parIndex, enregistrer, telechargerTexte, champCSV } from '../io.js';
 import {
   STATUTS, CYCLE_TAP, SEUIL_ALERTE,
@@ -59,6 +59,9 @@ async function vueSelecteur(c) {
     } else if (seq) {
       action = el('button', { class: 'btn btn-principal' }, 'Créer la séance + appel');
       action.addEventListener('click', async () => {
+        action.disabled = true; // un double tap créait deux séances le même jour (audit 2026-09-05, B05)
+        const existante = (await parIndex('seances', 'sequenceId', seq.id)).find((s) => s.date === auj);
+        if (existante) { location.hash = `#/appel/${existante.id}`; return; }
         const deja = seances.filter((s) => s.sequenceId === seq.id && s.date < auj).length;
         const nouvelle = {
           id: crypto.randomUUID(), sequenceId: seq.id, date: auj, edtId: cr.id,
@@ -182,22 +185,28 @@ async function vueAppel(c, seanceId) {
   function majCompteurs() {
     let absents = 0;
     let pratiquants = 0;
+    let saisis = 0; // parmi les élèves ACTUELS de la classe — pas enregs.size, qui compte aussi
+    // les appels d'un élève parti depuis vers une autre classe (audit 2026-09-05, B06)
     for (const eleve of eleves) {
-      const st = enregs.get(eleve.id)?.statut || 'present';
+      const rec = enregs.get(eleve.id);
+      if (rec) saisis++;
+      const st = rec?.statut || 'present';
       if (st === 'absent') absents++;
-      if (STATUTS[st].pratiquant) pratiquants++;
+      if ((STATUTS[st] || STATUTS.present).pratiquant) pratiquants++;
     }
     compteursEl.replaceChildren(
       el('span', {}, el('strong', {}, String(eleves.length - absents)), `/${eleves.length} présents`),
       el('span', {}, el('strong', {}, String(pratiquants)), ' pratiquants'),
-      el('span', { class: 'note-inline' }, `${enregs.size}/${eleves.length} saisis`),
+      el('span', { class: 'note-inline' }, `${saisis}/${eleves.length} saisis`),
     );
-    if (enregs.size >= eleves.length) {
+    if (saisis >= eleves.length) {
       btnTerminer.hidden = true;
       statutFin.textContent = `Appel complet ✓ (${eleves.length}/${eleves.length})`;
       statutFin.className = 'statut statut-ok';
     } else {
-      const restants = eleves.length - enregs.size;
+      const restants = eleves.length - saisis;
+      btnTerminer.hidden = false;
+      statutFin.textContent = '';
       btnTerminer.textContent = `Terminer l’appel · ${restants} passé${restants > 1 ? 's' : ''} en présent`;
     }
   }
@@ -210,12 +219,12 @@ async function vueAppel(c, seanceId) {
     const carteE = boutons.get(eleve.id);
     const rec = enregs.get(eleve.id);
     const st = rec?.statut || 'present';
-    const conf = STATUTS[st];
+    const conf = STATUTS[st] || STATUTS.present; // statut inconnu (sauvegarde tierce) : ne pas planter la vue
     carteE.dataset.statut = rec ? st : '';
     // Couleur de bordure pilotée par CSS via [data-statut] (déclinée par thème, audit UX P2).
     const badge = carteE.querySelector('.badge-statut');
     badge.hidden = !rec;
-    badge.textContent = conf.court;
+    badge.textContent = rec ? conf.court : ''; // pas de « P » fantôme dans le nom accessible (B34)
     // Fond de la pastille piloté par CSS via [data-statut] (thématisé clair/sombre).
     const detail = carteE.querySelector('.detail-txt');
     detail.textContent = !rec ? ''
@@ -233,10 +242,19 @@ async function vueAppel(c, seanceId) {
         : statut === 'retard' ? prec?.minutesRetard ?? null : null,
       commentaire: 'commentaire' in extras ? extras.commentaire : prec?.commentaire || '',
     };
-    await enregistrer('appels', rec);
+    // État mis à jour AVANT l'écriture : deux taps très rapprochés lisaient tous deux l'ancien
+    // statut et « absent → tenue » devenait « absent → absent » (audit 2026-09-05, B04).
     enregs.set(eleve.id, rec);
     majBouton(eleve);
     majCompteurs();
+    try {
+      await enregistrer('appels', rec);
+    } catch (e) {
+      if (prec) enregs.set(eleve.id, prec); else enregs.delete(eleve.id);
+      majBouton(eleve);
+      majCompteurs();
+      toast(`Statut non enregistré : ${e?.message || e}`);
+    }
   }
 
   // --- Menu complet (feuille bas d'écran, <dialog> natif) ---
@@ -321,6 +339,9 @@ async function vueAppel(c, seanceId) {
     });
     cycle.addEventListener('pointerup', finPresse);
     cycle.addEventListener('pointerleave', finPresse);
+    // Le navigateur prend la main pour défiler → pointercancel (ni pointerup ni pointerleave) :
+    // sans ça, faire défiler la grille le doigt posé > 450 ms ouvrait le menu (audit 2026-09-05, B03).
+    cycle.addEventListener('pointercancel', finPresse);
     cycle.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       finPresse();
@@ -432,8 +453,14 @@ async function vueRecap(c, classeId) {
         el('td', {}, alerte ? '⚠' : ''),
       ))),
     );
+    // La période figure dans la ligne de synthèse : les champs de dates sont masqués à
+    // l'impression, le papier ne disait pas quelle période il couvrait (audit 2026-09-05, B21).
+    const dateLongue = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('fr-FR');
+    const periode = inpDebut.value || inpFin.value
+      ? `du ${inpDebut.value ? dateLongue(inpDebut.value) : 'début'} au ${inpFin.value ? dateLongue(inpFin.value) : 'aujourd’hui'}`
+      : 'toutes dates';
     zoneTable.replaceChildren(
-      el('p', { class: 'note-discrete' }, `${seancesPeriode.length} séance(s) dans la période · ${STATUTS.present.court}=présent, A=absent, R=retard, D=dispensé, I=inapte, T=oubli de tenue, INF=infirmerie`),
+      el('p', { class: 'note-discrete' }, `${seancesPeriode.length} séance(s) — ${periode} · ${STATUTS.present.court}=présent, A=absent, R=retard, D=dispensé, I=inapte, T=oubli de tenue, INF=infirmerie`),
       table,
     );
     return { lignes, nbSeances: seancesPeriode.length };

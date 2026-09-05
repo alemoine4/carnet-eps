@@ -45,7 +45,7 @@
   font-size: 0.7rem;
   font-weight: 600;
   background: var(--c-bordure);
-  color: var(--c-texte-2);
+  color: var(--c-texte-badge); /* --c-texte-2 ne passait qu'à 4,2:1 sur --c-bordure (B08) */
   white-space: nowrap;
 }
 
@@ -54,14 +54,9 @@
   color: var(--c-sur-accent);
 }
 
-.badge-ok {
-  background: var(--c-ok);
-  color: #fff;
-}
-
 .badge-alerte {
   background: var(--c-alerte);
-  color: #fff;
+  color: var(--c-sur-accent); /* blanc en clair, encre en sombre (le rouge sombre est clair) */
 }
 
 /* ---- Boutons ---- */
@@ -207,7 +202,7 @@
 .btn-danger {
   background: var(--c-alerte);
   border-color: var(--c-alerte);
-  color: #fff;
+  color: var(--c-sur-accent);
 }
 
 /* ---- Retours d'état et infos ---- */
@@ -471,10 +466,12 @@
 }
 
 /* Colonnes auto-remplies : 2 sur mobile, davantage dès qu'il y a de la place
-   (la vue d'appel s'élargit sur PC via .vue-large → moins de défilement). */
+   (la vue d'appel s'élargit sur PC via .vue-large → moins de défilement).
+   150 px et non 160 : à 360 px de large (Samsung, la largeur Android la plus courante),
+   160 px ne laissait qu'UNE colonne — 28 cartes à dérouler (audit 2026-09-05, B01). */
 .grille-appel {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 10px;
   margin: 10px 0 16px;
 }
@@ -571,6 +568,13 @@
   min-height: 1em;
 }
 
+/* `display` d'auteur > `[hidden]` du navigateur : sans cette règle la pastille « cachée » des
+   élèves non saisis restait rendue (un « P » fantôme, visible en sombre et lu par les lecteurs
+   d'écran) — audit 2026-09-05, B34. */
+.btn-eleve .badge-statut[hidden] {
+  display: none;
+}
+
 .btn-eleve .badge-statut {
   display: inline-block;
   min-width: 20px;
@@ -615,8 +619,8 @@
 
 /* ---- Feuille (menu de statuts, <dialog> natif) ---- */
 
-/* Feuille modale = <dialog> natif (helper ouvrirFeuille). Le menu d'appel l'utilise ;
-   la visionneuse de media.js garde le pattern .feuille-fond ci-dessus. */
+/* Feuille modale = <dialog> natif (helper ouvrirFeuille) : menu d'appel, observations,
+   confirmations. La visionneuse (media.js) est un <dialog> distinct, plus bas. */
 dialog.feuille {
   position: fixed;
   inset: auto 0 0 0;
@@ -689,6 +693,16 @@ dialog.feuille-confirm .rang-btn {
   border-radius: 10px;
   cursor: zoom-in;
   margin-top: 8px;
+}
+
+/* Bouton enveloppant la vignette : ouverture au clavier et au lecteur d'écran (B09) */
+.btn-vignette {
+  display: block;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+  border-radius: 10px;
 }
 
 /* Visionneuse plein écran (média) = <dialog> natif : Échap + fond inerte */

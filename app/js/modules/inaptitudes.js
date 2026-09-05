@@ -177,7 +177,9 @@ async function vueNouvelle(c, eleveIdInitial) {
   const inpComm = el('input', { type: 'text', id: 'in-comm', placeholder: 'Ex. : pas d’appui sur le poignet droit', autocomplete: 'off' });
 
   // certificat (photo ou PDF)
-  const inpFichier = el('input', { type: 'file', id: 'in-fichier', accept: 'image/*,.pdf,application/pdf', capture: 'environment', class: 'champ-fichier' });
+  // Sans `capture` : Android propose Appareil photo / Fichiers / Galerie ; avec, il ouvrait la
+  // caméra directement et le PDF annoncé était inaccessible (audit 2026-09-05, B13).
+  const inpFichier = el('input', { type: 'file', id: 'in-fichier', accept: 'image/*,.pdf,application/pdf', class: 'champ-fichier' });
   const statutFichier = el('p', { class: 'statut' });
   inpFichier.addEventListener('change', () => {
     const f = inpFichier.files[0];
@@ -287,7 +289,7 @@ async function vueDetail(c, id) {
   // --- Certificat ---
   const carteC = carte('Certificat / pièce jointe', '');
   const statutPiece = el('p', { class: 'statut' });
-  const inpRemplace = el('input', { type: 'file', accept: 'image/*,.pdf,application/pdf', capture: 'environment', hidden: true });
+  const inpRemplace = el('input', { type: 'file', accept: 'image/*,.pdf,application/pdf', hidden: true }); // sans capture (B13)
   inpRemplace.addEventListener('change', async () => {
     const f = inpRemplace.files[0];
     if (!f) return;
@@ -316,9 +318,12 @@ async function vueDetail(c, id) {
     if (res) {
       const { url, fichier } = res;
       if (fichier.mime.startsWith('image/')) {
-        const vignette = el('img', { class: 'vignette', src: url, alt: `Certificat de ${eleve?.prenom || ''}` });
-        vignette.addEventListener('click', () => ouvrirVisionneuse(c, fichier));
-        carteC.append(vignette);
+        // Vignette dans un vrai bouton : ouverture au clavier / lecteur d'écran (audit 2026-09-05, B09).
+        const vignette = el('img', { class: 'vignette', src: url, alt: '' });
+        vignette.addEventListener('load', () => URL.revokeObjectURL(url), { once: true }); // plus de fuite d'URL (B19)
+        const btnVignette = el('button', { class: 'btn-vignette', type: 'button', 'aria-label': `Agrandir le certificat${eleve ? ` de ${eleve.prenom}` : ''}` }, vignette);
+        btnVignette.addEventListener('click', () => ouvrirVisionneuse(c, fichier));
+        carteC.append(btnVignette);
       } else {
         const btnPdf = el('button', { class: 'btn' }, `Ouvrir ${fichier.nom}`);
         btnPdf.addEventListener('click', () => ouvrirVisionneuse(c, fichier));

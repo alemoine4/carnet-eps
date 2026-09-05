@@ -4,6 +4,19 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-05 — v0.12.4 : 4e audit (34 constats) — 30 correctifs, 13 tests de non-régression
+
+Audit à 12 lentilles du code complet (rapport `docs/audit-2026-09-05.md`), chaque constat vérifié par mesure avant correction.
+- **Appel sur téléphone** : la grille passait à **une seule colonne sur les écrans de 360 px** (Samsung, largeur Android la plus courante) → 2 colonnes dès 360 px ; faire défiler la grille le doigt posé n'ouvre plus le menu de statut ; un double tap très rapide ne perd plus de statut ; un double clic sur « Créer la séance » ne crée plus deux séances ; les compteurs « saisis / Appel complet » ne comptent que les élèves actuels de la classe.
+- **Données** : un fichier de sauvegarde altéré (enregistrement sans identifiant) pouvait **vider un store et laisser la base à moitié remplacée** → le fichier est refusé avant toute écriture, et une erreur synchrone annule désormais la transaction. Suppression d'une classe refusée tant que des séquences / créneaux EDT la référencent (plus d'orphelins « Classe ? »).
+- **Élève « parti »** (déménagement, changement d'établissement) : nouveau réglage sur la fiche (« Dans la classe : Parti ») → masqué à l'appel, aux notes et aux effectifs, historique conservé ; badge « parti » dans la classe. Le champ `actif` du modèle n'avait jamais eu d'interface.
+- **Accessibilité** : rouge d'alerte lisible en thème sombre (3,3:1 → 5:1), texte des badges gris 4,2 → 5,7:1 en clair, vignette du certificat ouvrable au clavier, pastille de statut « cachée » désormais réellement masquée (elle était rendue et lue par les lecteurs d'écran), contrôles natifs assortis au thème (`color-scheme`).
+- **Robustesse** : une vue qui plante affiche « Affichage impossible » au lieu d'un écran blanc ; repli `crypto.randomUUID` hors HTTPS (test sur téléphone via IP locale) ; connexion IndexedDB libérée si un autre onglet migre le schéma ; préférences protégées si localStorage indisponible ; service-worker : les réponses 404/5xx ne sont plus mises en cache ; visionneuse servie avec le type déclaré (défense en profondeur) ; fuites d'URL d'objet colmatées.
+- **Terrain** : `capture` retiré des champs fichier (la photo d'élève forçait la caméra **frontale**, le certificat rendait le PDF inaccessible sur Android) ; classes en barrette visibles sur l'accueil ; période imprimée sur le récap ; coefficient 0 honoré ; message « Vérifier les mises à jour » corrigé.
+- **Documentation** : rollback (`deploiement.md` disait « aucune migration » alors que v0.12.0 a migré en DB_VERSION 2 : **pas de retour avant v0.12.0**), architecture (14 stores, onglets Suivi/Plus), modèle de données, CLAUDE.md (outils réels), pronote.md (UTF-8 BOM), guides et Aide in-app (EDT sous Plus, Inaptitudes sous Suivi), fiche terrain v0.12.4, README des tests.
+- Reportés : dédoublonnage des helpers (B27, > 3 fichiers), cascades atomiques (B29), seuil ×3 par trimestre (B30, à trancher), clavier virtuel vs feuille (B31, à valider sur Android).
+- Vérifié : suite Playwright **21/21** (8 smoke + 13 non-régression), captures clair 360 px / sombre 375 px. Bump SW + `VERSION_APP` → 0.12.4. **Non déployé** (commit local).
+
 ## 2026-08-30 — Rangement du dépôt (documentation uniquement, aucun code touché)
 
 - **Template générique sorti du projet** : `template/` (squelette réutilisable : BIBLE, CLAUDE.md, 5 commandes, 3 skills) était rangé à côté du dépôt sous « CARNET EPS », donc invisible depuis les autres projets → déplacé dans `30_APPLICATIONS/RESSOURCES_IA/template-projet` (14 fichiers, empreintes MD5 vérifiées identiques).

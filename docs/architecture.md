@@ -27,24 +27,24 @@ PWA **vanilla** (HTML/CSS/JS ES modules), multi-fichiers, **sans étape de build
 | État | `state.js` | état courant (route, contexte), pub/sub, préférences | persistance métier |
 | Données | `io.js` | IndexedDB (CRUD + index), export/import JSON, parse CSV | manipulation du DOM |
 
-Règle de croissance : **un module métier = un fichier** dans `modules/` (ex. `appel.js`) qui exporte `enregistrerVue()`. `main.js` importe les modules ; jamais l'inverse entre modules (passer par `state.js`/événements).
+Règle de croissance : **un module métier = un fichier** dans `modules/` (ex. `appel.js`) qui exporte `enregistrerVue()`. `main.js` importe les modules ; jamais l'inverse entre modules (passer par `state.js`/événements). Exception assumée : `modules/observations.js` est une **brique** (carte réutilisable) importée par `eleves.js` (v0.12.0).
 
 ## Navigation
 
-- Hash-router : `#/accueil`, `#/edt`, `#/appel`, `#/eleves`, `#/notes`, `#/plus` (+ sous-routes `#/eleves/<id>` plus tard).
-- 6 onglets : barre **en bas** sur mobile (pouce), **latérale** ≥ 900 px (PC).
-- L'onglet « Plus » regroupe : Inaptitudes & certificats, Séquences, Documents, Sauvegarde, Réglages.
+- Hash-router : `#/accueil`, `#/appel`, `#/eleves`, `#/notes`, `#/suivi`, `#/plus` (onglets) + routes enfants `#/edt`, `#/sequences`, `#/inaptitudes`, `#/documents`, `#/sauvegarde`, `#/reglages`, `#/aide` ; sous-routes à segments (`#/eleves/fiche/<id>`, `#/appel/<seanceId>`, `#/notes/eval/<id>`…).
+- 6 onglets : Aujourd'hui, Appel, Élèves, Notes, **Suivi** (v0.11.0, à la place d'EDT), Plus — barre **en bas** sur mobile (pouce), **latérale** ≥ 900 px (PC).
+- L'onglet « Plus » regroupe : Emploi du temps, Séquences, Documents, Sauvegarde, Réglages, Aide. Les Inaptitudes & certificats sont frontées par l'onglet « Suivi ».
 
 ## Stockage
 
-- **IndexedDB** `carnet-eps` (wrapper maison promisifié dans `io.js`, décision D003 — pas d'idb-keyval) : 13 stores, schéma détaillé dans `modele-donnees.md`.
+- **IndexedDB** `carnet-eps` (wrapper maison promisifié dans `io.js`, décision D003 — pas d'idb-keyval) : 14 stores (`DB_VERSION 2` depuis v0.12.0, migrations additives D009), schéma détaillé dans `modele-donnees.md`.
 - **localStorage** `carnet-eps:prefs` : préférences UI uniquement (thème, dernier onglet) — jamais de données élèves.
 - **Blobs** (photos certificats, documents) : store dédié `fichiers`, compression canvas→JPEG avant écriture.
 - `navigator.storage.persist()` demandé au premier lancement (évite l'éviction silencieuse sur Android).
 
 ## PWA & hors ligne (BIBLE règle 5)
 
-- `manifest.webmanifest` : standalone, icônes 192/512 (PNG à générer, SVG en attendant), fr.
+- `manifest.webmanifest` : standalone, icônes SVG + PNG 192/512 (+ 512 maskable), fr.
 - `service-worker.js` **versionné** (constante `VERSION` à incrémenter à chaque déploiement) :
   - `network-first` pour `index.html` et `manifest.webmanifest` (jamais de version morte) ;
   - `cache-first` pour css/js/icônes ;
@@ -64,6 +64,6 @@ Règle de croissance : **un module métier = un fichier** dans `modules/` (ex. `
 
 ## Vérification en dev
 
-- Serveur : `node server-carnet.mjs` (port 8160, no-cache), config preview `carnet-eps`.
-- `preview_snapshot` / `preview_eval` (le screenshot time out sur ce poste), console via `preview_console_logs`.
-- Playwright pour les scénarios critiques (appel complet, import CSV, export notes) à partir de la phase 4.
+- Serveur : `node server-carnet.mjs` (port 8160, no-cache) à la racine du dépôt, puis un navigateur sur `http://localhost:8160`.
+- **Playwright** (dépendance de dev, D010) : `npm test` = 8 smoke-tests des parcours critiques + tests de non-régression des correctifs d'audit (`tests/e2e/`). Le navigateur de test s'installe une fois par poste : `npx playwright install chromium`.
+- Contrôles ponctuels (Lighthouse, axe, impression) via les DevTools du navigateur ; `tests/checklist.md` et `docs/test-terrain.md` pour le manuel.

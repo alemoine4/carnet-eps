@@ -2,7 +2,7 @@
 // jamais de données élèves ici — elles vivent dans IndexedDB via io.js).
 
 // Version applicative : synchroniser avec VERSION du service-worker à chaque déploiement.
-export const VERSION_APP = '0.12.3';
+export const VERSION_APP = '0.12.4';
 
 const CLE_PREFS = 'carnet-eps:prefs';
 
@@ -33,7 +33,12 @@ function chargerPrefs() {
 
 export function sauverPrefs(maj) {
   Object.assign(etat.prefs, maj);
-  localStorage.setItem(CLE_PREFS, JSON.stringify(etat.prefs));
+  try {
+    localStorage.setItem(CLE_PREFS, JSON.stringify(etat.prefs));
+  } catch {
+    // localStorage plein ou désactivé : la préférence vit en mémoire pour la session,
+    // ça ne doit pas casser le rendu de la vue appelante (audit 2026-09-05, B17).
+  }
   emettre('prefs', etat.prefs);
 }
 

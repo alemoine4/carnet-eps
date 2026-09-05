@@ -30,7 +30,7 @@ Côté app, bouton **« Copier pour Pronote »** sur une évaluation :
 
 ### Voie B — CSV (si l'établissement utilise l'import de notes)
 
-Export CSV `;` : `Nom;Prénom;Note` (+ en-tête barème/coef en commentaire). Encodage Windows-1252 proposé par défaut (Pronote/Excel France). Format exact des imports tiers à confronter à la version de l'établissement avant d'industrialiser.
+Export CSV `;` : `Nom;Prénom;Note` (virgule décimale, codes ABS/DISP/NN tels quels, champs échappés + anti-injection de formule). Encodage **UTF-8 avec BOM** (Excel France l'ouvre avec les accents corrects ; c'est ce que fait le code, `io.telechargerTexte`). Un export Windows-1252 ne serait ajouté que si l'import Pronote de l'établissement l'exigeait — à confronter à la version de l'établissement avant d'industrialiser.
 
 ### Métadonnées de traçabilité
 

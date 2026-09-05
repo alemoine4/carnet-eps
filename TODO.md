@@ -5,7 +5,15 @@ Vue d'ensemble des phases : `docs/roadmap.md`.
 
 ## 🎒 Jalon rentrée 2026 : phases 1→9 TERMINÉES — app EN LIGNE (https://alemoine4.github.io/carnet-eps/) — restent les validations terrain ci-dessous
 
-## Phase active : post-v1 — audit complet du 2026-07-10 (corrections v0.12.1)
+## Phase active : post-v1 — 4e audit du 2026-09-05 (v0.12.4, à déployer)
+
+### Audit du 2026-09-05 (rapport : `docs/audit-2026-09-05.md` — 34 constats, 30 traités)
+- [x] 2026-09-05 — **Correctifs livrés en v0.12.4** (30 constats, tests de non-régression `tests/e2e/regressions.spec.mjs` 13/13 + smoke 8/8) : grille d'appel 2 colonnes dès 360 px (B01), import JSON altéré refusé avant écriture (B02), appui long vs défilement (B03), double tap (B04), double clic « Créer la séance » (B05), compteur « saisis » (B06), contrastes rouge/badges (B07/B08), vignette au clavier (B09), **élève « parti »** (B10), rollback DB_VERSION documenté (B11), SW et réponses non-OK (B12), `capture` retiré (B13), écran blanc → message (B14), repli randomUUID (B15), onversionchange (B16), prefs protégées (B17), visionneuse re-typée (B18), fuites d'URL (B19), message MAJ (B20), période sur récap imprimé (B21), suppression de classe référencée refusée (B22), coef 0 (B23), barrette sur l'accueil (B24), dérive doc (B25), CSS mort (B26), tests (B28), icône iOS (B32), color-scheme (B33), pastille hidden (B34).
+- [ ] **Déployer v0.12.4** : `git push origin main` + `git subtree push --prefix app origin gh-pages` + tag `v0.12.4` + ligne dans `docs/deploiement.md` (le commit `3b48740` du 30/08 n'est pas poussé non plus).
+- [ ] **B27 — dédoublonnage** (non appliqué, > 3 fichiers → /plan) : `trierEleves`/`trierClasses` ×7, `champF` ×5, `jours` ×2, `normaliser` ×2 → `metier.js` / `ui.js`.
+- [ ] **B30 — à trancher (produit)** : le seuil ⚠ « 3 oublis de tenue / 3 dispenses » cumule toute l'année (fonctionnalites.md §4 dit « sur le trimestre ») — garder, ou fenêtre glissante / trimestre ?
+- [ ] **B31 — à valider sur Android** : bouton « Enregistrer » d'une feuille (observation, commentaire d'appel) atteignable clavier ouvert ? Sinon `interactive-widget=resizes-content` (fiche terrain 4 bis).
+- [ ] **B29 — différé** : cascades de suppression en N transactions (non atomiques) → une transaction multi-stores = refactor `io.js` (AVIS avant).
 
 ### Audit /audit-projet du 2026-07-10 (rapport : `docs/audit-2026-07-10.md`)
 - [x] 2026-07-10 — **Lot validé « GO »** (A1→A11, A15, A16) corrigé en v0.12.1 : observations dans le résumé sauvegarde/import + accords (A1/A2), erreurs visibles sur photo/pièce illisible (A3), date « aujourd'hui » en heure locale (A4), helpers dédupliqués sequences/reglages (A5), `numero` de séance documenté comme indicatif (A6), liens externes limités à http(s) (A7), fin des `alert()` natifs (A8), routeur protégé contre les rendus concurrents (A9), doublon bloqué au renommage de classe (A10), chevauchements EDT signalés (A11), conflit de séquences actives signalé sur l'accueil (A15), TODO nettoyé (A16).

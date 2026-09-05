@@ -18,9 +18,10 @@
    ```
 4. Poser un **tag** sur le commit déployé (pour pouvoir y revenir) :
    ```bash
-   git tag -a v0.9.X <commit> -m "v0.9.X — résumé"
-   git push origin v0.9.X
+   git tag -a v0.12.X <commit> -m "v0.12.X — résumé"
+   git push origin v0.12.X
    ```
+5. Ajouter la ligne au tableau ci-dessous (version → tag → commit).
 
 > ⚠ La branche **`gh-pages`** contient uniquement le dossier `app/` (pas `docs/`, donc ni les avis ni les rapports d'audit). C'est elle qui est publiée.
 
@@ -78,4 +79,4 @@ git checkout v0.9.4              # revue en mode "détaché" pour inspecter
 ## Côté utilisateur, après un rollback
 - L'app installée détecte le nouveau service-worker et propose **« Recharger »**.
 - **Les données élèves ne sont pas touchées** par un rollback de code (elles vivent dans IndexedDB, séparées). Un retour en arrière de version ne supprime aucune donnée.
-- Exception à connaître : ne jamais revenir à une version dont le **schéma IndexedDB** serait plus ancien après une migration de schéma (aucune migration à ce jour — `DB_VERSION = 1`).
+- ⚠ **Exception à connaître** : ne jamais revenir à une version dont le **schéma IndexedDB** est plus ancien que celui déjà ouvert sur les appareils. La v0.12.0 a migré la base en `DB_VERSION = 2` (store `observations`, décision D009) : **aucun retour arrière avant v0.12.0** — une app en `DB_VERSION = 1` face à une base en version 2 échoue à l'ouverture (`VersionError`, écran « Affichage impossible »). Les rollbacks entre v0.12.0 et la version courante restent sans risque (même schéma). (Constat B11 de l'audit 2026-09-05 : cette ligne affirmait à tort « aucune migration à ce jour ».)

@@ -4,7 +4,38 @@ Une entrée par session de travail, la plus récente **en haut**. C'est la mémo
 
 Modèle d'entrée :
 
-```md## 2026-08-30 — Rangement du dépôt et sortie du template générique
+```md
+## AAAA-MM-JJ — titre court
+**Fait** : …
+**Décidé** : … (reporter dans decisions.md si structurant)
+**Coincé / à vérifier** : …
+**Prochaine étape** : …
+```
+
+---
+
+## 2026-09-05 (24) — 4e audit (34 constats) + correctifs v0.12.4
+
+Demande : « réfléchis à la meilleure stratégie pour auditer et améliorer, puis effectue le tout ».
+
+**Stratégie retenue** : référence factuelle d'abord (tests, versions, synchronisation git), puis audit à 12 lentilles (logique métier, sécurité/RGPD, PWA/SW, WCAG 2.2, terrain prof d'EPS, intégrité des données, performance, qualité/dérive documentaire, tests, Pronote, responsive, cas limites), les 16 constats de juillet exclus ; chaque hypothèse **vérifiée par mesure** (Playwright, calcul WCAG en Node) avant d'être retenue ; corrections non structurantes appliquées avec un test de non-régression chacune, structurantes reportées.
+
+**Fait** :
+- Le workflow multi-agents prévu (12 lentilles + réfutateurs) a été refusé par la limite de session : l'audit a été mené **en solo** avec la même grille, lecture intégrale des 24 fichiers de `app/` (5 500 lignes). Rapport : **`docs/audit-2026-09-05.md`** — 34 constats (2 P1, 11 P2, 21 P3), **30 traités**, 4 reportés.
+- 7 hypothèses testées par un spec Playwright temporaire (supprimé) : 6 confirmées, 1 réfutée (le défilement revient bien en haut après navigation).
+- **P1** : grille d'appel à **1 colonne sur 360 px** (`minmax` 160 → 150 px) ; import JSON altéré qui **vidait un store** (DataError synchrone → `clear()` validé) → validation de chaque enregistrement avant toute écriture + `tx.abort()`.
+- **P2** : `pointercancel` (défilement ouvrait le menu), double tap perdu (état mis à jour avant l'écriture), double clic « Créer la séance » (accueil + sélecteur), compteur « saisis » sur les élèves actuels, rouge d'alerte thématisé (3,3:1 → 5:1 en sombre), badges gris 4,2 → 5,7:1, vignette du certificat dans un bouton, **élève « parti »** (champ `actif` enfin exposé : fiche, badge, effectifs), rollback documenté (DB_VERSION 2), SW ne cache plus les réponses non-OK, `capture` retiré des champs fichier (caméra frontale forcée, PDF inaccessible).
+- **P3** : écran blanc → carte « Affichage impossible », repli `crypto.randomUUID` hors HTTPS, `onversionchange/onblocked`, `sauverPrefs` protégé, visionneuse re-typée par mime déclaré, fuites d'URL, message MAJ, période sur le récap imprimé, refus de supprimer une classe référencée, coef 0 honoré, classes en barrette sur l'accueil, `color-scheme`, `apple-touch-icon` PNG, CSS mort, pastille `hidden` réellement masquée (trouvée sur capture sombre), dérive doc (architecture, modèle, CLAUDE.md, pronote, guides, Aide in-app).
+- Tests : **`tests/e2e/regressions.spec.mjs`** (13 tests, un par correctif) ; suite complète **21/21** (le navigateur Playwright 1223 a été réinstallé : `npx playwright install chromium`, la « régression » du 30/08 était bien l'environnement). Captures clair 360 px / sombre 375 px contrôlées visuellement.
+- Bump `VERSION` (SW) + `VERSION_APP` → **0.12.4**. Sauvegardes dans `archives/2026-09-05/`.
+
+**Décidé** : lot > 3 fichiers assumé sur instruction explicite (« effectue le tout »), chaque correctif restant local et testé ; refactor des doublons (`trierEleves` ×7, `champF` ×5…) **non appliqué** (règle des 3 fichiers → à planifier) ; `interactive-widget=resizes-content` **non appliqué** sans test Android (fiche terrain 4 bis).
+
+**Coincé / à vérifier** : sur Android réel — sélecteur caméra/fichiers sans `capture`, grille 2 colonnes, clavier virtuel vs feuille (B31). Non déployé : commit local, **push + subtree + tag à faire** (procédure `deploiement.md`).
+
+**Prochaine étape** : déployer v0.12.4 ; validations terrain (fiche `test-terrain.md` v0.12.4) ; trancher B30 (seuil ×3 par trimestre ?) et planifier B27 (dédoublonnage).
+
+## 2026-08-30 (23) — Rangement du dépôt et sortie du template générique
 
 **Fait** :
 - Recherche exhaustive préalable des références au chemin du projet : dépôt (md/js/mjs/json/html), `playwright.config.mjs`, `server-carnet.mjs`, workflows GitHub (**aucun** : pas de CI), `.vscode` (**aucun**), `~/.claude/settings*.json` (**aucune**), raccourci bureau « Carnet EPS.lnk » (→ pointe la **PWA en ligne**, `msedge_proxy --app-url=https://alemoine4.github.io/carnet-eps/`, donc indépendant du dossier local).
@@ -17,15 +48,6 @@ Modèle d'entrée :
 **Coincé / à vérifier** : les smoke-tests n'ont pas pu tourner — le binaire navigateur Playwright manque (`chromium_headless_shell-1223` absent de `~/AppData/Local/ms-playwright`). Dérive d'environnement, sans lien avec ce rangement ; à relancer après `npx playwright install`. Aucun fichier de `app/` n'ayant été touché, le risque de régression applicative est nul.
 
 **Prochaine étape** : réinstaller le navigateur Playwright et repasser les 8 smoke-tests ; trancher l'aplatissement du double niveau.
-
-## AAAA-MM-JJ — titre court
-**Fait** : …
-**Décidé** : … (reporter dans decisions.md si structurant)
-**Coincé / à vérifier** : …
-**Prochaine étape** : …
-```
-
----
 
 ## 2026-07-12 (22) — Finitions post-audit (v0.12.3)
 

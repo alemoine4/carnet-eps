@@ -27,7 +27,7 @@ Pour **chaque classe** :
 
 ## 4. Saisir l'EDT (5 min)
 
-**EDT** :
+**Plus → Emploi du temps** :
 1. Si votre emploi du temps alterne sur deux semaines : renseigner « **Un lundi de semaine A** » (n'importe quel lundi d'une semaine A, par ex. le lundi de la rentrée si c'est une semaine A).
 2. **+ Ajouter un créneau** pour chaque cours : jour, heures, classe, semaine (Toutes/A/B), installation.
 
@@ -55,6 +55,7 @@ Pas besoin de créer les séances : **l'accueil propose la séance du jour autom
 ## Au fil de l'année — les bons réflexes
 
 - **Exporter une sauvegarde chaque semaine** (vendredi soir, 10 secondes) — c'est la seule protection contre la perte de l'appareil.
-- Certificat reçu → **Plus → Inaptitudes → + Nouvelle** avec photo : l'élève sera signalé à l'appel tout seul.
+- Certificat reçu → **Suivi → Inaptitudes → + Nouvelle** avec photo ou PDF : l'élève sera signalé à l'appel tout seul.
+- Élève qui quitte l'établissement → sa fiche → **« Dans la classe : Parti »** : il disparaît de l'appel, des notes et des effectifs ; son historique reste consultable.
 - Fin de cycle → saisir les notes dans l'app → **« Copier pour Pronote »** au bureau.
 - L'accueil vous rappelle le reste (inaptitudes qui expirent, seuils de tenue, notes non remontées).

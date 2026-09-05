@@ -1,4 +1,4 @@
-# Fiche de test terrain — Carnet EPS (v0.9.2)
+# Fiche de test terrain — Carnet EPS (v0.12.4)
 
 > À imprimer (ou garder sur un 2e écran). ~15 min. Coche au fur et à mesure, note ce qui coince.
 > App en ligne : **https://alemoine4.github.io/carnet-eps/** · Guide détaillé : Plus → Aide.
@@ -13,7 +13,7 @@
 - [ ] L'icône **EPS** apparaît sur l'écran d'accueil
 - [ ] L'app s'ouvre en plein écran (sans barre d'adresse)
 - [ ] Plus → Réglages → protection contre l'effacement **active ✓**
-- [ ] Réglages → **Version : v0.9.2** (sinon : fermer l'app à fond, rouvrir)
+- [ ] Réglages → **Version : v0.12.4** (sinon : Réglages → Vérifier les mises à jour, puis « Recharger »)
 
 **PC (Chrome/Edge)**
 - [ ] Icône « Installer » dans la barre d'adresse → app dans sa fenêtre
@@ -23,7 +23,9 @@ Résultat / notes : ________________________________________________
 ## 2. Appel d'une classe de 28 — chrono < 40 s ⏱ (critère officiel)
 
 - [ ] Créer (ou importer) une classe de ~28, une séquence, ouvrir l'appel du jour
+- [ ] La grille affiche **2 colonnes** sur ton téléphone (v0.12.4 : corrigé pour les écrans de 360 px)
 - [ ] **Chrono en main**, faire l'appel réel : tap = présent→absent→tenue ; ⋯ ou appui long = autres statuts
+- [ ] Faire défiler la grille le doigt posé : **aucun menu** ne doit s'ouvrir tout seul (v0.12.4)
 - [ ] Finir avec **« Terminer l'appel »** (le reste = présents)
 
 ⏱ Temps mesuré : **______ s**  (cible : < 40 s) — tenu ? ☐ oui ☐ non
@@ -46,9 +48,16 @@ Résultat / notes : ________________________________________________
 
 ## 4. Caméra — certificat (~2 min)
 
-- [ ] Plus → Inaptitudes → Nouvelle → élève + dates + **photo** → la caméra arrière s'ouvre
+- [ ] Suivi → Inaptitudes → Nouvelle → élève + dates + **pièce** → Android propose **Appareil photo / Fichiers / Galerie** (v0.12.4 : l'app n'impose plus la caméra, pour pouvoir joindre un PDF) → prendre la photo
 - [ ] Photo nette et **lisible** dans la visionneuse (toucher la vignette ; Échap/clic pour fermer)
 - [ ] À la date du cours, l'élève est signalé 🩺 à l'appel
+- [ ] Fiche élève → **Ajouter une photo** → le choix appareil photo (arrière) / galerie est proposé
+
+## 4 bis. Clavier virtuel (~1 min) — à noter, pas encore corrigé
+
+- [ ] Fiche élève → **+ Observation** → taper du texte : le bouton **Enregistrer** reste-t-il atteignable clavier ouvert (sans le refermer) ? ☐ oui ☐ non
+- [ ] Appel → ⋯ sur un élève → **Commentaire** : idem
+  > Si « non » : ajouter `interactive-widget=resizes-content` à la balise viewport (`app/index.html`) — piste notée dans `docs/audit-2026-09-05.md` (B31).
 
 Résultat / notes : ________________________________________________
 
@@ -71,7 +80,7 @@ Résultat / notes : ________________________________________________
 
 ## Bilan
 
-- Tests OK : ______ / 6
+- Tests OK : ______ / 7
 - Bloquants rencontrés : ________________________________________________
 - À améliorer : ________________________________________________
 

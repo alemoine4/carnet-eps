@@ -46,11 +46,12 @@ Cadrage : `docs/brief.md` + `docs/fonctionnalites.md`. Avancement : `docs/roadma
 |---|---|
 | Code actif | `app/` (entrée : `app/index.html`) |
 | Serveur local | `server-carnet.mjs` — port **8160** — `node server-carnet.mjs` à la racine du dépôt |
-| Vérification rendu | `preview_start` (config `carnet-eps`) puis `preview_snapshot` / `preview_eval` — `preview_screenshot` time out sur ce poste |
+| Vérification rendu | `node server-carnet.mjs` puis navigateur sur `http://localhost:8160` ; **`npm test`** (Playwright : smoke + non-régression ; navigateur à installer une fois : `npx playwright install chromium`) |
 | Modèle de données | `docs/modele-donnees.md` — IndexedDB `carnet-eps`, wrapper maison dans `app/js/io.js` |
 | Service worker | enregistré **uniquement hors localhost** → jamais de cache pendant le dev |
 | Échanges Pronote | `docs/pronote.md` |
-| Décisions actées | `docs/decisions.md` (D001 à D008 au démarrage) |
+| Décisions actées | `docs/decisions.md` (D001 à D011) |
+| Audits | `docs/audit-2026-07-10.md` (soldé), `docs/audit-2026-09-05.md` (4e passe, v0.12.4) |
 
 ---
 
@@ -59,8 +60,8 @@ Cadrage : `docs/brief.md` + `docs/fonctionnalites.md`. Avancement : `docs/roadma
 - HTML5, CSS3 (custom properties), JavaScript ES modules.
 - `localStorage` pour préférences UI ; **IndexedDB via wrapper maison** (`app/js/io.js`, décision D003 — pas d'idb-keyval) pour toutes les données.
 - PWA : `manifest.webmanifest` + service-worker maison versionné (BIBLE règle 5).
-- Tests : Playwright pour scénarios critiques + `tests/checklist.md`.
-- Qualité : ESLint, Prettier, Stylelint, html-validate, axe-core, Lighthouse local.
+- Tests : Playwright (dépendance de **dev** uniquement, D010) — `npm test` = 8 smoke-tests + tests de non-régression des audits ; `tests/checklist.md` + `docs/test-terrain.md` pour le manuel.
+- Qualité : Lighthouse / axe via les DevTools à la demande. Aucun linter (ESLint, Prettier, Stylelint, html-validate) n'est configuré dans le dépôt : en ajouter un = dépendance de dev à valider (checklist gratuité).
 - **Outils gratuits uniquement** (voir BIBLE.md règle 1).
 
 ---
