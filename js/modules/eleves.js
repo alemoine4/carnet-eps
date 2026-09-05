@@ -48,9 +48,13 @@ function avatar(eleve, couleur) {
   return a;
 }
 
+// Effectif = élèves présents dans la classe (un élève « parti » reste dans la base pour son
+// historique mais ne compte plus — audit 2026-09-05, B10).
 async function compterParClasse() {
   const comptes = new Map();
-  for (const e of await tous('eleves')) comptes.set(e.classeId, (comptes.get(e.classeId) || 0) + 1);
+  for (const e of await tous('eleves')) {
+    if (e.actif !== false) comptes.set(e.classeId, (comptes.get(e.classeId) || 0) + 1);
+  }
   return comptes;
 }
 
@@ -150,9 +154,11 @@ async function vueClasse(c, id) {
   if (!classe) { c.append(carte('Classe introuvable', 'Elle a peut-être été supprimée.')); return; }
   sauverPrefs({ derniereClasseId: id }); // raccourci « Reprendre » de l'accueil
   const eleves = (await parIndex('eleves', 'classeId', id)).sort(trierEleves);
+  const nbActifs = eleves.filter((e) => e.actif !== false).length;
+  const nbPartis = eleves.length - nbActifs;
 
   // Carte classe (édition directe)
-  const carteCl = carte(`Classe ${classe.nom}`, '', `${eleves.length} élève${eleves.length > 1 ? 's' : ''}`);
+  const carteCl = carte(`Classe ${classe.nom}`, '', `${nbActifs} élève${nbActifs > 1 ? 's' : ''}${nbPartis ? ` · ${nbPartis} parti${nbPartis > 1 ? 's' : ''}` : ''}`);
   const inpCouleur = el('input', { type: 'color', id: 'cl-couleur' });
   inpCouleur.value = classe.couleur || PALETTE[0];
   inpCouleur.addEventListener('change', async () => { classe.couleur = inpCouleur.value; await enregistrer('classes', classe); });
@@ -180,6 +186,16 @@ async function vueClasse(c, id) {
   if (!eleves.length) {
     const btnSuppr = el('button', { class: 'btn btn-danger' }, 'Supprimer la classe');
     btnSuppr.addEventListener('click', async () => {
+      // Une classe encore référencée par des séquences ou des créneaux EDT laisserait des
+      // orphelins « Classe ? » partout (audit 2026-09-05, B22) : on refuse tant qu'ils existent.
+      const [seqs, crens] = await Promise.all([parIndex('sequences', 'classeId', classe.id), parIndex('edt', 'classeId', classe.id)]);
+      const restes = [];
+      if (seqs.length) restes.push(`${seqs.length} séquence${seqs.length > 1 ? 's' : ''}`);
+      if (crens.length) restes.push(`${crens.length} créneau${crens.length > 1 ? 'x' : ''} EDT`);
+      if (restes.length) {
+        toast(`Classe non supprimée : elle a encore ${restes.join(' et ')} — à supprimer d’abord (Plus → Séquences / Emploi du temps).`);
+        return;
+      }
       if (!(await confirmer({ titre: 'Supprimer la classe', message: `Supprimer définitivement la classe ${classe.nom} (vide) ?` }))) return;
       await supprimer('classes', classe.id);
       location.hash = '#/eleves';
@@ -232,6 +248,7 @@ async function vueClasse(c, id) {
       const ligne = el('a', { class: 'ligne-eleve', href: `#/eleves/fiche/${e.id}` },
         avatar(e, classe.couleur),
         el('span', { class: 'ligne-eleve-nom' }, `${e.nom} ${e.prenom}`),
+        e.actif === false ? el('span', { class: 'badge' }, 'parti') : '',
         e.notesPerso ? el('span', { class: 'badge' }, 'ℹ') : '',
         el('span', { class: 'chevron', 'aria-hidden': 'true' }, '›'),
       );
@@ -269,16 +286,21 @@ async function vueFiche(c, id) {
   const carteId = carte(`${eleve.nom} ${eleve.prenom}`, '', classe ? classe.nom : '');
   // Photo de l'élève (stockée localement, compressée) ou initiales.
   const h2Fiche = carteId.querySelector('h2');
+  if (eleve.actif === false) h2Fiche.append(el('span', { class: 'badge' }, 'parti'));
   let photoOK = false;
   if (eleve.photoFichierId) {
     const res = await urlDuFichier(eleve.photoFichierId);
     if (res) {
-      h2Fiche.prepend(el('img', { class: 'avatar avatar-photo', src: res.url, alt: '' }));
+      const img = el('img', { class: 'avatar avatar-photo', src: res.url, alt: '' });
+      img.addEventListener('load', () => URL.revokeObjectURL(res.url), { once: true }); // plus de fuite d'URL (B19)
+      h2Fiche.prepend(img);
       photoOK = true;
     }
   }
   if (!photoOK) h2Fiche.prepend(avatar(eleve, classe?.couleur));
-  const inpPhoto = el('input', { type: 'file', accept: 'image/*', capture: 'user', hidden: true });
+  // Sans `capture="user"` : il forçait la caméra FRONTALE sur Android ; le sélecteur natif propose
+  // désormais appareil photo (arrière) ou galerie (audit 2026-09-05, B13).
+  const inpPhoto = el('input', { type: 'file', accept: 'image/*', hidden: true });
   const statutPhoto = el('p', { class: 'statut' });
   inpPhoto.addEventListener('change', async () => {
     const f = inpPhoto.files[0];
@@ -319,6 +341,16 @@ async function vueFiche(c, id) {
       id: 'f-classe', libelle: 'Classe', valeur: eleve.classeId,
       options: classes.map((cl) => ({ value: cl.id, label: cl.nom })),
       onChange: async (v) => { eleve.classeId = v; await sauver(); },
+    }),
+    // Élève parti en cours d'année : masqué à l'appel, aux notes et aux effectifs, historique
+    // conservé (le champ `actif` du modèle n'avait aucune interface — audit 2026-09-05, B10).
+    champSelect({
+      id: 'f-actif', libelle: 'Dans la classe', valeur: eleve.actif === false ? 'parti' : 'oui',
+      options: [
+        { value: 'oui', label: 'Oui — à l’appel et aux notes' },
+        { value: 'parti', label: 'Parti (déménagement, changement d’établissement) — masqué, historique conservé' },
+      ],
+      onChange: async (v) => { eleve.actif = v !== 'parti'; await sauver(); rafraichir(); },
     }),
     champZone({ id: 'f-notes', libelle: 'À savoir (PAI, asthme, lunettes…)', valeur: eleve.notesPerso || '', placeholder: 'Visible uniquement sur cet appareil', onChange: async (v) => { eleve.notesPerso = v; await sauver(); } }),
   );
@@ -402,7 +434,8 @@ async function vueFiche(c, id) {
     let poids = 0;
     for (const { n, ev } of lignesN) {
       const bar = baremeDe(ev);
-      if (bar && typeof n.valeur === 'number') { somme += (n.valeur / bar) * 20 * (ev.coef || 1); poids += ev.coef || 1; }
+      const coef = Number.isFinite(ev.coef) ? ev.coef : 1; // coef 0 = ne compte pas (B23)
+      if (bar && typeof n.valeur === 'number') { somme += (n.valeur / bar) * 20 * coef; poids += coef; }
     }
     if (poids) {
       const moy = String(Math.round((somme / poids) * 100) / 100).replace('.', ',');

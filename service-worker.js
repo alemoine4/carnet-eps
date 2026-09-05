@@ -1,10 +1,10 @@
 /* service-worker.js — Carnet EPS
    BIBLE règle 5 : versionné, network-first sur le document/manifest (jamais de
    version morte), cache-first sur les assets, purge des vieux caches à l'activation.
-   ⚠ Incrémenter VERSION à chaque déploiement (synchroniser avec VERSION_APP de main.js).
+   ⚠ Incrémenter VERSION à chaque déploiement (synchroniser avec VERSION_APP de state.js).
    Non enregistré sur localhost (voir main.js, décision D008). */
 
-const VERSION = '0.12.3';
+const VERSION = '0.12.4';
 const CACHE = `carnet-eps-${VERSION}`;
 const ASSETS = [
   './',
@@ -61,11 +61,15 @@ self.addEventListener('fetch', (e) => {
 
   if (estDocument) {
     // network-first : on sert le réseau, le cache n'est qu'un filet hors ligne.
+    // Seules les réponses OK sont mises en cache : une 404/5xx passagère (déploiement en cours)
+    // ne doit pas devenir le filet hors ligne de toute la version (audit 2026-09-05, B12).
     e.respondWith(
       fetch(req)
         .then((rep) => {
-          const copie = rep.clone();
-          caches.open(CACHE).then((c) => c.put(req, copie));
+          if (rep.ok) {
+            const copie = rep.clone();
+            caches.open(CACHE).then((c) => c.put(req, copie));
+          }
           return rep;
         })
         .catch(() => caches.match(req).then((r) => r || caches.match('./index.html')))
@@ -77,8 +81,10 @@ self.addEventListener('fetch', (e) => {
         (r) =>
           r ||
           fetch(req).then((rep) => {
-            const copie = rep.clone();
-            caches.open(CACHE).then((c) => c.put(req, copie));
+            if (rep.ok) {
+              const copie = rep.clone();
+              caches.open(CACHE).then((c) => c.put(req, copie));
+            }
             return rep;
           })
       )

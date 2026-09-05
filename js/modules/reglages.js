@@ -81,7 +81,9 @@ export function initialiser() {
         if (!reg) { statutMaj.textContent = 'Service-worker non enregistré.'; return; }
         await reg.update();
         if (reg.waiting || reg.installing) {
-          statutMaj.textContent = 'Mise à jour téléchargée : fermez complètement l’app puis rouvrez-la.';
+          // Le SW fait skipWaiting + claim : la nouvelle version prend la main toute seule et
+          // le toast « Recharger » apparaît — inutile de fermer l'app (audit 2026-09-05, B20).
+          statutMaj.textContent = 'Mise à jour trouvée : elle s’installe, un bouton « Recharger » va apparaître.';
         } else {
           statutMaj.textContent = `Vous êtes à jour (v${VERSION_APP}).`;
         }

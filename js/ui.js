@@ -24,7 +24,17 @@ export async function afficherVue(id, params = []) {
     conteneur.append(carte('Page introuvable', `Aucune vue « ${id} ».`));
     return;
   }
-  await rendu(conteneur, params);
+  try {
+    await rendu(conteneur, params);
+  } catch (e) {
+    // Une exception dans une vue laissait un écran blanc muet (audit 2026-09-05, B14).
+    console.error(`Vue « ${id} » :`, e);
+    if (gen === generation) {
+      conteneur.append(carte('Affichage impossible',
+        `Une erreur est survenue (${e?.message || e}). Rechargez la page ; si cela persiste, `
+        + 'exportez une sauvegarde (Plus → Sauvegarde) avant toute autre manipulation.'));
+    }
+  }
   if (gen === generation) conteneur.focus({ preventScroll: true });
 }
 

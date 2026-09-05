@@ -90,10 +90,13 @@ async function vueListe(c) {
     const titre = inpTitre.value.trim();
     if (!titre) { statutForm.textContent = 'Le titre est obligatoire.'; statutForm.className = 'statut statut-erreur'; return; }
     const id = crypto.randomUUID();
+    // Coefficient 0 accepté (évaluation blanche, non comptée) : `|| 1` le transformait en 1 sans
+    // rien dire (audit 2026-09-05, B23). Vide ou invalide → 1.
+    const coefSaisi = Number(inpCoef.value);
     await enregistrer('evaluations', {
       id, sequenceId: selSeq.value, titre, date: inpDate.value || isoAujourdhui(),
       type: selType.value, bareme: selType.value === 'bareme' ? Number(inpBareme.value) || 20 : null,
-      coef: Number(inpCoef.value) || 1, publieePronote: null,
+      coef: inpCoef.value.trim() !== '' && Number.isFinite(coefSaisi) && coefSaisi >= 0 ? coefSaisi : 1, publieePronote: null,
     });
     location.hash = `#/notes/eval/${id}`;
   });
@@ -377,7 +380,8 @@ async function vueReleve(c, classeId) {
     for (const ev of evals) {
       const bar = baremeDe(ev);
       const v = noteDe.get(`${ev.id}_${eleveId}`);
-      if (bar && typeof v === 'number') { somme += (v / bar) * 20 * (ev.coef || 1); poids += ev.coef || 1; }
+      const coef = Number.isFinite(ev.coef) ? ev.coef : 1; // coef 0 = ne compte pas (B23)
+      if (bar && typeof v === 'number') { somme += (v / bar) * 20 * coef; poids += coef; }
     }
     return poids ? somme / poids : null;
   };
