@@ -38,6 +38,19 @@ export const MODELES_PHRASES = [
   'Bonne coopération avec le groupe.',
 ];
 
+// ---- Tris, normalisation, formats partagés (dédoublonnés des modules — audit 2026-09-05, B27) ----
+// Ordre alphabétique « Pronote » : NOM puis Prénom, collation française.
+export const trierEleves = (a, b) => a.nom.localeCompare(b.nom, 'fr') || a.prenom.localeCompare(b.prenom, 'fr');
+// Classes en tri naturel (6A < 10A).
+export const trierClasses = (a, b) => a.nom.localeCompare(b.nom, 'fr', { numeric: true });
+// Minuscules sans accents ; cleTexte ne garde que [a-z0-9] (clés de recherche et de doublon).
+export const normaliser = (s = '') => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+export const cleTexte = (s = '') => normaliser(s).replace(/[^a-z0-9]/g, '');
+// Barème effectif d'une évaluation (null = AFL / positionnement, hors moyenne).
+export const baremeDe = (ev) => (ev.type === 'note20' ? 20 : ev.type === 'bareme' ? Number(ev.bareme) || 20 : null);
+// Nombre arrondi à 2 décimales, virgule française.
+export const formatFR = (n) => String(Math.round(n * 100) / 100).replace('.', ',');
+
 // ---- Dates & heures ----
 // Date LOCALE (pas toISOString/UTC : entre minuit et 1-2 h du matin, l'UTC est encore « hier »).
 export const isoAujourdhui = () => {
@@ -49,6 +62,8 @@ export const enMinutes = (hm) => {
   const [h, m] = String(hm || '0:0').split(':').map(Number);
   return h * 60 + m;
 };
+// Écart en jours entre deux dates ISO (calcul à midi : insensible aux changements d'heure).
+export const jours = (de, a) => Math.round((new Date(`${a}T12:00:00`) - new Date(`${de}T12:00:00`)) / 86400000);
 
 export function lundiDe(date) {
   const d = new Date(date);
@@ -96,7 +111,6 @@ export async function collecterAlertes() {
   const eleveDe = (id) => eleves.find((e) => e.id === id);
   const classeDe = (id) => classes.find((cl) => cl.id === id);
   const nomComplet = (e) => `${e.prenom} ${e.nom}${classeDe(e.classeId) ? ' (' + classeDe(e.classeId).nom + ')' : ''}`;
-  const jours = (de, a) => Math.round((new Date(`${a}T12:00:00`) - new Date(`${de}T12:00:00`)) / 86400000);
   const alertes = [];
 
   for (const i of inaptitudes) {

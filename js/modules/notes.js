@@ -5,17 +5,12 @@
 // (codes ABS/DISP/NN laissés en lignes vides + liste à saisir à la main, garde-fou effectif) ;
 // voie B = CSV Nom;Prénom;Note. Type « afl » = positionnement libre, non exportable vers Pronote.
 
-import { enregistrerVue, el, carte, champTexte, confirmer, toast } from '../ui.js';
+import { enregistrerVue, el, carte, champ, champTexte, confirmer, toast } from '../ui.js';
 import { tous, lire, parIndex, enregistrer, supprimer, telechargerTexte, champCSV } from '../io.js';
-import { isoAujourdhui, dateFR } from '../metier.js';
+import { isoAujourdhui, dateFR, trierEleves, trierClasses, baremeDe, formatFR } from '../metier.js';
 import { sauverPrefs } from '../state.js';
 
-const trierEleves = (a, b) => a.nom.localeCompare(b.nom, 'fr') || a.prenom.localeCompare(b.prenom, 'fr');
-const trierClasses = (a, b) => a.nom.localeCompare(b.nom, 'fr', { numeric: true });
 const CODES = ['ABS', 'DISP', 'NN'];
-
-const baremeDe = (ev) => (ev.type === 'note20' ? 20 : ev.type === 'bareme' ? Number(ev.bareme) || 20 : null);
-const formatFR = (n) => String(Math.round(n * 100) / 100).replace('.', ',');
 
 // "12,5" → nombre · "ABS"/"A" → code · "" → vide · sinon invalide (type afl : texte libre)
 function parserValeur(brut, max) {
@@ -72,13 +67,12 @@ async function vueListe(c) {
   const inpCoef = el('input', { type: 'number', id: 'ev-coef', min: '0', max: '10', step: '0.5', value: '1' });
   const statutForm = el('p', { class: 'statut' });
   const btnCreer = el('button', { class: 'btn btn-principal' }, 'Créer et saisir les notes');
-  const champF = (id, libelle, controle) => el('div', { class: 'champ' }, el('label', { for: id }, libelle), controle);
   const form = carte('Nouvelle évaluation');
   form.append(
-    champF('ev-seq', 'Séquence', selSeq),
-    champF('ev-titre', 'Titre *', inpTitre),
-    el('div', { class: 'rang-2' }, champF('ev-date', 'Date', inpDate), champF('ev-coef', 'Coefficient', inpCoef)),
-    champF('ev-type', 'Type', selType),
+    champ('ev-seq', 'Séquence', selSeq),
+    champ('ev-titre', 'Titre *', inpTitre),
+    el('div', { class: 'rang-2' }, champ('ev-date', 'Date', inpDate), champ('ev-coef', 'Coefficient', inpCoef)),
+    champ('ev-type', 'Type', selType),
     blocBareme,
     el('div', { class: 'rang-btn' }, btnCreer),
     statutForm,

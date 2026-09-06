@@ -8,12 +8,8 @@ import { enregistrerVue, el, carte, champZone, ouvrirFeuille, toast } from '../u
 import { tous, lire, parIndex, enregistrer, telechargerTexte, champCSV } from '../io.js';
 import {
   STATUTS, CYCLE_TAP, SEUIL_ALERTE,
-  isoAujourdhui, dateFR, coursDuJour, inaptitudesActives,
+  isoAujourdhui, dateFR, coursDuJour, inaptitudesActives, trierEleves, trierClasses,
 } from '../metier.js';
-
-const trierEleves = (a, b) =>
-  a.nom.localeCompare(b.nom, 'fr') || a.prenom.localeCompare(b.prenom, 'fr');
-const trierClasses = (a, b) => a.nom.localeCompare(b.nom, 'fr', { numeric: true });
 
 // Raccourcis clavier (PC) sur une carte d'élève focalisée : une lettre = un statut.
 const RACCOURCIS_STATUT = { p: 'present', a: 'absent', r: 'retard', d: 'dispense', i: 'inapte', t: 'oubli_tenue', f: 'infirmerie' };

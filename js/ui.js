@@ -94,6 +94,12 @@ export function champZone({ id, libelle, valeur = '', placeholder = '', rows = 3
   return el('div', { class: 'champ' }, el('label', { for: id }, libelle, ' ', retour), zone);
 }
 
+// Libellé + contrôle déjà construit (select, fichier, grille de cases…) dans un bloc .champ,
+// sans sauvegarde automatique (ex-`champF` copié dans 5 modules — audit 2026-09-05, B27).
+export function champ(id, libelle, controle) {
+  return el('div', { class: 'champ' }, el('label', { for: id }, libelle), controle);
+}
+
 // ---- Feuille modale (menu bas d'écran) ----
 // <dialog> natif : piège de focus, fermeture par Échap et par clic sur le fond,
 // arrière-plan rendu inerte par le navigateur, focus restitué au déclencheur.

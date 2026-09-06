@@ -3,10 +3,10 @@
 // Un document = un fichier (image compressée / PDF, store `fichiers`) OU un lien externe.
 // Pas d'édition en v1 : supprimer puis recréer.
 
-import { enregistrerVue, el, carte, confirmer, toast } from '../ui.js';
+import { enregistrerVue, el, carte, champ, confirmer, toast } from '../ui.js';
 import { tous, lire, enregistrer, supprimer } from '../io.js';
 import { stockerFichier, supprimerFichier, ouvrirVisionneuse } from '../media.js';
-import { dateFR } from '../metier.js';
+import { dateFR, normaliser, trierClasses } from '../metier.js';
 
 const TYPES_DOC = [
   ['fiche', 'Fiche / situation'],
@@ -17,9 +17,6 @@ const TYPES_DOC = [
   ['autre', 'Autre'],
 ];
 const LIBELLE_TYPE = Object.fromEntries(TYPES_DOC);
-
-const normaliser = (s = '') => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-const trierClasses = (a, b) => a.nom.localeCompare(b.nom, 'fr', { numeric: true });
 
 async function vueDocuments(c) {
   const rafraichir = () => { c.innerHTML = ''; return vueDocuments(c); };
@@ -32,7 +29,6 @@ async function vueDocuments(c) {
   const btnAjouter = el('button', { class: 'btn btn-principal' }, '+ Ajouter un document');
   c.append(el('div', { class: 'barre-actions' }, btnAjouter));
 
-  const champF = (id, libelle, controle) => el('div', { class: 'champ' }, el('label', { for: id }, libelle), controle);
   const inpTitre = el('input', { type: 'text', id: 'doc-titre', placeholder: 'Fiche ateliers gym, protocole piscine…', autocomplete: 'off' });
   const selType = el('select', { id: 'doc-type' }, ...TYPES_DOC.map(([v, l]) => el('option', { value: v }, l)));
   const inpTags = el('input', { type: 'text', id: 'doc-tags', placeholder: 'gym, sécurité, cycle 4… (séparés par des virgules)', autocomplete: 'off' });
@@ -49,12 +45,12 @@ async function vueDocuments(c) {
   const btnCreer = el('button', { class: 'btn btn-principal' }, 'Enregistrer');
   const form = carte('Nouveau document');
   form.append(
-    champF('doc-titre', 'Titre *', inpTitre),
-    champF('doc-type', 'Type', selType),
-    champF('doc-tags', 'Mots-clés', inpTags),
-    actives.length ? champF('', 'Classes concernées (optionnel)', grilleClasses) : '',
-    champF('doc-fichier', 'Fichier (photo ou PDF)', inpFichier),
-    champF('doc-url', 'ou lien externe', inpUrl),
+    champ('doc-titre', 'Titre *', inpTitre),
+    champ('doc-type', 'Type', selType),
+    champ('doc-tags', 'Mots-clés', inpTags),
+    actives.length ? champ('', 'Classes concernées (optionnel)', grilleClasses) : '',
+    champ('doc-fichier', 'Fichier (photo ou PDF)', inpFichier),
+    champ('doc-url', 'ou lien externe', inpUrl),
     el('div', { class: 'rang-btn' }, btnCreer),
     statutForm,
   );

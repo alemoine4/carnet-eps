@@ -3,13 +3,13 @@
 // Le numéro d'une séance est calculé par ordre de date (pas de renumérotation à gérer).
 // Le bilan de séance se saisira depuis l'écran d'appel (phase 4).
 
-import { enregistrerVue, el, carte, champTexte, champSelect, champZone, confirmer, toast } from '../ui.js';
+import { enregistrerVue, el, carte, champ, champTexte, champSelect, champZone, confirmer, toast } from '../ui.js';
 import {
   tous, lire, parIndex, enregistrer,
   supprimerSeanceEnCascade, supprimerSequenceEnCascade,
   apercuSuppressionSequence, detailSuppression, restaurer,
 } from '../io.js';
-import { dateFR, isoAujourdhui } from '../metier.js';
+import { dateFR, isoAujourdhui, trierClasses } from '../metier.js';
 
 const APSA_COURANTES = [
   'Demi-fond', 'Course de haies', 'Relais-vitesse', 'Javelot', 'Saut en hauteur', 'Natation de vitesse',
@@ -25,8 +25,6 @@ const CA_OPTIONS = [
   { value: '3', label: 'CA3 · Artistique / acrobatique' },
   { value: '4', label: 'CA4 · Opposition' },
 ];
-
-const trierClasses = (a, b) => a.nom.localeCompare(b.nom, 'fr', { numeric: true });
 
 function estActive(s, jour = isoAujourdhui()) {
   return (!s.dateDebut || s.dateDebut <= jour) && (!s.dateFin || jour <= s.dateFin);
@@ -61,15 +59,14 @@ async function vueListe(c) {
   const inpNb = el('input', { type: 'number', id: 'sq-nb', min: '1', max: '30', value: '10' });
   const statutForm = el('p', { class: 'statut' });
   const btnCreer = el('button', { class: 'btn btn-principal' }, 'Créer la séquence');
-  const champF = (id, libelle, controle) => el('div', { class: 'champ' }, el('label', { for: id }, libelle), controle);
   const formCarte = carte('Nouvelle séquence');
   formCarte.append(
-    champF('sq-classe', 'Classe', selClasse),
-    champF('sq-apsa', 'APSA *', inpApsa),
+    champ('sq-classe', 'Classe', selClasse),
+    champ('sq-apsa', 'APSA *', inpApsa),
     datalist,
-    champF('sq-ca', 'Champ d’apprentissage', selCA),
-    el('div', { class: 'rang-2' }, champF('sq-debut', 'Début', inpDebut), champF('sq-fin', 'Fin', inpFin)),
-    champF('sq-nb', 'Séances prévues', inpNb),
+    champ('sq-ca', 'Champ d’apprentissage', selCA),
+    el('div', { class: 'rang-2' }, champ('sq-debut', 'Début', inpDebut), champ('sq-fin', 'Fin', inpFin)),
+    champ('sq-nb', 'Séances prévues', inpNb),
     el('div', { class: 'rang-btn' }, btnCreer),
     statutForm,
   );
