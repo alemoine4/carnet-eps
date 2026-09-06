@@ -81,7 +81,7 @@ enregistrerVue('aide', (c) => {
   const ol = el('ol', { class: 'liste-aide' });
   for (const [t, d] of [
     ['Archiver l’année passée', 'Sauvegarde → Télécharger (avec pièces), ranger le fichier, puis Effacer toutes les données. (À sauter la toute première fois.)'],
-    ['Régler l’année', 'Réglages : année scolaire, établissement, thème.'],
+    ['Régler l’année', 'Réglages : année scolaire, établissement, fins des trimestres (défaut 15/12 et 15/03), thème.'],
     ['Importer les élèves', 'Élèves → Importer depuis Pronote : coller le tableau ou le CSV → Analyser → vérifier les colonnes → Importer. Les classes se créent seules, les doublons sont ignorés.'],
     ['Saisir l’EDT', 'Plus → Emploi du temps : si alternance, renseigner « un lundi de semaine A », puis ajouter chaque créneau (jour, heures, classe, semaine, installation).'],
     ['Créer les séquences', 'Séquences → Nouvelle, pour chaque classe (APSA, dates, nombre de séances). Pas besoin de créer les séances : l’accueil propose celle du jour.'],

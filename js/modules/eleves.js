@@ -9,7 +9,10 @@ import {
   parserCSV, lireTexteCSV, supprimerEleveEnCascade,
   apercuSuppressionEleve, detailSuppression, restaurer,
 } from '../io.js';
-import { STATUTS, SEUIL_ALERTE, dateFR, isoAujourdhui, trierEleves, trierClasses, cleTexte, baremeDe, formatFR } from '../metier.js';
+import {
+  STATUTS, SEUIL_ALERTE, dateFR, isoAujourdhui, trierEleves, trierClasses, cleTexte, baremeDe, formatFR,
+  bornesTrimestres, compterStatutsParTrimestre,
+} from '../metier.js';
 import { stockerFichier, supprimerFichier, urlDuFichier } from '../media.js';
 import { carteObservations } from './observations.js';
 import { sauverPrefs } from '../state.js';
@@ -367,11 +370,32 @@ async function vueFiche(c, id) {
       chips.append(chip);
     }
     carteAp.append(chips);
-    if ((cnt.oubli_tenue || 0) >= SEUIL_ALERTE || (cnt.dispense || 0) >= SEUIL_ALERTE) {
-      carteAp.append(el('p', { class: 'statut statut-erreur' }, `⚠ Signalement : ${SEUIL_ALERTE} oublis de tenue ou dispenses atteints — penser famille / vie scolaire.`));
-    }
     const seancesT = await tous('seances');
     const seqT = await tous('sequences');
+    // Vision par trimestre (D012) : l'alerte reste sur le cumul, le tableau situe dans l'année.
+    const bornes = await bornesTrimestres();
+    const parTri = compterStatutsParTrimestre(appelsE, seancesT, bornes).get(id);
+    const triCourant = parTri?.t[bornes.courant] || {};
+    if ((cnt.oubli_tenue || 0) >= SEUIL_ALERTE || (cnt.dispense || 0) >= SEUIL_ALERTE) {
+      carteAp.append(el('p', { class: 'statut statut-erreur' },
+        `⚠ Signalement : ${SEUIL_ALERTE} oublis de tenue ou dispenses atteints sur l’année (T${bornes.courant} : ${triCourant.oubli_tenue || 0} tenue · ${triCourant.dispense || 0} disp.) — penser famille / vie scolaire.`));
+    }
+    if (parTri) {
+      const cles = Object.keys(STATUTS).filter((k) => parTri.annee[k]);
+      const tableTri = el('table', { class: 'table-apercu' },
+        el('thead', {}, el('tr', {},
+          el('th', {}, 'Statut'),
+          ...[1, 2, 3].map((t) => el('th', { title: t === bornes.courant ? 'trimestre en cours' : '' }, `T${t}${t === bornes.courant ? ' ●' : ''}`)),
+          el('th', {}, 'Année'),
+        )),
+        el('tbody', {}, ...cles.map((k) => el('tr', {},
+          el('td', {}, STATUTS[k].libelle),
+          ...[1, 2, 3].map((t) => el('td', {}, parTri.t[t][k] ? String(parTri.t[t][k]) : '')),
+          el('td', {}, String(parTri.annee[k])),
+        ))),
+      );
+      carteAp.append(el('p', { class: 'note-inline' }, `Par trimestre — année scolaire ${bornes.annee}-${bornes.annee + 1} (bornes : Plus → Réglages)`), tableTri);
+    }
     const derniers = appelsE
       .map((a) => ({ a, s: seancesT.find((x) => x.id === a.seanceId) }))
       .filter((x) => x.s)

@@ -669,6 +669,13 @@ dialog.feuille-confirm .rang-btn {
   font-size: 0.88rem;
 }
 
+/* Bouton bascule actif (périodes rapides du récap, D012) */
+.btn-statut[aria-pressed="true"] {
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+  color: var(--c-sur-accent);
+}
+
 .rang-chips {
   display: flex;
   gap: 8px;
