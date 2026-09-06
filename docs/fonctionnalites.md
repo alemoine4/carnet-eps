@@ -35,7 +35,7 @@ Chaque module = une vue + un fichier `app/js/modules/<module>.js` (à partir de 
 - Pré-remplissage : inaptitude active à la date du jour → statut `inapte` proposé d'office, pastille visible.
 - Compteurs en direct : effectif présent / pratiquants (l'inapte présent n'est pas pratiquant).
 - Historique : par séance, par élève (vue fiche élève), par classe.
-- Alertes : 3 oublis de tenue ou 3 dispenses « mot » sur le trimestre → signalement.
+- Alertes : 3 oublis de tenue ou 3 dispenses « mot » **cumulés sur l'année scolaire** → signalement (décision D012). **Vision par trimestre** en complément : tableau T1 / T2 / T3 / Année sur la fiche élève, périodes rapides sur le récap de classe, détail du trimestre en cours dans les alertes ; fins de T1/T2 réglables (Réglages, défaut 15/12 et 15/03).
 - Export : récap période/classe en CSV + impression (`window.print`).
 - **Important** : l'appel réglementaire reste fait dans Pronote (vie scolaire). Carnet EPS trace le suivi EPS fin, il ne remonte rien automatiquement (décision D006).
 

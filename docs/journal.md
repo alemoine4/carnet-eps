@@ -14,6 +14,22 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-06 (26) — Vision par trimestre (D012, B30 → v0.12.6)
+
+Décision de l’utilisateur : « les oublis cumulatifs année mais aussi vision trimestre ».
+
+**Fait** :
+- `metier.js` : `anneeScolaireDe`, `decalerJours`, `trimestreDe`, `bornesTrimestres` (meta `finTrimestre1/2` retenues seulement dans la même année scolaire, sinon 15/12 et 15/03), `periodeTrimestre`, `compterStatutsParTrimestre` (jointure appels × séances : la date vit sur la séance). `collecterAlertes` garde le seuil annuel et ajoute « (T2 : n) ».
+- `reglages.js` : carte « Trimestres » (2 dates). `eleves.js` : tableau T1/T2/T3/Année sur la fiche, signalement « sur l’année (T… : …) ». `appel.js` : périodes rapides T1/T2/T3/Année sur le récap (`aria-pressed`, réinitialisées si l’on touche aux dates), pastille ⚠ avec le détail du trimestre de la séance. Aide in-app + guide de rentrée (étape 2).
+- Docs : `decisions.md` **D012**, `fonctionnalites.md` §4 (corrigé : « sur le trimestre » → cumul annuel + vision trimestre), `modele-donnees.md` (clés meta, dont `semaineAReference` qui n’était pas documentée).
+- Tests : 4 tests B30 (bornes/réglage, fiche, récap, alerte), robustes au changement d’année scolaire (dates calculées depuis l’année en cours) — suite **25/25**.
+
+**Décidé** : D012 (dans decisions.md). Année scolaire = août → juillet ; bornes d’une autre année scolaire ignorées (évite un réglage périmé après la purge de rentrée).
+
+**Coincé / à vérifier** : rien.
+
+**Prochaine étape** : déployer v0.12.6 ; validations terrain ; B29 (avis si retenu) ; B31 (Android).
+
 ## 2026-09-06 (25) — Déploiement v0.12.4 + dédoublonnage B27 (v0.12.5)
 
 **Fait** :

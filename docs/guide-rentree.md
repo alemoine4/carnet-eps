@@ -13,6 +13,7 @@
 **Plus → Réglages** :
 - Année scolaire : `2026-2027`
 - Établissement : vérifier
+- Trimestres : fins du 1er et du 2e trimestre selon ton établissement (vides = 15/12 et 15/03) — utilisées par la fiche élève, les récaps et les alertes
 - Thème : au goût du jour 🌞/🌙
 
 ## 3. Importer les élèves depuis Pronote (10 min)

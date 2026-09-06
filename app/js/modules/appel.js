@@ -9,6 +9,7 @@ import { tous, lire, parIndex, enregistrer, telechargerTexte, champCSV } from '.
 import {
   STATUTS, CYCLE_TAP, SEUIL_ALERTE,
   isoAujourdhui, dateFR, coursDuJour, inaptitudesActives, trierEleves, trierClasses,
+  bornesTrimestres, periodeTrimestre, compterStatutsParTrimestre,
 } from '../metier.js';
 
 // Raccourcis clavier (PC) sur une carte d'élève focalisée : une lettre = un statut.
@@ -155,7 +156,7 @@ async function vueAppel(c, seanceId) {
     }
   }
 
-  // Cumuls tenue/dispense (pour les pastilles ⚠)
+  // Cumuls tenue/dispense (pour les pastilles ⚠) : seuil sur l'année, détail du trimestre de la séance (D012)
   const tousAppels = await tous('appels');
   const cumul = new Map();
   for (const a of tousAppels) {
@@ -163,6 +164,8 @@ async function vueAppel(c, seanceId) {
     if (!cumul.has(a.eleveId)) cumul.set(a.eleveId, { oubli_tenue: 0, dispense: 0 });
     cumul.get(a.eleveId)[a.statut]++;
   }
+  const bornes = await bornesTrimestres(seance.date);
+  const parTri = compterStatutsParTrimestre(tousAppels, await tous('seances'), bornes);
 
   // --- En-tête + compteurs ---
   const seancesSeq = (await parIndex('seances', 'sequenceId', sequence.id)).sort((a, b) => a.date.localeCompare(b.date));
@@ -304,6 +307,7 @@ async function vueAppel(c, seanceId) {
   for (const eleve of eleves) {
     const alerte = cumul.get(eleve.id);
     const enAlerte = alerte && (alerte.oubli_tenue >= SEUIL_ALERTE || alerte.dispense >= SEUIL_ALERTE);
+    const tri = parTri.get(eleve.id)?.t[bornes.courant] || {};
     const carteE = el('div', { class: 'btn-eleve', role: 'group', 'aria-label': `${eleve.prenom} ${eleve.nom}` });
     const cycle = el('button', { class: 'eleve-cycle', type: 'button' },
       el('span', { class: 'nom-e' }, `${eleve.prenom} ${eleve.nom}`),
@@ -312,7 +316,7 @@ async function vueAppel(c, seanceId) {
         el('span', { class: 'detail-txt' }, ''),
       ),
       inaptesSet.has(eleve.id) ? el('span', { class: 'pastille-info', title: 'Inaptitude en cours' }, '🩺') : '',
-      enAlerte ? el('span', { class: 'pastille-warn', title: `Oublis de tenue ×${alerte.oubli_tenue} · Dispenses ×${alerte.dispense}` }, '⚠') : '',
+      enAlerte ? el('span', { class: 'pastille-warn', title: `Année : oublis de tenue ×${alerte.oubli_tenue} · dispenses ×${alerte.dispense} — T${bornes.courant} : ${tri.oubli_tenue || 0} · ${tri.dispense || 0}` }, '⚠') : '',
     );
     const menu = el('button', {
       class: 'eleve-menu', type: 'button', 'aria-haspopup': 'dialog',
@@ -410,7 +414,25 @@ async function vueRecap(c, classeId) {
   btnImprimer.addEventListener('click', () => window.print());
 
   const carteFiltres = carte(`Récapitulatif — ${classe.nom}`, 'Seuls les appels enregistrés sont comptés (pensez à « Terminer l’appel » à chaque séance).');
+  // Périodes rapides : trimestres de l'année scolaire en cours (bornes : Réglages) ou l'année (D012).
+  const bornes = await bornesTrimestres();
+  const presets = el('div', { class: 'rang-chips no-print', role: 'group', 'aria-label': 'Période rapide' });
+  const deselectionner = () => { for (const x of presets.children) x.setAttribute('aria-pressed', 'false'); };
+  for (const [t, lib] of [[1, 'T1'], [2, 'T2'], [3, 'T3'], ['annee', `Année ${bornes.annee}-${bornes.annee + 1}`]]) {
+    const b = el('button', { class: 'btn btn-statut', type: 'button', 'aria-pressed': 'false' },
+      lib + (t === bornes.courant ? ' (en cours)' : ''));
+    b.addEventListener('click', () => {
+      const p = periodeTrimestre(t, bornes);
+      inpDebut.value = p.du;
+      inpFin.value = p.au;
+      deselectionner();
+      b.setAttribute('aria-pressed', 'true');
+      construire();
+    });
+    presets.append(b);
+  }
   carteFiltres.append(
+    presets,
     el('div', { class: 'rang-2 no-print' },
       el('div', { class: 'champ' }, el('label', { for: 'rc-debut' }, 'Du'), inpDebut),
       el('div', { class: 'champ' }, el('label', { for: 'rc-fin' }, 'Au'), inpFin),
@@ -469,8 +491,8 @@ async function vueRecap(c, classeId) {
       [e.nom, e.prenom, ...CLES.map((k) => cnt[k]), alerte ? 'OUI' : ''].map(champCSV).join(';'));
     telechargerTexte(`recap-eps_${classe.nom}_${isoAujourdhui()}.csv`, [tete, ...corps].join('\r\n'));
   });
-  inpDebut.addEventListener('change', construire);
-  inpFin.addEventListener('change', construire);
+  inpDebut.addEventListener('change', () => { deselectionner(); construire(); });
+  inpFin.addEventListener('change', () => { deselectionner(); construire(); });
   construire();
 }
 

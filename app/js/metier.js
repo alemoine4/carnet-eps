@@ -64,6 +64,56 @@ export const enMinutes = (hm) => {
 };
 // Écart en jours entre deux dates ISO (calcul à midi : insensible aux changements d'heure).
 export const jours = (de, a) => Math.round((new Date(`${a}T12:00:00`) - new Date(`${de}T12:00:00`)) / 86400000);
+// Date ISO décalée de n jours.
+export const decalerJours = (iso, n) => {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+// ---- Trimestres (décision D012 : alerte sur le cumul de l'année, vision par trimestre) ----
+// Année scolaire d'une date ISO : d'août à juillet → année civile de la rentrée.
+export const anneeScolaireDe = (iso) => {
+  const [y, m] = String(iso).split('-').map(Number);
+  return m >= 8 ? y : y - 1;
+};
+// Trimestre (1, 2, 3) d'une date d'après les fins de T1 et T2.
+export const trimestreDe = (iso, b) => (iso <= b.finT1 ? 1 : iso <= b.finT2 ? 2 : 3);
+// Bornes de l'année scolaire de `iso`. Fins de T1/T2 réglables (Réglages → meta finTrimestre1/2),
+// retenues seulement si elles tombent dans cette année scolaire ; sinon 15/12 et 15/03.
+export async function bornesTrimestres(iso = isoAujourdhui()) {
+  const y = anneeScolaireDe(iso);
+  const valide = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v) && anneeScolaireDe(v) === y ? v : '');
+  const finT1 = valide(await lireMeta('finTrimestre1', '')) || `${y}-12-15`;
+  const finT2 = valide(await lireMeta('finTrimestre2', '')) || `${y + 1}-03-15`;
+  const b = { annee: y, debut: `${y}-09-01`, finT1, finT2, fin: `${y + 1}-07-31` };
+  b.courant = trimestreDe(iso, b);
+  return b;
+}
+// Période { du, au } d'un trimestre (1, 2, 3) ou de l'année scolaire (toute autre valeur).
+export function periodeTrimestre(t, b) {
+  if (t === 1) return { du: b.debut, au: b.finT1 };
+  if (t === 2) return { du: decalerJours(b.finT1, 1), au: b.finT2 };
+  if (t === 3) return { du: decalerJours(b.finT2, 1), au: b.fin };
+  return { du: b.debut, au: b.fin };
+}
+// Statuts d'appel comptés par élève, par trimestre et sur l'année scolaire des bornes.
+// La date vit sur la séance → jointure appels × séances ; un appel orphelin est ignoré.
+// Retourne Map(eleveId → { t: { 1: {statut: n}, 2: {…}, 3: {…} }, annee: {statut: n} }).
+export function compterStatutsParTrimestre(appels, seances, b) {
+  const dateDe = new Map(seances.map((s) => [s.id, s.date]));
+  const res = new Map();
+  for (const a of appels) {
+    const date = dateDe.get(a.seanceId);
+    if (!date || date < b.debut || date > b.fin) continue;
+    if (!res.has(a.eleveId)) res.set(a.eleveId, { t: { 1: {}, 2: {}, 3: {} }, annee: {} });
+    const c = res.get(a.eleveId);
+    const tri = c.t[trimestreDe(date, b)];
+    tri[a.statut] = (tri[a.statut] || 0) + 1;
+    c.annee[a.statut] = (c.annee[a.statut] || 0) + 1;
+  }
+  return res;
+}
 
 export function lundiDe(date) {
   const d = new Date(date);
@@ -104,10 +154,12 @@ export async function inaptitudesActives(dateISO = isoAujourdhui()) {
 // notées non remontées vers Pronote. Retourne [{ grave, href, texte }].
 export async function collecterAlertes() {
   const auj = isoAujourdhui();
-  const [inaptitudes, eleves, classes, appels, evaluations, notes, sequences] = await Promise.all([
+  const [inaptitudes, eleves, classes, appels, evaluations, notes, sequences, seances] = await Promise.all([
     tous('inaptitudes'), tous('eleves'), tous('classes'), tous('appels'),
-    tous('evaluations'), tous('notes'), tous('sequences'),
+    tous('evaluations'), tous('notes'), tous('sequences'), tous('seances'),
   ]);
+  const bornes = await bornesTrimestres(auj);
+  const parTri = compterStatutsParTrimestre(appels, seances, bornes);
   const eleveDe = (id) => eleves.find((e) => e.id === id);
   const classeDe = (id) => classes.find((cl) => cl.id === id);
   const nomComplet = (e) => `${e.prenom} ${e.nom}${classeDe(e.classeId) ? ' (' + classeDe(e.classeId).nom + ')' : ''}`;
@@ -137,9 +189,11 @@ export async function collecterAlertes() {
     if (c.oubli_tenue < SEUIL_ALERTE && c.dispense < SEUIL_ALERTE) continue;
     const e = eleveDe(eleveId);
     if (!e) continue;
+    // Seuil sur le cumul de l'année (D012) ; le trimestre en cours est précisé pour situer.
+    const tri = parTri.get(eleveId)?.t[bornes.courant] || {};
     const morceaux = [];
-    if (c.oubli_tenue >= SEUIL_ALERTE) morceaux.push(`${c.oubli_tenue} oublis de tenue`);
-    if (c.dispense >= SEUIL_ALERTE) morceaux.push(`${c.dispense} dispenses « mot »`);
+    if (c.oubli_tenue >= SEUIL_ALERTE) morceaux.push(`${c.oubli_tenue} oublis de tenue (T${bornes.courant} : ${tri.oubli_tenue || 0})`);
+    if (c.dispense >= SEUIL_ALERTE) morceaux.push(`${c.dispense} dispenses « mot » (T${bornes.courant} : ${tri.dispense || 0})`);
     alertes.push({ grave: true, href: `#/eleves/fiche/${e.id}`, texte: `${nomComplet(e)} — ${morceaux.join(' · ')}` });
   }
 

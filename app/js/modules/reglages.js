@@ -23,6 +23,14 @@ export function initialiser() {
     );
     c.append(carteEtab);
 
+    // ---- Trimestres (D012 : alertes sur le cumul de l'année, vision par trimestre) ----
+    const carteTri = carte('Trimestres', 'Bornes utilisées par la fiche élève, les récapitulatifs et les alertes. Laisser vide = 15/12 et 15/03 (l’année scolaire va de septembre à juillet).');
+    carteTri.append(
+      champTexte({ id: 'reg-t1', libelle: 'Fin du 1er trimestre', type: 'date', valeur: await lireMeta('finTrimestre1'), onChange: (v) => ecrireMeta('finTrimestre1', v) }),
+      champTexte({ id: 'reg-t2', libelle: 'Fin du 2e trimestre', type: 'date', valeur: await lireMeta('finTrimestre2'), onChange: (v) => ecrireMeta('finTrimestre2', v) }),
+    );
+    c.append(carteTri);
+
     // ---- Apparence ----
     const carteTheme = carte('Apparence');
     const selTheme = el('select', { id: 'reg-theme' },

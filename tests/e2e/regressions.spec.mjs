@@ -201,6 +201,81 @@ test('B34 — la pastille de statut d’un élève non saisi est réellement mas
   await expect(page.locator('.eleve-cycle').first()).toHaveText(/^Prenom0 NOM00$/);
 });
 
+// ---- D012 (audit B30) : alerte sur le cumul annuel, vision par trimestre ----
+const anneeScolaire = () => { const d = new Date(); return d.getMonth() + 1 >= 8 ? d.getFullYear() : d.getFullYear() - 1; };
+
+test('B30 — bornes de trimestres : défauts 15/12 et 15/03, réglage, année scolaire', async ({ page }) => {
+  const res = await page.evaluate(async () => {
+    const m = await import('/js/metier.js');
+    const io = await import('/js/io.js');
+    const a = await m.bornesTrimestres('2026-10-05');
+    const b = await m.bornesTrimestres('2027-01-10');
+    await io.ecrireMeta('finTrimestre1', '2026-12-04');
+    const c = await m.bornesTrimestres('2026-12-10');
+    await io.ecrireMeta('finTrimestre1', '2025-12-04'); // autre année scolaire → ignorée
+    const d = await m.bornesTrimestres('2026-12-10');
+    await io.ecrireMeta('finTrimestre1', '');
+    return { a: [a.finT1, a.finT2, a.courant, a.annee], b: b.courant, c: [c.finT1, c.courant], d: [d.finT1, d.courant], p2: m.periodeTrimestre(2, a) };
+  });
+  expect(res.a).toEqual(['2026-12-15', '2027-03-15', 1, 2026]);
+  expect(res.b).toBe(2);
+  expect(res.c).toEqual(['2026-12-04', 2]);
+  expect(res.d).toEqual(['2026-12-15', 1]);
+  expect(res.p2).toEqual({ du: '2026-12-16', au: '2027-03-15' });
+});
+
+test('B30 — fiche élève : tableau par trimestre + signalement sur l’année', async ({ page }) => {
+  const y = anneeScolaire();
+  await page.evaluate(async ({ y }) => {
+    const io = await import('/js/io.js');
+    await io.enregistrer('classes', { id: 'c1', nom: '6A', archivee: false });
+    await io.enregistrer('eleves', { id: 'e1', classeId: 'c1', nom: 'Martin', prenom: 'Inès', actif: true });
+    await io.enregistrer('sequences', { id: 'sq', classeId: 'c1', apsa: 'Bad' });
+    const dates = [[`${y}-10-01`, 'oubli_tenue'], [`${y}-11-05`, 'oubli_tenue'], [`${y + 1}-01-15`, 'oubli_tenue'], [`${y + 1}-05-10`, 'present']];
+    for (const [i, [date, statut]] of dates.entries()) {
+      await io.enregistrer('seances', { id: 's' + i, sequenceId: 'sq', date });
+      await io.enregistrer('appels', { id: `s${i}_e1`, seanceId: 's' + i, eleveId: 'e1', statut });
+    }
+  }, { y });
+  await page.goto('/#/eleves/fiche/e1');
+  const ligne = page.locator('table.table-apercu tr', { hasText: 'Oubli de tenue' });
+  await expect(ligne).toBeVisible();
+  expect(await ligne.locator('td').allTextContents()).toEqual(['Oubli de tenue', '2', '1', '', '3']);
+  await expect(page.locator('.statut-erreur')).toContainText('sur l’année');
+});
+
+test('B30 — récap de classe : périodes rapides T1 / Année', async ({ page }) => {
+  const y = anneeScolaire();
+  await page.evaluate(async () => {
+    const io = await import('/js/io.js');
+    await io.enregistrer('classes', { id: 'c1', nom: '6A', archivee: false });
+    await io.enregistrer('eleves', { id: 'e1', classeId: 'c1', nom: 'A', prenom: 'B', actif: true });
+  });
+  await page.goto('/#/appel/recap/c1');
+  await page.getByRole('button', { name: /^T1/ }).click();
+  await expect(page.locator('#rc-debut')).toHaveValue(`${y}-09-01`);
+  await expect(page.locator('#rc-fin')).toHaveValue(`${y}-12-15`);
+  await expect(page.locator('#vue')).toContainText(`du 01/09/${y} au 15/12/${y}`);
+  await page.getByRole('button', { name: /^Année/ }).click();
+  await expect(page.locator('#rc-fin')).toHaveValue(`${y + 1}-07-31`);
+});
+
+test('B30 — alerte Suivi : cumul annuel avec le détail du trimestre en cours', async ({ page }) => {
+  await page.evaluate(async ({ today }) => {
+    const io = await import('/js/io.js');
+    await io.enregistrer('classes', { id: 'c1', nom: '6A', archivee: false });
+    await io.enregistrer('eleves', { id: 'e1', classeId: 'c1', nom: 'Martin', prenom: 'Inès', actif: true });
+    await io.enregistrer('sequences', { id: 'sq', classeId: 'c1', apsa: 'Bad' });
+    for (let i = 0; i < 3; i++) {
+      await io.enregistrer('seances', { id: 's' + i, sequenceId: 'sq', date: today });
+      await io.enregistrer('appels', { id: `s${i}_e1`, seanceId: 's' + i, eleveId: 'e1', statut: 'oubli_tenue' });
+    }
+  }, { today: today() });
+  const courant = await page.evaluate(async () => (await (await import('/js/metier.js')).bornesTrimestres()).courant);
+  await page.goto('/#/suivi');
+  await expect(page.locator('#vue')).toContainText(`3 oublis de tenue (T${courant} : 3)`);
+});
+
 test('B23 — coefficient 0 : l’évaluation ne pèse pas dans la moyenne du relevé', async ({ page }) => {
   await page.evaluate(async () => {
     const io = await import('/js/io.js');

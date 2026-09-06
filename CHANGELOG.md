@@ -4,6 +4,15 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-06 — v0.12.6 : vision par trimestre (décision D012, audit B30)
+
+Le seuil d'alerte « 3 oublis de tenue / 3 dispenses » reste **cumulé sur l'année scolaire** ; le trimestre vient en complément.
+- **Réglages → Trimestres** : fins du 1er et du 2e trimestre (vides = 15/12 et 15/03) ; l'année scolaire va de septembre à juillet.
+- **Fiche élève** : tableau **T1 · T2 · T3 · Année** par statut d'appel (● = trimestre en cours) ; le signalement précise le trimestre en cours.
+- **Récap de classe** : périodes rapides **T1 / T2 / T3 / Année** qui remplissent les dates (imprimable pour le conseil de classe).
+- **Alertes** (accueil, Suivi) et pastille ⚠ de l'appel : le cumul annuel plus le détail du trimestre en cours.
+- Technique : `metier.js` (`bornesTrimestres`, `periodeTrimestre`, `compterStatutsParTrimestre`, `anneeScolaireDe`, `decalerJours`), aucun nouveau store ni fichier. 4 tests de non-régression ajoutés (suite : 8 smoke + 17). Bump SW + `VERSION_APP` → 0.12.6.
+
 ## 2026-09-06 — v0.12.5 : dédoublonnage des helpers (audit B27, refactor sans changement fonctionnel)
 
 Avis `docs/avis/AVIS_DEDOUBLONNAGE_HELPERS.md` validé et appliqué.

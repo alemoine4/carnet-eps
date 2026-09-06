@@ -11,7 +11,8 @@
 
 ```
 meta          { cle, valeur }
-              → schemaVersion, etablissement, anneeScolaire ("2026-2027"), dateDerniereSauvegarde
+              → etablissement, anneeScolaire ("2026-2027"), semaineAReference (un lundi de semaine A),
+                finTrimestre1 / finTrimestre2 (dates ISO, vides = 15/12 et 15/03 — décision D012)
 
 classes       { id, nom, niveau, anneeScolaire, couleur, ordre, archivee }
 
