@@ -325,6 +325,109 @@ test('B29 — import tout-ou-rien : une valeur non clonable dans un store laisse
   expect(res.seances).toEqual(['s1']);
 });
 
+// ---- Hypothèses Codex H01–H05 (avis « durabilité des écritures », v0.12.8) ----
+
+test('H03 — une écriture ne résout qu’à la validation de la transaction (abandon tardif = rejet)', async ({ page }) => {
+  const res = await page.evaluate(async () => {
+    const io = await import('/js/io.js');
+    const original = IDBObjectStore.prototype.put;
+    // Mutant : la transaction est abandonnée juste APRÈS le succès de la requête, avant le commit —
+    // ce que font un quota plein ou une erreur disque au moment de valider.
+    IDBObjectStore.prototype.put = function (...args) {
+      const req = original.apply(this, args);
+      req.addEventListener('success', () => { try { req.transaction.abort(); } catch {} });
+      return req;
+    };
+    let erreur = null;
+    try { await io.enregistrer('classes', { id: 'cx', nom: 'X', archivee: false }); } catch (e) { erreur = e?.name || String(e); }
+    IDBObjectStore.prototype.put = original;
+    return { erreur, presente: !!(await io.lire('classes', 'cx')) };
+  });
+  expect(res.erreur).toBeTruthy(); // avant correctif : résolvait → « ✓ » mensonger
+  expect(res.presente).toBe(false);
+});
+
+test('H01 — la purge totale tient en une seule transaction sur les 14 stores', async ({ page }) => {
+  const res = await page.evaluate(async () => {
+    const io = await import('/js/io.js');
+    await io.enregistrer('classes', { id: 'c1', nom: '6A', archivee: false });
+    await io.enregistrer('eleves', { id: 'e1', classeId: 'c1', nom: 'A', prenom: 'B', actif: true });
+    await io.ecrireMeta('etablissement', 'Collège test');
+    const original = IDBDatabase.prototype.transaction;
+    const appels = [];
+    IDBDatabase.prototype.transaction = function (stores, ...rest) { appels.push([].concat(stores).length); return original.call(this, stores, ...rest); };
+    await io.viderTout();
+    IDBDatabase.prototype.transaction = original;
+    const comptes = await io.compterTout();
+    return { appels, total: Object.values(comptes).reduce((a, b) => a + b, 0) };
+  });
+  expect(res.appels).toEqual([14]);
+  expect(res.total).toBe(0);
+});
+
+test('H02 — l’export est un instantané : une écriture lancée juste après n’y apparaît pas', async ({ page }) => {
+  const res = await page.evaluate(async () => {
+    const io = await import('/js/io.js');
+    await io.enregistrer('classes', { id: 'c1', nom: '6A', archivee: false });
+    const dumpP = io.exporterJSON({ avecFichiers: false }); // lecture lancée en premier
+    const ecriture = (async () => {
+      await io.enregistrer('seances', { id: 's-new', sequenceId: 'sq', date: '2026-10-01' });
+      await io.enregistrer('appels', { id: 's-new_e1', seanceId: 's-new', eleveId: 'e1', statut: 'present' });
+    })();
+    const dump = await dumpP;
+    await ecriture;
+    return { classes: dump.stores.classes.length, seances: dump.stores.seances.map((s) => s.id), appels: dump.stores.appels.length, apres: (await io.tous('seances')).length };
+  });
+  expect(res.classes).toBe(1);
+  expect(res.seances).toEqual([]);
+  expect(res.appels).toBe(0);
+  expect(res.apres).toBe(1); // l'écriture a bien eu lieu, après l'instantané
+});
+
+test('H04 — import : identifiant en double refusé avant écriture, store absent annoncé', async ({ page }) => {
+  const res = await page.evaluate(async () => {
+    const io = await import('/js/io.js');
+    await io.enregistrer('classes', { id: 'c1', nom: 'ANCIENNE', archivee: false });
+    const double = { app: 'carnet-eps', schemaVersion: 2, stores: { classes: [{ id: 'c2', nom: 'A' }, { id: 'c2', nom: 'B' }] } };
+    let erreur = null;
+    try { await io.importerJSON(double); } catch (e) { erreur = e.message; }
+    const v1 = io.validerExport({ app: 'carnet-eps', schemaVersion: 1, stores: { classes: [{ id: 'c3', nom: 'V1' }] } });
+    return { erreur, classes: (await io.tous('classes')).map((c) => c.nom), absents: v1.absents };
+  });
+  expect(res.erreur).toMatch(/identifiant en double « c2 »/);
+  expect(res.classes).toEqual(['ANCIENNE']);
+  expect(res.absents).toContain('observations');
+});
+
+test('H05 — le service-worker ne nettoie que ses propres caches (origine partagée)', async ({ page }) => {
+  // Hôte de bouclage ≠ « localhost »/« 127.0.0.1 » pour estLocalhost() → le SW s'enregistre.
+  // `app.localhost` : Chromium le résout lui-même en boucle locale (sans DNS) et le traite comme
+  // contexte sécurisé ; sinon repli sur [::1] / 127.0.0.2. Premier test réel du service-worker.
+  // Page de préparation SANS service-worker : une feuille CSS (un .csv déclencherait un téléchargement).
+  let base = null;
+  for (const h of ['http://app.localhost:8160', 'http://[::1]:8160', 'http://127.0.0.2:8160']) {
+    try { await page.goto(`${h}/css/base.css`, { timeout: 5000 }); base = h; break; } catch { /* essai suivant */ }
+  }
+  test.skip(!base, 'aucun hôte de bouclage hors localhost joignable sur le port 8160');
+  await page.evaluate(async () => { await caches.open('autre-app-test'); await caches.open('carnet-eps-0.0.1'); });
+  await page.goto(`${base}/`);
+  // Attente de l'activation via expect.poll (waitForFunction prendrait une promesse pour un « vrai »
+  // immédiat) : l'état « activated » n'est posé qu'après le waitUntil de l'activation (nettoyage fait).
+  await expect.poll(() => page.evaluate(async () => {
+    const reg = await navigator.serviceWorker.getRegistration();
+    return reg?.active?.state || null;
+  }), { timeout: 20000 }).toBe('activated');
+  const etat = await page.evaluate(async () => ({
+    version: (await import('/js/state.js')).VERSION_APP,
+    cles: await caches.keys(),
+    autre: await caches.has('autre-app-test'),
+    ancien: await caches.has('carnet-eps-0.0.1'),
+  }));
+  expect(etat.autre).toBe(true);    // le cache du voisin survit
+  expect(etat.ancien).toBe(false);  // notre ancien cache est bien nettoyé
+  expect(etat.cles).toContain(`carnet-eps-${etat.version}`);
+});
+
 test('B23 — coefficient 0 : l’évaluation ne pèse pas dans la moyenne du relevé', async ({ page }) => {
   await page.evaluate(async () => {
     const io = await import('/js/io.js');

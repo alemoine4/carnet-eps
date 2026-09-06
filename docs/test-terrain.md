@@ -74,6 +74,7 @@ Résultat / notes : ________________________________________________
 - [ ] Activer le **mode avion**
 - [ ] Ouvrir l'app : elle se lance et fonctionne (appel, consultation, saisie)
 - [ ] Désactiver le mode avion : tout est toujours là
+- [ ] Si **Le Bar Clandestin** est installé sur le même appareil : après une mise à jour de Carnet EPS, l'ouvrir en mode avion → il se charge toujours (v0.12.8 : Carnet EPS ne touche plus aux caches des autres apps de l'origine)
 
 Résultat / notes : ________________________________________________
 

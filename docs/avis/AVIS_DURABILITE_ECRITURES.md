@@ -1,6 +1,6 @@
 # AVIS avant application — Durabilité des écritures, purge et export cohérents, caches d'origine (hypothèses Codex H01–H05)
 
-> Statut : **EN ATTENTE DE VALIDATION** (rédigé le 2026-09-06). Aucun fichier de `app/` n'est modifié par cet avis.
+> Statut : **VALIDÉ (« GO ») ET APPLIQUÉ le 2026-09-06 — v0.12.8** : les 5 fixes livrés en un lot (`io.js`, `sauvegarde.js`, `service-worker.js`), 5 tests ajoutés dont le premier test réel du service-worker, suite existante inchangée.
 > Origine : stratégie d'audit d'une autre IA (`audit codex/STRATEGIE_AUDIT.md`, section 5), dont les cinq hypothèses ont été **vérifiées contre le code par six vérificateurs indépendants** (lecture seule, fichier:ligne à l'appui). Les cinq sont démontrées.
 > Verdict proposé : **GO, un seul lot (v0.12.8)**, trois fichiers de code, cinq tests, dont le premier test réel du service-worker.
 

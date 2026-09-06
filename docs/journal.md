@@ -14,6 +14,22 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-06 (28) — Retour Codex : hypothèses H01–H05 vérifiées et corrigées (v0.12.8)
+
+L’utilisateur a transmis la stratégie d’audit d’une autre IA (`audit codex/STRATEGIE_AUDIT.md`, dossier non suivi par git). Pas de constats dedans, mais 5 hypothèses précises et un signalement de dérive documentaire.
+
+**Fait** :
+- **Vérification indépendante** : workflow de 6 agents (un par hypothèse + un pour la doc), lecture seule, fichier:ligne à l’appui → **5/5 démontrées** : H03 durabilité (P2 : `attendre()` résolvait sur `req.onsuccess`, pas `tx.oncomplete` → quota plein = « ✓ » sans écriture), H05 caches (P2 : `activate` supprimait TOUS les caches de l’origine `alemoine4.github.io`, donc le precache Workbox du Bar Clandestin ; Workbox, lui, ne nettoie que ses `-precache-`), H01 purge non atomique (P3, oubliée dans B29), H02 export sans instantané (P3), H04 doublons d’id non détectés + stores absents vidés sans le dire (P3). Dérive doc confirmée (7 écarts : roadmap, TODO, CLAUDE.md, fiche terrain, README, rapport) → corrigée, commit `63cdc46`.
+- **Avis `AVIS_DURABILITE_ECRITURES.md`** rédigé, validé (« GO »), appliqué : `io.js` (`enregistrer`/`supprimer`/`vider` via `ecrireLot` → résolution au commit ; `viderTout` ; `lireLot` readonly pour `exporterJSON`/`compterTout` ; `validerExport` refuse les doublons et renvoie `absents`), `sauvegarde.js` (purge protégée + bouton désactivé, confirmation « ne contient pas : observations → seront vidées »), `service-worker.js` (`k.startsWith('carnet-eps-')`). Bump → **0.12.8**.
+- **Tests** : 5 nouveaux — H03 mutant réel (`IDBObjectStore.prototype.put` patché pour abandonner la transaction après le succès de requête : avant correctif ça résolvait), H01 (une seule transaction de 14 stores, comptée via `IDBDatabase.prototype.transaction`), H02 (écriture lancée juste après l’export absente du dump), H04 (doublon refusé, `absents` contient `observations`), **H05 = premier test réel du service-worker** : navigation sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale, contexte sécurisé, mais `estLocalhost()` faux → le SW s’enregistre), caches voisins créés avant, vérification après activation. Suite **33/33**.
+- Docs : `modele-donnees.md` (durabilité, instantané, purge, import strict), CHANGELOG, TODO, README, README des tests, fiche terrain (Bar Clandestin hors ligne après mise à jour), avis (statut appliqué). Mémoire du projet whisky annotée (interférence d’origine).
+
+**Décidé** : rien de structurant au-delà de l’avis. Règle apprise pour les tests : `page.waitForFunction` ne doit pas recevoir de fonction asynchrone (la promesse est prise pour un « vrai » immédiat) → `expect.poll`. Un `.csv` en page de préparation déclenche un téléchargement : utiliser une feuille CSS.
+
+**Coincé / à vérifier** : rien. Le dossier `audit codex/` reste hors git, à la main de l’utilisateur.
+
+**Prochaine étape** : déployer v0.12.8 ; validations terrain (fiche v0.12.7) ; B31 (Android).
+
 ## 2026-09-06 (27) — Cascades et annulations atomiques (avis B29 → v0.12.7)
 
 Avis `AVIS_CASCADES_ATOMIQUES.md` rédigé sur demande, validé « go pour les deux phases », appliqué dans une seule version.

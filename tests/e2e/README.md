@@ -29,13 +29,20 @@ déjà, il est réutilisé.
 7. Onglet Suivi + EDT déplacé dans « Plus ».
 8. Ajouter une observation + cascade à la suppression de l'élève.
 
-**`regressions.spec.mjs` — 20 tests de non-régression** des correctifs de l'audit du 2026-09-05
+**`regressions.spec.mjs` — 25 tests de non-régression** des correctifs de l'audit du 2026-09-05
 (`docs/audit-2026-09-05.md`, un test par constat Bxx) : grille d'appel à 360 px, import JSON altéré
 refusé avant écriture, appui long vs défilement, double tap, double clic « Créer la séance »
 (sélecteur + accueil), compteur « saisis », contrastes clair/sombre, élève « parti », vue en erreur,
 suppression de classe référencée, coefficient 0, pastille de statut masquée, la vision par
-trimestre (D012 : bornes/réglage, tableau de la fiche, périodes rapides du récap, alerte) et
-l'atomicité des écritures groupées (B29 : restauration, suppression et import tout-ou-rien).
+trimestre (D012 : bornes/réglage, tableau de la fiche, périodes rapides du récap, alerte),
+l'atomicité des écritures groupées (B29 : restauration, suppression et import tout-ou-rien) et les
+hypothèses Codex H01–H05 (purge en une transaction, export instantané, écriture qui rejette sur un
+abandon tardif — mutant réel —, doublon d'identifiant refusé, **service-worker** qui ne nettoie que
+ses caches).
+
+> **Test du service-worker** (H05) : il navigue sur `http://[::1]:8160` (adresse de bouclage = contexte
+> sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre). Si aucune adresse
+> de bouclage hors localhost ne répond, le test est **ignoré avec sa raison**, jamais un faux vert.
 
 > Convention : tout correctif d'audit arrive avec son test ici ; les specs de vérification
 > temporaires (préfixe `_`) sont supprimés avant commit.

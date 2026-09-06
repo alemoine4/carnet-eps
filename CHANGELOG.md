@@ -4,6 +4,16 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-06 — v0.12.8 : durabilité des écritures, purge et export cohérents, caches d'origine (hypothèses Codex H01–H05)
+
+Cinq hypothèses issues d'une stratégie d'audit tierce (`audit codex/STRATEGIE_AUDIT.md`), vérifiées et démontrées, corrigées d'après l'avis `docs/avis/AVIS_DURABILITE_ECRITURES.md`.
+- **Écritures durables (H03)** : `enregistrer` / `supprimer` / `vider` ne résolvent qu'à la validation de la transaction — un quota plein ou une erreur disque au moment de valider devient une erreur visible au lieu d'un « ✓ » sans rien d'écrit (cas réel : Android presque plein avec des photos).
+- **Voisinage sur GitHub Pages (H05)** : le service-worker ne supprime plus que ses propres caches `carnet-eps-*` — il effaçait à chaque mise à jour le cache hors ligne du **Bar Clandestin**, hébergé sur la même origine.
+- **Purge tout-ou-rien (H01)** : « Effacer toutes les données » tient en une seule transaction (`viderTout`), bouton désactivé pendant l'opération, erreur affichée le cas échéant.
+- **Export instantané (H02)** : sauvegarde et comptage lisent les 14 stores dans une seule transaction — plus de sauvegarde avec orphelins si une écriture survient pendant l'export.
+- **Import plus strict (H04)** : identifiants en double refusés avant toute écriture ; la confirmation annonce les stores absents du fichier (« ne contient pas : observations → seront vidées »).
+- Vérifié : 5 tests (mutant d'abandon de transaction, purge en une transaction, écriture concurrente absente du dump, doublon refusé, **premier test réel du service-worker** via l'adresse de bouclage `[::1]`), suite existante inchangée. Bump SW + `VERSION_APP` → 0.12.8.
+
 ## 2026-09-06 — v0.12.7 : cascades et annulations atomiques (avis B29, deux phases)
 
 Avis `docs/avis/AVIS_CASCADES_ATOMIQUES.md` validé et appliqué.

@@ -72,7 +72,9 @@ documents     { id, titre, type, tags[], classeIds[], fichierId?, url?, dateAjou
 - Supprimer une **classe** → refus si élèves actifs (archiver d'abord).
 - Supprimer une **évaluation/séquence/séance** → cascade sur notes/séances/appels avec récapitulatif avant confirmation.
 - Une **inaptitude active** à une date D = `dateDebut ≤ D ≤ dateFin` → pré-remplit le statut d'appel et affiche la pastille.
-- **Atomicité (v0.12.7, avis B29)** : toute cascade de suppression, toute annulation (`restaurer`) et l'import JSON s'exécutent en **une seule transaction IndexedDB multi-stores** (`io.js` : `ecrireLot` → `supprimerLot` / `restaurer`). Les lectures ont lieu avant, les écritures sont émises d'un bloc : tout ou rien, même si l'onglet est fermé en cours de route. Un module ne doit plus enchaîner des `supprimer()` / `enregistrer()` pour une opération logiquement unique.
+- **Atomicité (v0.12.7, avis B29 ; complétée en v0.12.8, hypothèses Codex)** : toute cascade de suppression, toute annulation (`restaurer`), la **purge totale** (`viderTout`) et l'import JSON s'exécutent en **une seule transaction IndexedDB multi-stores** (`io.js` : `ecrireLot`). Les lectures ont lieu avant, les écritures sont émises d'un bloc : tout ou rien, même si l'onglet est fermé en cours de route. Un module ne doit plus enchaîner des `supprimer()` / `enregistrer()` pour une opération logiquement unique.
+- **Durabilité (v0.12.8, H03)** : les écritures unitaires (`enregistrer`, `supprimer`, `vider`) ne résolvent qu'à la **validation de la transaction** (`oncomplete`), jamais au simple succès de la requête : un quota plein ou une erreur disque au commit remonte en rejet (toast d'erreur) au lieu d'un « ✓ » sans écriture.
+- **Instantané (v0.12.8, H02)** : l'export JSON et le comptage lisent tous les stores dans **une** transaction readonly (`lireLot`) : une écriture concurrente attend, la sauvegarde ne peut pas contenir d'orphelins nés pendant sa lecture.
 
 ## Observations (v2)
 
@@ -96,7 +98,7 @@ Store **`observations`** (schéma v2), index `eleveId`. Notes de suivi terrain.
 ## Sauvegarde / restauration
 
 - **Export JSON** : `{ app:"carnet-eps", schemaVersion, dateExport, stores:{...} }` ; blobs sérialisés en base64 (option « sans pièces jointes »). Nom de fichier : `carnet-eps_sauvegarde_YYYY-MM-DD.json`.
-- **Import** : vérification `app` + `schemaVersion` (migration à l'import si version antérieure), double confirmation, export de sécurité automatique avant remplacement.
+- **Import** : vérification **avant toute écriture** de `app`, de `schemaVersion` (≤ courant), de chaque liste et de chaque clé (**identifiants en double refusés**, v0.12.8) ; **aucune migration** : un store absent du fichier (sauvegarde de schéma 1 sans `observations`) est **vidé** par le remplacement, et la confirmation le dit ; références orphelines et statuts inconnus tolérés (pas de contrôle relationnel, l'interface les ignore) ; écriture en une transaction (tout ou rien) ; double confirmation, export de sécurité automatique avant.
 - **Purge fin d'année** : purge **totale** (écran Sauvegarde, double confirmation, export de sécurité automatique avant). La purge par `anneeScolaire` prévue au cadrage n'est pas implémentée en v1 (le rituel de rentrée = export d'archive puis purge totale, cf. `guide-rentree.md`).
 
 ## RGPD (BIBLE règle 4) — registre local
