@@ -1,6 +1,6 @@
 # AVIS avant application — Cascades de suppression et restauration atomiques (audit 2026-09-05, B29)
 
-> Statut : **EN ATTENTE DE VALIDATION** (rédigé le 2026-09-06 sur demande). Aucun fichier de `app/` n'est modifié par cet avis.
+> Statut : **VALIDÉ (« go pour les deux phases ») ET APPLIQUÉ le 2026-09-06 — v0.12.7** : phase 1 (`io.js` : `ecrireLot`, `supprimerLot`, `restaurer`, 3 cascades, `importerJSON`) + phase 2 (`notes.js`, `inaptitudes.js`, `documents.js`) dans la même version ; 3 tests d'atomicité ajoutés, suite existante inchangée.
 > Déclencheur : BIBLE règle 6 — refactor de la couche données (`io.js`) = changement structurant, avis avant application.
 > Verdict proposé : **GO, en deux phases**, la première limitée à **un seul fichier** (`io.js`), livrée seule en v0.12.7.
 

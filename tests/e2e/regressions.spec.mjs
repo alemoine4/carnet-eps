@@ -276,6 +276,55 @@ test('B30 — alerte Suivi : cumul annuel avec le détail du trimestre en cours'
   await expect(page.locator('#vue')).toContainText(`3 oublis de tenue (T${courant} : 3)`);
 });
 
+// ---- B29 (avis cascades atomiques) : une transaction, tout ou rien ----
+
+test('B29 — restauration atomique : un enregistrement invalide annule tout le lot', async ({ page }) => {
+  const res = await page.evaluate(async () => {
+    const io = await import('/js/io.js');
+    let erreur = null;
+    try {
+      await io.restaurer({ appels: [{ id: 'a1', seanceId: 's', eleveId: 'e', statut: 'present' }], eleves: [{ nom: 'sans id' }] });
+    } catch (e) { erreur = e?.name || String(e); }
+    return { erreur, a1: !!(await io.lire('appels', 'a1')) };
+  });
+  expect(res.erreur).toBeTruthy();
+  expect(res.a1).toBe(false); // rien n'a été écrit, pas même l'enregistrement valide
+});
+
+test('B29 — suppression atomique : un store inconnu ou une clé absente ne supprime rien', async ({ page }) => {
+  const res = await page.evaluate(async () => {
+    const io = await import('/js/io.js');
+    const a1 = { id: 'a1', seanceId: 's', eleveId: 'e', statut: 'present' };
+    await io.enregistrer('appels', a1);
+    const erreurs = [];
+    try { await io.supprimerLot({ appels: [a1], inconnu: [{ id: 'x' }] }); } catch (e) { erreurs.push(e?.message || String(e)); }
+    try { await io.supprimerLot({ appels: [a1], eleves: [{ nom: 'sans id' }] }); } catch (e) { erreurs.push(e?.name || String(e)); }
+    const restant = !!(await io.lire('appels', 'a1'));
+    await io.supprimerLot({ appels: [a1] });
+    return { erreurs, restant, apres: !!(await io.lire('appels', 'a1')) };
+  });
+  expect(res.erreurs).toHaveLength(2);
+  expect(res.erreurs[0]).toMatch(/store inconnu/);
+  expect(res.restant).toBe(true);  // les deux lots fautifs n'ont rien supprimé
+  expect(res.apres).toBe(false);   // le lot valide, lui, supprime
+});
+
+test('B29 — import tout-ou-rien : une valeur non clonable dans un store laisse TOUS les stores intacts', async ({ page }) => {
+  const res = await page.evaluate(async () => {
+    const io = await import('/js/io.js');
+    await io.enregistrer('classes', { id: 'c1', nom: 'ANCIENNE', archivee: false });
+    await io.enregistrer('seances', { id: 's1', sequenceId: 'x', date: '2026-01-01' });
+    // Passe la validation (ids présents) mais échoue à l'écriture : fonction non clonable.
+    const dump = { app: 'carnet-eps', schemaVersion: 2, stores: { classes: [{ id: 'c2', nom: 'NOUVELLE' }], seances: [{ id: 's9', f: () => 1 }] } };
+    let erreur = null;
+    try { await io.importerJSON(dump); } catch (e) { erreur = e?.name || String(e); }
+    return { erreur, classes: (await io.tous('classes')).map((c) => c.nom), seances: (await io.tous('seances')).map((s) => s.id) };
+  });
+  expect(res.erreur).toBeTruthy();
+  expect(res.classes).toEqual(['ANCIENNE']); // avant B29, ce store était déjà remplacé
+  expect(res.seances).toEqual(['s1']);
+});
+
 test('B23 — coefficient 0 : l’évaluation ne pèse pas dans la moyenne du relevé', async ({ page }) => {
   await page.evaluate(async () => {
     const io = await import('/js/io.js');

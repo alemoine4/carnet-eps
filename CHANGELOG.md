@@ -4,6 +4,14 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-06 — v0.12.7 : cascades et annulations atomiques (avis B29, deux phases)
+
+Avis `docs/avis/AVIS_CASCADES_ATOMIQUES.md` validé et appliqué.
+- **Une seule transaction IndexedDB** pour chaque suppression en cascade (élève, séquence, séance), chaque **annulation** (« Annuler » des toasts) et l'**import de sauvegarde** : tout ou rien, même si l'onglet est fermé ou l'app tuée en cours de route. Avant : une transaction par enregistrement (jusqu'à plusieurs centaines), donc une base « à mi-chemin » possible, surtout à l'annulation.
+- `io.js` : helper interne `ecrireLot` (lectures avant, écritures émises d'un bloc), nouvel export `supprimerLot(objets)`, `restaurer` réécrit dessus ; les cascades collectent puis suppriment en un lot, signatures et retours inchangés.
+- Modules : suppression d'une évaluation (+ notes), d'une inaptitude (+ certificat + pièce) et d'un document (+ pièce), et leurs annulations, passent par `supprimerLot` / `restaurer`.
+- Vérifié : 3 tests d'atomicité (restauration et suppression annulées entièrement sur un enregistrement invalide ; import laissant tous les stores intacts sur une valeur non clonable), suite existante inchangée. Bump SW + `VERSION_APP` → 0.12.7.
+
 ## 2026-09-06 — v0.12.6 : vision par trimestre (décision D012, audit B30)
 
 Le seuil d'alerte « 3 oublis de tenue / 3 dispenses » reste **cumulé sur l'année scolaire** ; le trimestre vient en complément.

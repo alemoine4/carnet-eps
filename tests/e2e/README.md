@@ -29,12 +29,13 @@ déjà, il est réutilisé.
 7. Onglet Suivi + EDT déplacé dans « Plus ».
 8. Ajouter une observation + cascade à la suppression de l'élève.
 
-**`regressions.spec.mjs` — 17 tests de non-régression** des correctifs de l'audit du 2026-09-05
+**`regressions.spec.mjs` — 20 tests de non-régression** des correctifs de l'audit du 2026-09-05
 (`docs/audit-2026-09-05.md`, un test par constat Bxx) : grille d'appel à 360 px, import JSON altéré
 refusé avant écriture, appui long vs défilement, double tap, double clic « Créer la séance »
 (sélecteur + accueil), compteur « saisis », contrastes clair/sombre, élève « parti », vue en erreur,
-suppression de classe référencée, coefficient 0, pastille de statut masquée, et la vision par
-trimestre (D012 : bornes/réglage, tableau de la fiche, périodes rapides du récap, alerte).
+suppression de classe référencée, coefficient 0, pastille de statut masquée, la vision par
+trimestre (D012 : bornes/réglage, tableau de la fiche, périodes rapides du récap, alerte) et
+l'atomicité des écritures groupées (B29 : restauration, suppression et import tout-ou-rien).
 
 > Convention : tout correctif d'audit arrive avec son test ici ; les specs de vérification
 > temporaires (préfixe `_`) sont supprimés avant commit.

@@ -72,6 +72,7 @@ documents     { id, titre, type, tags[], classeIds[], fichierId?, url?, dateAjou
 - Supprimer une **classe** → refus si élèves actifs (archiver d'abord).
 - Supprimer une **évaluation/séquence/séance** → cascade sur notes/séances/appels avec récapitulatif avant confirmation.
 - Une **inaptitude active** à une date D = `dateDebut ≤ D ≤ dateFin` → pré-remplit le statut d'appel et affiche la pastille.
+- **Atomicité (v0.12.7, avis B29)** : toute cascade de suppression, toute annulation (`restaurer`) et l'import JSON s'exécutent en **une seule transaction IndexedDB multi-stores** (`io.js` : `ecrireLot` → `supprimerLot` / `restaurer`). Les lectures ont lieu avant, les écritures sont émises d'un bloc : tout ou rien, même si l'onglet est fermé en cours de route. Un module ne doit plus enchaîner des `supprimer()` / `enregistrer()` pour une opération logiquement unique.
 
 ## Observations (v2)
 

@@ -14,6 +14,23 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-06 (27) — Cascades et annulations atomiques (avis B29 → v0.12.7)
+
+Avis `AVIS_CASCADES_ATOMIQUES.md` rédigé sur demande, validé « go pour les deux phases », appliqué dans une seule version.
+
+**Fait** :
+- `io.js` : helper interne `ecrireLot(operations)` = UNE transaction `readwrite` sur les stores concernés, requêtes émises d’un bloc (put / delete / clear), `tx.abort()` sur exception synchrone, store inconnu refusé avant ouverture. `supprimerLot(objets)` (nouvel export) et `restaurer(objets)` construits dessus ; les 3 cascades collectent (lectures par index, `collecterSeance` interne) puis suppriment en un lot — signatures et retours `{ store: [records] }` inchangés ; `importerJSON` = une transaction sur les 14 stores (clear + puts).
+- Phase 2 : `notes.js` (évaluation + notes), `inaptitudes.js` (inaptitude + certificat + pièce), `documents.js` (document + pièce) et leurs annulations passent par `supprimerLot` / `restaurer` ; imports inutiles retirés.
+- Tests : 3 tests B29 (restauration atomique sur enregistrement sans clé, suppression atomique sur store inconnu / clé absente, import laissant tous les stores intacts sur une valeur non clonable) → suite **28/28** sans modification des tests existants.
+- **Mesure** (spec temporaire, séquence 10 séances × 28 appels + 3 évals × 28 notes = 380 enregistrements) : suppression **76 → 27 ms**, restauration **74 → 15 ms**.
+- Docs : avis (statut appliqué), `modele-donnees.md` (règle d’atomicité), `architecture.md` (couche données), CHANGELOG, TODO, README, README des tests. Bump → **0.12.7**.
+
+**Décidé** : rien de nouveau (l’avis vaut décision). Règle de code désormais écrite : un module n’enchaîne plus des `supprimer()` / `enregistrer()` pour une opération logiquement unique.
+
+**Coincé / à vérifier** : rien. Fenêtre lecture → écriture (autre onglet) documentée comme acceptable.
+
+**Prochaine étape** : déployer v0.12.7 ; validations terrain (fiche v0.12.4) ; B31 (Android).
+
 ## 2026-09-06 (26) — Vision par trimestre (D012, B30 → v0.12.6)
 
 Décision de l’utilisateur : « les oublis cumulatifs année mais aussi vision trimestre ».
