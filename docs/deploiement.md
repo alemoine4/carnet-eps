@@ -29,6 +29,7 @@
 
 | Version | Tag | Commit main | Résumé |
 |---|---|---|---|
+| v0.12.6 | `v0.12.6` | `727d389` | Vision par trimestre (D012, audit B30) : fins de T1/T2 réglables, tableau T1/T2/T3/Année sur la fiche, périodes rapides sur le récap, détail du trimestre dans les alertes — déployée le 2026-09-06 |
 | v0.12.5 | `v0.12.5` | `f7093fa` | Dédoublonnage des helpers (audit B27, avis validé) : `metier.js`/`ui.js` exportent tris, normalisation, formats, `champ()` — refactor sans changement fonctionnel, tests 21/21 inchangés — déployée le 2026-09-06 |
 | v0.12.4 | `v0.12.4` | `28732ad` | 4e audit (34 constats, 30 correctifs) : grille d'appel 2 colonnes à 360 px, import JSON altéré refusé avant écriture, élève « parti », contrastes du thème sombre, appui long vs défilement, double tap/double clic, 13 tests de non-régression — déployée le 2026-09-06 (gh-pages `0391552`) |
 | v0.12.3 | `v0.12.3` | `633c2da` | Finitions post-audit : toast persistant épargné par l'éviction, lien document auto-préfixé https://, README/roadmap/smoke-tests à jour |
