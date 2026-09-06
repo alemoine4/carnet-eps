@@ -31,9 +31,11 @@ Demande : « réfléchis à la meilleure stratégie pour auditer et améliorer, 
 
 **Décidé** : lot > 3 fichiers assumé sur instruction explicite (« effectue le tout »), chaque correctif restant local et testé ; refactor des doublons (`trierEleves` ×7, `champF` ×5…) **non appliqué** (règle des 3 fichiers → à planifier) ; `interactive-widget=resizes-content` **non appliqué** sans test Android (fiche terrain 4 bis).
 
-**Coincé / à vérifier** : sur Android réel — sélecteur caméra/fichiers sans `capture`, grille 2 colonnes, clavier virtuel vs feuille (B31). Non déployé : commit local, **push + subtree + tag à faire** (procédure `deploiement.md`).
+**Coincé / à vérifier** : sur Android réel — sélecteur caméra/fichiers sans `capture`, grille 2 colonnes, clavier virtuel vs feuille (B31).
 
-**Prochaine étape** : déployer v0.12.4 ; validations terrain (fiche `test-terrain.md` v0.12.4) ; trancher B30 (seuil ×3 par trimestre ?) et planifier B27 (dédoublonnage).
+**Déploiement (2026-09-06)** : le premier `git push` a été refusé par le classificateur de sécurité du mode auto (rien exécuté) ; après le « continue oui » de l'utilisateur, push `main` (`59d99ae..857d292`, 4 commits dont le rangement du 30/08), `git subtree push` → gh-pages `0391552`, tag `v0.12.4` poussé. Vérifié : `app/` ≡ gh-pages (diff vide), `VERSION 0.12.4` dans le SW et `state.js` servis. Avis **B27** rédigé (`docs/avis/AVIS_DEDOUBLONNAGE_HELPERS.md`).
+
+**Prochaine étape** : validations terrain (fiche `test-terrain.md` v0.12.4) ; trancher B30 (seuil ×3 par trimestre ?) ; B27 selon validation de l'avis (v0.12.5 dédiée).
 
 ## 2026-08-30 (23) — Rangement du dépôt et sortie du template générique
 

@@ -15,7 +15,7 @@ Audit à 12 lentilles du code complet (rapport `docs/audit-2026-09-05.md`), chaq
 - **Terrain** : `capture` retiré des champs fichier (la photo d'élève forçait la caméra **frontale**, le certificat rendait le PDF inaccessible sur Android) ; classes en barrette visibles sur l'accueil ; période imprimée sur le récap ; coefficient 0 honoré ; message « Vérifier les mises à jour » corrigé.
 - **Documentation** : rollback (`deploiement.md` disait « aucune migration » alors que v0.12.0 a migré en DB_VERSION 2 : **pas de retour avant v0.12.0**), architecture (14 stores, onglets Suivi/Plus), modèle de données, CLAUDE.md (outils réels), pronote.md (UTF-8 BOM), guides et Aide in-app (EDT sous Plus, Inaptitudes sous Suivi), fiche terrain v0.12.4, README des tests.
 - Reportés : dédoublonnage des helpers (B27, > 3 fichiers), cascades atomiques (B29), seuil ×3 par trimestre (B30, à trancher), clavier virtuel vs feuille (B31, à valider sur Android).
-- Vérifié : suite Playwright **21/21** (8 smoke + 13 non-régression), captures clair 360 px / sombre 375 px. Bump SW + `VERSION_APP` → 0.12.4. **Non déployé** (commit local).
+- Vérifié : suite Playwright **21/21** (8 smoke + 13 non-régression), captures clair 360 px / sombre 375 px. Bump SW + `VERSION_APP` → 0.12.4. **Déployée le 2026-09-06** (tag `v0.12.4`, gh-pages `0391552`).
 
 ## 2026-08-30 — Rangement du dépôt (documentation uniquement, aucun code touché)
 
