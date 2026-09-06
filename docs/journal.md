@@ -25,7 +25,9 @@ Modèle d'entrée :
 
 **Coincé / à vérifier** : rien. Reliquats inchangés : B29 (AVIS séparé si retenu), B30 (décision), B31 (Android).
 
-**Prochaine étape** : déployer v0.12.5 ; validations terrain (fiche v0.12.4) ; roadmap post-v1 (observation depuis l'appel, dashboard enrichi, évals EPS A1–A5).
+**Déployé** : v0.12.5 poussée le 2026-09-06 (commit `f7093fa`, gh-pages `77dda4a`, tag `v0.12.5`), `app/` ≡ gh-pages vérifié.
+
+**Prochaine étape** : validations terrain (fiche v0.12.4) ; roadmap post-v1 (observation depuis l'appel, dashboard enrichi, évals EPS A1–A5).
 
 ## 2026-09-05 (24) — 4e audit (34 constats) + correctifs v0.12.4
 

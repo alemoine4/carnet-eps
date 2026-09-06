@@ -78,7 +78,7 @@ carnet-eps/
 
 ## État du projet
 
-**v0.12.4 — en ligne (déployée le 2026-09-06)** : phases 0→9 livrées (🎒 jalon rentrée 2026), tous les modules du tableau ci-dessus sont fonctionnels, vérifiés et **publiés** sur https://alemoine4.github.io/carnet-eps/. QA : Lighthouse Perf 97 / A11y 100 / BP 100, année complète simulée fluide (< 50 ms par écran), **8 smoke-tests + 13 tests de non-régression** Playwright (`npm test`), audit complet du 2026-07-10 soldé (v0.12.1 → v0.12.2) et **4e audit du 2026-09-05** (34 constats, 30 traités en v0.12.4 : grille d'appel à 2 colonnes sur 360 px, import JSON sûr, élève « parti », contrastes du thème sombre… — rapport `docs/audit-2026-09-05.md`). Historique des versions et retour arrière : `docs/deploiement.md`.
+**v0.12.5 — en ligne (v0.12.4 = 4e audit, v0.12.5 = dédoublonnage des helpers, déployées le 2026-09-06)** : phases 0→9 livrées (🎒 jalon rentrée 2026), tous les modules du tableau ci-dessus sont fonctionnels, vérifiés et **publiés** sur https://alemoine4.github.io/carnet-eps/. QA : Lighthouse Perf 97 / A11y 100 / BP 100, année complète simulée fluide (< 50 ms par écran), **8 smoke-tests + 13 tests de non-régression** Playwright (`npm test`), audit complet du 2026-07-10 soldé (v0.12.1 → v0.12.2) et **4e audit du 2026-09-05** (34 constats, 30 traités en v0.12.4 : grille d'appel à 2 colonnes sur 360 px, import JSON sûr, élève « parti », contrastes du thème sombre… — rapport `docs/audit-2026-09-05.md`). Historique des versions et retour arrière : `docs/deploiement.md`.
 
 Restent : les **validations terrain** (Pronote réel, Android réel, impression) listées en tête de `TODO.md`.
 
