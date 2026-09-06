@@ -9,18 +9,12 @@ import {
   parserCSV, lireTexteCSV, supprimerEleveEnCascade,
   apercuSuppressionEleve, detailSuppression, restaurer,
 } from '../io.js';
-import { STATUTS, SEUIL_ALERTE, dateFR, isoAujourdhui } from '../metier.js';
+import { STATUTS, SEUIL_ALERTE, dateFR, isoAujourdhui, trierEleves, trierClasses, cleTexte, baremeDe, formatFR } from '../metier.js';
 import { stockerFichier, supprimerFichier, urlDuFichier } from '../media.js';
 import { carteObservations } from './observations.js';
 import { sauverPrefs } from '../state.js';
 
 const PALETTE = ['#1d5fd6', '#178a52', '#c97a06', '#7c3aed', '#d03a3a', '#0e7490', '#be185d', '#4d7c0f'];
-
-const normaliser = (s = '') => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-const cleTexte = (s = '') => normaliser(s).replace(/[^a-z0-9]/g, '');
-const trierEleves = (a, b) =>
-  a.nom.localeCompare(b.nom, 'fr') || a.prenom.localeCompare(b.prenom, 'fr');
-const trierClasses = (a, b) => a.nom.localeCompare(b.nom, 'fr', { numeric: true });
 
 function devinerNiveau(nomClasse) {
   const m = String(nomClasse).trim().match(/^(\d)/);
@@ -425,7 +419,6 @@ async function vueFiche(c, id) {
   } else {
     const evalsT = await tous('evaluations');
     const seqsT = await tous('sequences');
-    const baremeDe = (ev) => (ev.type === 'note20' ? 20 : ev.type === 'bareme' ? Number(ev.bareme) || 20 : null);
     const lignesN = notesE
       .map((n) => ({ n, ev: evalsT.find((x) => x.id === n.evaluationId) }))
       .filter((x) => x.ev)
@@ -438,14 +431,14 @@ async function vueFiche(c, id) {
       if (bar && typeof n.valeur === 'number') { somme += (n.valeur / bar) * 20 * coef; poids += coef; }
     }
     if (poids) {
-      const moy = String(Math.round((somme / poids) * 100) / 100).replace('.', ',');
+      const moy = formatFR(somme / poids);
       carteNo.append(el('p', { class: 'compteurs' }, el('span', {}, el('strong', {}, moy), '/20 de moyenne générale')));
     }
     const listeN = el('div', { class: 'liste-eleves' });
     for (const { n, ev } of lignesN.slice(0, 8)) {
       const seq = seqsT.find((q) => q.id === ev.sequenceId);
       const bar = baremeDe(ev);
-      const valeur = typeof n.valeur === 'number' ? `${String(n.valeur).replace('.', ',')}${bar ? '/' + bar : ''}` : String(n.valeur);
+      const valeur = typeof n.valeur === 'number' ? `${formatFR(n.valeur)}${bar ? '/' + bar : ''}` : String(n.valeur);
       listeN.append(el('div', { class: 'ligne-eleve' },
         el('span', { class: 'badge' }, valeur),
         el('span', { class: 'ligne-eleve-nom' }, `${dateFR(ev.date)} · ${seq?.apsa || '?'} · ${ev.titre}`)));

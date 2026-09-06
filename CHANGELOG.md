@@ -4,6 +4,13 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-06 — v0.12.5 : dédoublonnage des helpers (audit B27, refactor sans changement fonctionnel)
+
+Avis `docs/avis/AVIS_DEDOUBLONNAGE_HELPERS.md` validé et appliqué.
+- `metier.js` exporte désormais `trierEleves`, `trierClasses`, `normaliser`, `cleTexte`, `baremeDe`, `formatFR`, `jours` ; `ui.js` exporte `champ(id, libelle, controle)` (ex-`champF`).
+- Les 7 modules importent ces helpers au lieu de les recopier (7 copies de `trierClasses`, 5 de `champF`, 4 de `trierEleves`, 2 de `jours`/`normaliser`/`baremeDe`, 2 arrondis inline dans la fiche élève) : ≈ −35 lignes, aucun nouveau fichier (liste `ASSETS` du SW inchangée).
+- Vérifié : `npm test` **21/21 sans toucher aux tests** (critère « zéro changement de comportement »), `grep` des anciennes copies = 0. Bump SW + `VERSION_APP` → 0.12.5.
+
 ## 2026-09-05 — v0.12.4 : 4e audit (34 constats) — 30 correctifs, 13 tests de non-régression
 
 Audit à 12 lentilles du code complet (rapport `docs/audit-2026-09-05.md`), chaque constat vérifié par mesure avant correction.

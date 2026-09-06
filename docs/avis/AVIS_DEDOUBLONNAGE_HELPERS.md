@@ -1,6 +1,6 @@
 # AVIS avant application — Dédoublonnage des helpers copiés entre modules (audit 2026-09-05, B27)
 
-> Statut : **EN ATTENTE DE VALIDATION** (rédigé le 2026-09-06). Aucun fichier de `app/` n'est modifié par cet avis.
+> Statut : **VALIDÉ ET APPLIQUÉ le 2026-09-06 (v0.12.5)** — rédigé le même jour, validé (« continue oui »), appliqué tel quel : 9 fichiers de code, `npm test` 21/21 sans modification des tests, `grep` des copies = 0 résultat.
 > Déclencheur : BIBLE règle 2 — « tout changement touchant plus de 3 fichiers doit passer par /plan » ; règle 6 — avis avant refactor.
 > Verdict proposé : **GO, en version dédiée** (v0.12.5), après le déploiement de v0.12.4, sans autre changement dans le même commit.
 

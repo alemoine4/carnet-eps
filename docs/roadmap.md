@@ -76,7 +76,7 @@ Versions courtes, vérifiées (smoke-tests Playwright), taguées (rollback : `do
 - ✅ **Onglet « Suivi »** (v0.11.0) — alertes EPS + inaptitudes sorties de « Plus » ; EDT déplacé dans « Plus ».
 - ✅ **Observations** (notes terrain, v0.12.0) — store IndexedDB v2 (migration additive, D009), timeline + formulaire sur la fiche élève.
 - ✅ **Audit complet /audit-projet** (2026-07-10, rapport `docs/audit-2026-07-10.md`) — 16 constats soldés en v0.12.1 (corrections) + v0.12.2 (arbitrages D011).
-- ✅ **4e audit, 12 lentilles** (2026-09-05, rapport `docs/audit-2026-09-05.md`) — 34 constats, 30 traités en **v0.12.4** (grille d'appel 2 colonnes à 360 px, import JSON sûr, élève « parti », contrastes du thème sombre…) + 13 tests de non-régression ; reliquats : B27 dédoublonnage, B29 cascades atomiques, B30 seuil par trimestre (à trancher), B31 clavier virtuel (à valider terrain). À déployer.
+- ✅ **4e audit, 12 lentilles** (2026-09-05, rapport `docs/audit-2026-09-05.md`) — 34 constats, 30 traités en **v0.12.4** (grille d'appel 2 colonnes à 360 px, import JSON sûr, élève « parti », contrastes du thème sombre…) + 13 tests de non-régression — **déployée le 2026-09-06** ; B27 dédoublonnage livré en **v0.12.5** (avis validé) ; reliquats : B29 cascades atomiques, B30 seuil par trimestre (à trancher), B31 clavier virtuel (à valider terrain).
 - 🔲 Dashboard enrichi · évaluations EPS A1–A5 · Pronote/appréciations · exports PDF (via impression) · corbeille persistante → jalon **1.0**.
 - ⛔ Différé (anti-usine-à-gaz) : cloud, comptes, IA, refonte design-system, tableur avancé.
 

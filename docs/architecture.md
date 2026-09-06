@@ -29,6 +29,8 @@ PWA **vanilla** (HTML/CSS/JS ES modules), multi-fichiers, **sans étape de build
 
 Règle de croissance : **un module métier = un fichier** dans `modules/` (ex. `appel.js`) qui exporte `enregistrerVue()`. `main.js` importe les modules ; jamais l'inverse entre modules (passer par `state.js`/événements). Exception assumée : `modules/observations.js` est une **brique** (carte réutilisable) importée par `eleves.js` (v0.12.0).
 
+Ce qui est commun à plusieurs modules vit dans **`metier.js`** (vocabulaire, dates, tris `trierEleves`/`trierClasses`, `normaliser`/`cleTexte`, `baremeDe`, `formatFR`, `jours`) ou **`ui.js`** (`el`, `carte`, `champ`, `champTexte`/`champSelect`/`champZone`, feuilles, `confirmer`, `toast`) — un module ne redéfinit jamais un helper qui existe déjà là (v0.12.5, avis B27).
+
 ## Navigation
 
 - Hash-router : `#/accueil`, `#/appel`, `#/eleves`, `#/notes`, `#/suivi`, `#/plus` (onglets) + routes enfants `#/edt`, `#/sequences`, `#/inaptitudes`, `#/documents`, `#/sauvegarde`, `#/reglages`, `#/aide` ; sous-routes à segments (`#/eleves/fiche/<id>`, `#/appel/<seanceId>`, `#/notes/eval/<id>`…).

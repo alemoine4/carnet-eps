@@ -4,14 +4,12 @@
 // Limite v1 assumée : l'alternance A/B suit la parité calendaire depuis le
 // lundi de référence (les vacances ne décalent pas l'alternance).
 
-import { enregistrerVue, el, carte, champTexte, confirmer, toast } from '../ui.js';
+import { enregistrerVue, el, carte, champ, champTexte, confirmer, toast } from '../ui.js';
 import { tous, enregistrer, supprimer, lireMeta, ecrireMeta } from '../io.js';
-import { enMinutes, semaineCourante } from '../metier.js';
+import { enMinutes, semaineCourante, trierClasses } from '../metier.js';
 
 const JOURS = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 const INSTALLATIONS = ['Gymnase', 'Plateau extérieur', 'Stade', 'Piscine', 'Salle polyvalente', 'Dojo'];
-
-const trierClasses = (a, b) => a.nom.localeCompare(b.nom, 'fr', { numeric: true });
 
 // ---------------------------------------------------------------------------
 // Vue EDT
@@ -60,16 +58,15 @@ async function vueEDT(c) {
   const btnEnregistrer = el('button', { class: 'btn btn-principal' }, 'Enregistrer');
   const btnSupprimer = el('button', { class: 'btn btn-danger' }, 'Supprimer');
   const formCarte = carte('Créneau');
-  const champF = (id, libelle, controle) => el('div', { class: 'champ' }, el('label', { for: id }, libelle), controle);
   formCarte.append(
-    champF('cr-jour', 'Jour', selJour),
+    champ('cr-jour', 'Jour', selJour),
     el('div', { class: 'rang-2' },
-      champF('cr-debut', 'Début', inpDebut),
-      champF('cr-fin', 'Fin', inpFin),
+      champ('cr-debut', 'Début', inpDebut),
+      champ('cr-fin', 'Fin', inpFin),
     ),
-    champF('cr-classe', 'Classe', selClasse),
-    champF('cr-semaine', 'Semaine', selSemaine),
-    champF('cr-instal', 'Installation', inpInstal),
+    champ('cr-classe', 'Classe', selClasse),
+    champ('cr-semaine', 'Semaine', selSemaine),
+    champ('cr-instal', 'Installation', inpInstal),
     datalist,
     el('div', { class: 'rang-btn' }, btnEnregistrer, btnSupprimer),
     statutForm,

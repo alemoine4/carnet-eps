@@ -14,6 +14,19 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-06 (25) — Déploiement v0.12.4 + dédoublonnage B27 (v0.12.5)
+
+**Fait** :
+- **v0.12.4 déployée** (détail dans l'entrée 24) : push `main`, gh-pages `0391552`, tag `v0.12.4` ; site public vérifié en 0.12.4 après le rebuild Pages.
+- **B27** : avis `AVIS_DEDOUBLONNAGE_HELPERS.md` rédigé, validé (« continue oui »), appliqué : `metier.js` (+`trierEleves`, `trierClasses`, `normaliser`, `cleTexte`, `baremeDe`, `formatFR`, `jours` ; le `jours` local de `collecterAlertes` supprimé), `ui.js` (+`champ`), 7 modules allégés (`appel`, `documents`, `edt`, `eleves`, `inaptitudes`, `notes`, `sequences`), 2 arrondis inline de la fiche élève → `formatFR`. `docs/architecture.md` : règle « un module ne redéfinit jamais un helper de `metier.js`/`ui.js` ».
+- Vérifié : `grep` des anciennes copies = 0 ; `npm test` **21/21 sans modification des tests**. Bump → **0.12.5**.
+
+**Décidé** : rien de structurant (refactor pur). Piège relevé : les fichiers du dépôt contiennent les caractères combinants **littéraux** dans la regex de `normaliser` (`[̀-ͯ]`) malgré la note de juin sur les échappements — `metier.js` est écrit avec les échappements `\u0300-\u036f` explicites (posés par script : l’outil d’édition convertit lui-même les séquences `\u`).
+
+**Coincé / à vérifier** : rien. Reliquats inchangés : B29 (AVIS séparé si retenu), B30 (décision), B31 (Android).
+
+**Prochaine étape** : déployer v0.12.5 ; validations terrain (fiche v0.12.4) ; roadmap post-v1 (observation depuis l'appel, dashboard enrichi, évals EPS A1–A5).
+
 ## 2026-09-05 (24) — 4e audit (34 constats) + correctifs v0.12.4
 
 Demande : « réfléchis à la meilleure stratégie pour auditer et améliorer, puis effectue le tout ».

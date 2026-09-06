@@ -3,10 +3,10 @@
 // Règles : pré-remplit l'appel (statut « inapte », géré par appel.js via inaptitudesActives) ;
 // alerte J-7 avant expiration ; inaptitude > 3 mois → rappel médecin scolaire (réglementation).
 
-import { enregistrerVue, el, carte, champTexte, champSelect, champZone, confirmer, toast } from '../ui.js';
+import { enregistrerVue, el, carte, champ, champTexte, champSelect, champZone, confirmer, toast } from '../ui.js';
 import { tous, lire, parIndex, enregistrer, supprimer } from '../io.js';
 import { stockerFichier, supprimerFichier, urlDuFichier, ouvrirVisionneuse } from '../media.js';
-import { isoAujourdhui, dateFR } from '../metier.js';
+import { isoAujourdhui, dateFR, jours, trierEleves, trierClasses } from '../metier.js';
 
 const RESTRICTIONS = [
   ['course', 'Course'],
@@ -23,11 +23,6 @@ const ORIGINES = [
   { value: 'infirmerie', label: 'Infirmerie' },
 ];
 const SEUIL_MEDECIN_JOURS = 90; // > 3 mois → médecin scolaire
-
-const trierEleves = (a, b) => a.nom.localeCompare(b.nom, 'fr') || a.prenom.localeCompare(b.prenom, 'fr');
-const trierClasses = (a, b) => a.nom.localeCompare(b.nom, 'fr', { numeric: true });
-
-const jours = (de, a) => Math.round((new Date(`${a}T12:00:00`) - new Date(`${de}T12:00:00`)) / 86400000);
 
 function etatDe(i, auj = isoAujourdhui()) {
   if (i.dateDebut && i.dateDebut > auj) return 'a_venir';
@@ -138,7 +133,6 @@ async function vueNouvelle(c, eleveIdInitial) {
   const initial = eleveIdInitial ? eleves.find((e) => e.id === eleveIdInitial) : null;
 
   const form = carte('Nouvelle inaptitude');
-  const champF = (id, libelle, controle) => el('div', { class: 'champ' }, el('label', { for: id }, libelle), controle);
 
   // élève (classe → élève)
   const selClasse = el('select', { id: 'in-classe' }, ...classes.map((cl) => el('option', { value: cl.id }, cl.nom)));
@@ -171,7 +165,7 @@ async function vueNouvelle(c, eleveIdInitial) {
     chk.addEventListener('change', () => (chk.checked ? coches.add(cle) : coches.delete(cle)));
     grilleR.append(el('label', { class: 'ligne-option', for: `in-r-${cle}` }, chk, ` ${lib}`));
   }
-  const blocRestrictions = champF('', 'Restrictions (inaptitude partielle)', grilleR);
+  const blocRestrictions = champ('', 'Restrictions (inaptitude partielle)', grilleR);
   selType.addEventListener('change', () => { blocRestrictions.hidden = selType.value === 'totale'; });
 
   const inpComm = el('input', { type: 'text', id: 'in-comm', placeholder: 'Ex. : pas d’appui sur le poignet droit', autocomplete: 'off' });
@@ -222,14 +216,14 @@ async function vueNouvelle(c, eleveIdInitial) {
   });
 
   form.append(
-    champF('in-classe', 'Classe', selClasse),
-    champF('in-eleve', 'Élève *', selEleve),
-    champF('in-type', 'Type', selType),
-    champF('in-origine', 'Origine', selOrigine),
-    el('div', { class: 'rang-2' }, champF('in-debut', 'Début *', inpDebut), champF('in-fin', 'Fin', inpFin)),
+    champ('in-classe', 'Classe', selClasse),
+    champ('in-eleve', 'Élève *', selEleve),
+    champ('in-type', 'Type', selType),
+    champ('in-origine', 'Origine', selOrigine),
+    el('div', { class: 'rang-2' }, champ('in-debut', 'Début *', inpDebut), champ('in-fin', 'Fin', inpFin)),
     blocRestrictions,
-    champF('in-comm', 'Commentaire', inpComm),
-    champF('in-fichier', 'Certificat / mot (photo ou PDF, optionnel)', inpFichier),
+    champ('in-comm', 'Commentaire', inpComm),
+    champ('in-fichier', 'Certificat / mot (photo ou PDF, optionnel)', inpFichier),
     statutFichier,
     el('div', { class: 'rang-btn' }, btnCreer),
     statutForm,
