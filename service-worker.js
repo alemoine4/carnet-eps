@@ -4,7 +4,7 @@
    ⚠ Incrémenter VERSION à chaque déploiement (synchroniser avec VERSION_APP de state.js).
    Non enregistré sur localhost (voir main.js, décision D008). */
 
-const VERSION = '0.12.7';
+const VERSION = '0.12.8';
 const CACHE = `carnet-eps-${VERSION}`;
 const ASSETS = [
   './',
@@ -44,9 +44,11 @@ self.addEventListener('install', (e) => {
 });
 
 self.addEventListener('activate', (e) => {
+  // Cache Storage est PAR ORIGINE : alemoine4.github.io héberge d'autres PWA (Le Bar Clandestin).
+  // On ne nettoie que NOS anciens caches « carnet-eps-* », jamais ceux des voisins (Codex H05).
   e.waitUntil(
     caches.keys()
-      .then((cles) => Promise.all(cles.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((cles) => Promise.all(cles.filter((k) => k.startsWith('carnet-eps-') && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });

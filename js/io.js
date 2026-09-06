@@ -78,20 +78,42 @@ export async function parIndex(store, index, valeur) {
   return attendre(db.transaction(store).objectStore(store).index(index).getAll(valeur));
 }
 
+// Les trois écritures unitaires passent par ecrireLot : elles ne résolvent qu'à la VALIDATION de
+// la transaction (tx.oncomplete), pas au succès de la requête. Un quota plein ou une erreur disque
+// remontés au commit deviennent un rejet visible au lieu d'un « ✓ » mensonger (hypothèse Codex H03).
 export async function enregistrer(store, objet) {
-  const db = await ouvrirDB();
-  await attendre(db.transaction(store, 'readwrite').objectStore(store).put(objet));
+  await ecrireLot([{ store, op: 'put', valeur: objet }]);
   return objet;
 }
 
 export async function supprimer(store, id) {
-  const db = await ouvrirDB();
-  return attendre(db.transaction(store, 'readwrite').objectStore(store).delete(id));
+  return ecrireLot([{ store, op: 'delete', cle: id }]);
 }
 
 export async function vider(store) {
+  return ecrireLot([{ store, op: 'clear' }]);
+}
+
+// Purge totale en UNE transaction sur les 14 stores — tout ou rien, comme l'import (H01).
+export async function viderTout() {
+  return ecrireLot(STORES.map((store) => ({ store, op: 'clear' })));
+}
+
+// Lit plusieurs stores d'un bloc dans UNE transaction readonly → instantané cohérent : une écriture
+// d'un autre onglet sur ces stores attend la fin de la lecture (hypothèse Codex H02).
+async function lireLot(stores) {
   const db = await ouvrirDB();
-  return attendre(db.transaction(store, 'readwrite').objectStore(store).clear());
+  return new Promise((resoudre, rejeter) => {
+    const tx = db.transaction(stores, 'readonly');
+    const resultat = {};
+    for (const nom of stores) {
+      const req = tx.objectStore(nom).getAll();
+      req.onsuccess = () => { resultat[nom] = req.result; };
+    }
+    tx.oncomplete = () => resoudre(resultat);
+    tx.onerror = () => rejeter(tx.error);
+    tx.onabort = () => rejeter(tx.error || new Error('lecture interrompue'));
+  });
 }
 
 // ---- meta : petits réglages persistants (établissement, année scolaire…) ----
@@ -121,22 +143,20 @@ function blobVersDataURL(blob) {
 }
 
 export async function exporterJSON({ avecFichiers = true } = {}) {
+  // Instantané cohérent : tous les stores lus dans UNE transaction (H02) ; les blobs sont
+  // convertis HORS transaction (un Blob lu reste lisible après sa fin).
+  const brut = await lireLot(avecFichiers ? STORES : STORES.filter((n) => n !== 'fichiers'));
   const stores = {};
   for (const nom of STORES) {
     if (nom === 'fichiers') {
-      if (!avecFichiers) {
-        stores.fichiers = [];
-        continue;
-      }
-      const enregs = await tous('fichiers');
-      stores.fichiers = await Promise.all(
-        enregs.map(async ({ blob, ...reste }) => ({
+      stores.fichiers = avecFichiers
+        ? await Promise.all(brut.fichiers.map(async ({ blob, ...reste }) => ({
           ...reste,
           donnees: blob ? await blobVersDataURL(blob) : null,
-        }))
-      );
+        })))
+        : [];
     } else {
-      stores[nom] = await tous(nom);
+      stores[nom] = brut[nom];
     }
   }
   return {
@@ -159,18 +179,28 @@ export function validerExport(objet) {
   // qui laissait la transaction valider son `clear()` → store vidé, base à moitié remplacée
   // (audit 2026-09-05, B02). On refuse donc le fichier AVANT toute écriture.
   const comptes = {};
+  // Stores absents du fichier (ex. sauvegarde de schéma 1 sans « observations ») : ils seront
+  // VIDÉS par l'import (contrat « remplace tout ») — l'appelant le dit dans la confirmation (H04).
+  const absents = STORES.filter((nom) => !(nom in objet.stores));
   for (const nom of STORES) {
     const liste = objet.stores[nom] ?? [];
     if (!Array.isArray(liste)) throw new Error(`sauvegarde altérée : « ${nom} » n’est pas une liste`);
     const cle = SCHEMA[nom].keyPath;
+    const vus = new Set();
     liste.forEach((enreg, i) => {
       if (!enreg || typeof enreg !== 'object' || typeof enreg[cle] !== 'string' || !enreg[cle]) {
         throw new Error(`sauvegarde altérée : « ${nom} » ligne ${i + 1} sans « ${cle} »`);
       }
+      // Deux enregistrements de même clé : put() écraserait le premier en silence et le nombre
+      // annoncé serait faux (H04) → refus avant toute écriture.
+      if (vus.has(enreg[cle])) {
+        throw new Error(`sauvegarde altérée : « ${nom} » identifiant en double « ${enreg[cle]} » (ligne ${i + 1})`);
+      }
+      vus.add(enreg[cle]);
     });
     comptes[nom] = liste.length;
   }
-  return { date: (objet.dateExport || '').slice(0, 10) || 'date inconnue', comptes };
+  return { date: (objet.dateExport || '').slice(0, 10) || 'date inconnue', comptes, absents };
 }
 
 // Restauration complète : REMPLACE tout. Les confirmations et l'export de sécurité
@@ -215,9 +245,8 @@ export async function telechargerJSON(objet, suffixe = 'sauvegarde') {
 }
 
 export async function compterTout() {
-  const comptes = {};
-  for (const nom of STORES) comptes[nom] = (await tous(nom)).length;
-  return comptes;
+  const brut = await lireLot(STORES); // un seul instantané (H02)
+  return Object.fromEntries(STORES.map((nom) => [nom, brut[nom].length]));
 }
 
 // Télécharge un texte (CSV…) — BOM UTF-8 en tête pour qu'Excel lise les accents.

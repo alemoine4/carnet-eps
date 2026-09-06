@@ -3,7 +3,7 @@
 // avant toute opération destructrice (BIBLE règle 4).
 
 import { enregistrerVue, el, carte, confirmer, toast } from '../ui.js';
-import { exporterJSON, importerJSON, validerExport, telechargerJSON, compterTout, vider, STORES } from '../io.js';
+import { exporterJSON, importerJSON, validerExport, telechargerJSON, compterTout, viderTout } from '../io.js';
 
 // [singulier, pluriel] par store — tout store de données doit figurer ici (sinon il
 // disparaît du résumé affiché avant un import qui REMPLACE tout). `meta` exclu (réglages).
@@ -80,11 +80,15 @@ export function initialiser() {
       if (!fichier) return;
       try {
         const objet = JSON.parse(await fichier.text());
-        const { date, comptes } = validerExport(objet);
+        const { date, comptes, absents } = validerExport(objet);
         const total = Object.values(comptes).reduce((a, b) => a + b, 0);
+        // Stores absents du fichier (sauvegarde plus ancienne) : dits avant le remplacement (H04).
+        const manque = absents.filter((n) => LIBELLES[n]).map((n) => LIBELLES[n][1]);
         const ok1 = await confirmer({
           titre: 'Importer cette sauvegarde',
-          message: `Sauvegarde du ${date} — ${total} enregistrements (${resumeComptes(comptes)}). L’import REMPLACE toutes les données de cet appareil.`,
+          message: `Sauvegarde du ${date} — ${total} enregistrements (${resumeComptes(comptes)}).`
+            + (manque.length ? ` Le fichier ne contient pas : ${manque.join(', ')} → seront vidées.` : '')
+            + ' L’import REMPLACE toutes les données de cet appareil.',
           action: 'Importer',
         });
         if (!ok1) return;
@@ -124,9 +128,15 @@ export function initialiser() {
         action: 'Tout effacer',
       });
       if (!ok2) return;
-      for (const nom of STORES) await vider(nom);
-      toast('Données effacées — rechargement…');
-      setTimeout(() => location.reload(), 900);
+      btnPurge.disabled = true;
+      try {
+        await viderTout(); // une transaction sur les 14 stores : tout ou rien (H01)
+        toast('Données effacées — rechargement…');
+        setTimeout(() => location.reload(), 900);
+      } catch (e) {
+        btnPurge.disabled = false;
+        toast(`Effacement impossible : ${e.message}`);
+      }
     });
     cartePurge.append(el('div', { class: 'rang-btn' }, btnPurge));
     c.append(cartePurge);
