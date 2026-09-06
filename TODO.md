@@ -5,7 +5,12 @@ Vue d'ensemble des phases : `docs/roadmap.md`.
 
 ## 🎒 Jalon rentrée 2026 : phases 1→9 TERMINÉES — app EN LIGNE (https://alemoine4.github.io/carnet-eps/) — restent les validations terrain ci-dessous
 
-## Phase active : post-v1 — 4e audit du 2026-09-05 (v0.12.4, à déployer)
+## Phase active : post-v1 — suites du 4e audit du 2026-09-05 (v0.12.7 déployée le 2026-09-06 ; reste B31 + validations terrain) et hypothèses Codex (avis v0.12.8 en attente)
+
+### Stratégie Codex du 2026-09-06 (`audit codex/STRATEGIE_AUDIT.md`)
+- [x] 2026-09-06 — 5 hypothèses H01–H05 **vérifiées contre le code** par 6 vérificateurs indépendants : toutes démontrées (H03 durabilité des écritures P2, H05 caches d'origine partagée avec Le Bar Clandestin P2, H01 purge non atomique P3, H02 export sans instantané P3, H04 doublons d'id à l'import P3) ; dérive documentaire signalée corrigée (roadmap, TODO, CLAUDE.md, fiche terrain, README, rapport d'audit).
+- [ ] **Avis `docs/avis/AVIS_DURABILITE_ECRITURES.md`** (lot v0.12.8 : 3 fichiers de code, 5 tests dont le 1er test réel du service-worker sur `[::1]`) — **en attente de validation**.
+- [ ] Après v0.12.8 : ajouter à `docs/test-terrain.md` la vérification « Bar Clandestin toujours hors ligne après une mise à jour de Carnet EPS ».
 
 ### Audit du 2026-09-05 (rapport : `docs/audit-2026-09-05.md` — 34 constats, 30 traités)
 - [x] 2026-09-05 — **Correctifs livrés en v0.12.4** (30 constats, tests de non-régression `tests/e2e/regressions.spec.mjs` 13/13 + smoke 8/8) : grille d'appel 2 colonnes dès 360 px (B01), import JSON altéré refusé avant écriture (B02), appui long vs défilement (B03), double tap (B04), double clic « Créer la séance » (B05), compteur « saisis » (B06), contrastes rouge/badges (B07/B08), vignette au clavier (B09), **élève « parti »** (B10), rollback DB_VERSION documenté (B11), SW et réponses non-OK (B12), `capture` retiré (B13), écran blanc → message (B14), repli randomUUID (B15), onversionchange (B16), prefs protégées (B17), visionneuse re-typée (B18), fuites d'URL (B19), message MAJ (B20), période sur récap imprimé (B21), suppression de classe référencée refusée (B22), coef 0 (B23), barrette sur l'accueil (B24), dérive doc (B25), CSS mort (B26), tests (B28), icône iOS (B32), color-scheme (B33), pastille hidden (B34).
@@ -49,7 +54,7 @@ Vue d'ensemble des phases : `docs/roadmap.md`.
 
 ## Reliquats phase 5 (validation terrain)
 
-- [ ] Scénario Tom sur **Android réel** : photo du certificat à la caméra (le `capture="environment"` ouvre l'appareil), lisibilité de la visionneuse
+- [ ] Scénario Tom sur **Android réel** : photo du certificat (depuis v0.12.4/B13, `capture` retiré : Android propose Appareil photo / Fichiers / Galerie), lisibilité de la visionneuse
 - [ ] Décider : photos des élèves aussi dans la grille d'appel ? (backlog — initiales seules pour l'instant)
 
 ## Reliquats phase 4 (validation terrain)

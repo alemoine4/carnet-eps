@@ -50,8 +50,8 @@ Cadrage : `docs/brief.md` + `docs/fonctionnalites.md`. Avancement : `docs/roadma
 | Modèle de données | `docs/modele-donnees.md` — IndexedDB `carnet-eps`, wrapper maison dans `app/js/io.js` |
 | Service worker | enregistré **uniquement hors localhost** → jamais de cache pendant le dev |
 | Échanges Pronote | `docs/pronote.md` |
-| Décisions actées | `docs/decisions.md` (D001 à D011) |
-| Audits | `docs/audit-2026-07-10.md` (soldé), `docs/audit-2026-09-05.md` (4e passe, v0.12.4) |
+| Décisions actées | `docs/decisions.md` (D001 à D012) |
+| Audits | `docs/audit-2026-07-10.md` (soldé), `docs/audit-2026-09-05.md` (4e passe, v0.12.4 ; suites B27/B30/B29 livrées en v0.12.5→v0.12.7, reste B31), `audit codex/STRATEGIE_AUDIT.md` (stratégie d'une autre IA, hypothèses vérifiées → avis v0.12.8) |
 
 ---
 

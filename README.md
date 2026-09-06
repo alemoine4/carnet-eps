@@ -69,6 +69,7 @@ carnet-eps/
 │   ├── guide-installation.md · guide-rentree.md · test-terrain.md
 │   ├── strategie.md         avis fondateur (méthode, outillage)
 │   ├── audit-2026-07-10.md  rapport d'audit complet (16 constats, soldés)
+│   ├── audit-2026-09-05.md  4e audit, 12 lentilles (34 constats ; suites v0.12.5→v0.12.7, reste B31)
 │   └── avis/                avis avant application (AVIS_*.md, cf. BIBLE)
 │
 ├── tests/               ← checklist manuelle + smoke-tests e2e Playwright (npm test)
