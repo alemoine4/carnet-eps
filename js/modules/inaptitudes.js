@@ -4,7 +4,7 @@
 // alerte J-7 avant expiration ; inaptitude > 3 mois → rappel médecin scolaire (réglementation).
 
 import { enregistrerVue, el, carte, champ, champTexte, champSelect, champZone, confirmer, toast } from '../ui.js';
-import { tous, lire, parIndex, enregistrer, supprimer } from '../io.js';
+import { tous, lire, parIndex, enregistrer, supprimer, supprimerLot, restaurer } from '../io.js';
 import { stockerFichier, supprimerFichier, urlDuFichier, ouvrirVisionneuse } from '../media.js';
 import { isoAujourdhui, dateFR, jours, trierEleves, trierClasses } from '../metier.js';
 
@@ -343,24 +343,19 @@ async function vueDetail(c, id) {
       message: `Inaptitude de ${eleve ? eleve.prenom + ' ' + eleve.nom : 'cet élève'}.`,
       detail: inapt.certificatId ? 'La pièce jointe (certificat) sera supprimée aussi.' : '',
     }))) return;
-    let certSupp = null;
-    let fichSupp = null;
+    // Collecte (lectures) puis UNE transaction : inaptitude + certificat + pièce (avis B29).
+    const objets = { fichiers: [], certificats: [], inaptitudes: [inapt] };
     if (inapt.certificatId) {
-      certSupp = await lire('certificats', inapt.certificatId);
-      if (certSupp) {
-        if (certSupp.fichierId) fichSupp = await lire('fichiers', certSupp.fichierId);
-        await supprimerFichier(certSupp.fichierId);
-        await supprimer('certificats', certSupp.id);
+      const cert = await lire('certificats', inapt.certificatId);
+      if (cert) {
+        objets.certificats.push(cert);
+        const f = cert.fichierId ? await lire('fichiers', cert.fichierId) : null;
+        if (f) objets.fichiers.push(f);
       }
     }
-    await supprimer('inaptitudes', id);
+    await supprimerLot(objets);
     location.hash = '#/inaptitudes';
-    toast('Inaptitude supprimée', { action: async () => {
-      if (fichSupp) await enregistrer('fichiers', fichSupp);
-      if (certSupp) await enregistrer('certificats', certSupp);
-      await enregistrer('inaptitudes', inapt);
-      location.hash = `#/inaptitudes/${id}`;
-    } });
+    toast('Inaptitude supprimée', { action: async () => { await restaurer(objets); location.hash = `#/inaptitudes/${id}`; } });
   });
   carteS.append(el('div', { class: 'rang-btn' }, btnSuppr));
   c.append(carteS);

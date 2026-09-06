@@ -6,7 +6,7 @@
 // voie B = CSV Nom;Prénom;Note. Type « afl » = positionnement libre, non exportable vers Pronote.
 
 import { enregistrerVue, el, carte, champ, champTexte, confirmer, toast } from '../ui.js';
-import { tous, lire, parIndex, enregistrer, supprimer, telechargerTexte, champCSV } from '../io.js';
+import { tous, lire, parIndex, enregistrer, supprimer, supprimerLot, restaurer, telechargerTexte, champCSV } from '../io.js';
 import { isoAujourdhui, dateFR, trierEleves, trierClasses, baremeDe, formatFR } from '../metier.js';
 import { sauverPrefs } from '../state.js';
 
@@ -331,11 +331,10 @@ async function vueEval(c, evalId) {
       message: `Supprimer « ${ev.titre} » ?`,
       detail: notesMap.size ? `Seront aussi supprimées : ${notesMap.size} note${notesMap.size > 1 ? 's' : ''}.` : '',
     }))) return;
-    const notesSupp = await parIndex('notes', 'evaluationId', evalId);
-    for (const n of notesSupp) await supprimer('notes', n.id);
-    await supprimer('evaluations', evalId);
+    const objets = { notes: await parIndex('notes', 'evaluationId', evalId), evaluations: [ev] };
+    await supprimerLot(objets); // une transaction : évaluation + notes, et annulation idem (avis B29)
     location.hash = '#/notes';
-    toast(`Évaluation « ${ev.titre} » supprimée`, { action: async () => { await enregistrer('evaluations', ev); for (const n of notesSupp) await enregistrer('notes', n); location.hash = `#/notes/eval/${evalId}`; } });
+    toast(`Évaluation « ${ev.titre} » supprimée`, { action: async () => { await restaurer(objets); location.hash = `#/notes/eval/${evalId}`; } });
   });
   carteS.append(el('div', { class: 'rang-btn' }, btnSuppr));
   c.append(carteS);

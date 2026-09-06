@@ -4,8 +4,8 @@
 // Pas d'édition en v1 : supprimer puis recréer.
 
 import { enregistrerVue, el, carte, champ, confirmer, toast } from '../ui.js';
-import { tous, lire, enregistrer, supprimer } from '../io.js';
-import { stockerFichier, supprimerFichier, ouvrirVisionneuse } from '../media.js';
+import { tous, lire, enregistrer, supprimerLot, restaurer } from '../io.js';
+import { stockerFichier, ouvrirVisionneuse } from '../media.js';
 import { dateFR, normaliser, trierClasses } from '../metier.js';
 
 const TYPES_DOC = [
@@ -130,10 +130,10 @@ async function vueDocuments(c) {
     btnSuppr.addEventListener('click', async () => {
       if (!(await confirmer({ titre: 'Supprimer le document', message: `Supprimer « ${doc.titre} » ?` }))) return;
       const fichier = doc.fichierId ? await lire('fichiers', doc.fichierId) : null;
-      if (doc.fichierId) await supprimerFichier(doc.fichierId);
-      await supprimer('documents', doc.id);
+      const objets = { fichiers: fichier ? [fichier] : [], documents: [doc] };
+      await supprimerLot(objets); // une transaction : document + pièce, annulation idem (avis B29)
       rafraichir();
-      toast('Document supprimé', { action: async () => { if (fichier) await enregistrer('fichiers', fichier); await enregistrer('documents', doc); rafraichir(); } });
+      toast('Document supprimé', { action: async () => { await restaurer(objets); rafraichir(); } });
     });
     const ligne = el('div', { class: 'rang-doc' }, btnOuvrir, btnSuppr);
     lignes.push({ doc, ligne });

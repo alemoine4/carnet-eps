@@ -175,8 +175,8 @@ export function validerExport(objet) {
 
 // Restauration complète : REMPLACE tout. Les confirmations et l'export de sécurité
 // sont gérés par l'appelant (modules/sauvegarde.js).
-// Écriture par lots : une seule transaction (clear + puts) par store — indispensable
-// pour restaurer une année entière (~10 000 appels) en quelques secondes.
+// Écriture en UNE transaction sur tous les stores (clear + puts) : rapide pour une année
+// entière (~10 000 appels) et tout-ou-rien, même si l'onglet est fermé en cours (avis B29).
 export async function importerJSON(objet) {
   validerExport(objet);
   // schemaVersion < DB_VERSION : appliquer ici les migrations à l'import (aucune en v1).
@@ -194,23 +194,12 @@ export async function importerJSON(objet) {
       lots[nom] = objet.stores[nom] || [];
     }
   }
-  const db = await ouvrirDB();
+  const operations = [];
   for (const nom of STORES) {
-    await new Promise((resoudre, rejeter) => {
-      const tx = db.transaction(nom, 'readwrite');
-      const store = tx.objectStore(nom);
-      tx.oncomplete = resoudre;
-      tx.onerror = () => rejeter(tx.error);
-      tx.onabort = () => rejeter(tx.error || new Error(`restauration de « ${nom} » interrompue`));
-      try {
-        store.clear();
-        for (const enreg of lots[nom]) store.put(enreg);
-      } catch (e) {
-        tx.abort(); // erreur synchrone (clé absente…) : annule aussi le clear() (B02)
-        rejeter(e);
-      }
-    });
+    operations.push({ store: nom, op: 'clear' });
+    for (const enreg of lots[nom]) operations.push({ store: nom, op: 'put', valeur: enreg });
   }
+  await ecrireLot(operations);
 }
 
 export async function telechargerJSON(objet, suffixe = 'sauvegarde') {
@@ -304,83 +293,114 @@ export function parserCSV(texte) {
 }
 
 // ---------------------------------------------------------------------------
-// Cascades de suppression (IndexedDB n'a pas de clés étrangères) —
-// règles documentées dans docs/modele-donnees.md.
+// Écritures groupées : UNE transaction pour plusieurs stores (avis B29, v0.12.7).
+// Règle : toutes les lectures ont lieu AVANT ; toutes les requêtes d'écriture sont émises
+// de façon synchrone dans la transaction (aucun await entre elles) → le navigateur valide
+// tout ou annule tout, même si l'onglet est fermé ou l'app tuée en cours de route.
 // ---------------------------------------------------------------------------
 
-// Les fonctions de cascade renvoient { <store>: [records supprimés] } pour permettre la
-// restauration (undo) via restaurer().
-export async function supprimerSeanceEnCascade(seanceId) {
-  const objets = { appels: [], seances: [] };
-  for (const a of await parIndex('appels', 'seanceId', seanceId)) {
-    objets.appels.push(a);
-    await supprimer('appels', a.id);
+// operations = [{ store, op: 'put', valeur } | { store, op: 'delete', cle } | { store, op: 'clear' }]
+async function ecrireLot(operations) {
+  if (!operations.length) return;
+  const stores = [...new Set(operations.map((o) => o.store))];
+  const inconnu = stores.find((s) => !SCHEMA[s]);
+  if (inconnu) throw new Error(`store inconnu « ${inconnu} »`);
+  const db = await ouvrirDB();
+  await new Promise((resoudre, rejeter) => {
+    const tx = db.transaction(stores, 'readwrite');
+    tx.oncomplete = resoudre;
+    tx.onerror = () => rejeter(tx.error);
+    tx.onabort = () => rejeter(tx.error || new Error('écriture interrompue'));
+    try {
+      for (const o of operations) {
+        const st = tx.objectStore(o.store);
+        if (o.op === 'clear') st.clear();
+        else if (o.op === 'delete') st.delete(o.cle);
+        else st.put(o.valeur);
+      }
+    } catch (e) {
+      tx.abort(); // erreur synchrone (clé absente, valeur non clonable…) : rien n'est écrit
+      rejeter(e);
+    }
+  });
+}
+
+// { store: [records] } → supprime tous ces enregistrements en une transaction (tout ou rien).
+export async function supprimerLot(objets) {
+  const operations = [];
+  for (const [store, records] of Object.entries(objets || {})) {
+    const cle = SCHEMA[store]?.keyPath;
+    for (const rec of records || []) operations.push({ store, op: 'delete', cle: cle ? rec?.[cle] : undefined });
   }
+  return ecrireLot(operations);
+}
+
+// { store: [records] } → restaure des enregistrements supprimés (undo) en une transaction.
+export async function restaurer(objets) {
+  const operations = [];
+  for (const [store, records] of Object.entries(objets || {})) {
+    for (const rec of records || []) operations.push({ store, op: 'put', valeur: rec });
+  }
+  return ecrireLot(operations);
+}
+
+// ---------------------------------------------------------------------------
+// Cascades de suppression (IndexedDB n'a pas de clés étrangères) —
+// règles documentées dans docs/modele-donnees.md.
+// Chaque cascade COLLECTE d'abord (lectures), puis supprime en UNE transaction ;
+// elle renvoie { <store>: [records supprimés] } pour l'annulation via restaurer().
+// ---------------------------------------------------------------------------
+
+async function collecterSeance(seanceId) {
+  const objets = { appels: await parIndex('appels', 'seanceId', seanceId), seances: [] };
   const seance = await lire('seances', seanceId);
-  if (seance) { objets.seances.push(seance); await supprimer('seances', seanceId); }
+  if (seance) objets.seances.push(seance);
+  return objets;
+}
+
+export async function supprimerSeanceEnCascade(seanceId) {
+  const objets = await collecterSeance(seanceId);
+  await supprimerLot(objets);
   return objets;
 }
 
 export async function supprimerSequenceEnCascade(sequenceId) {
   const objets = { seances: [], appels: [], evaluations: [], notes: [], sequences: [] };
   for (const s of await parIndex('seances', 'sequenceId', sequenceId)) {
-    const o = await supprimerSeanceEnCascade(s.id);
+    const o = await collecterSeance(s.id);
     objets.seances.push(...o.seances);
     objets.appels.push(...o.appels);
   }
   for (const ev of await parIndex('evaluations', 'sequenceId', sequenceId)) {
-    for (const n of await parIndex('notes', 'evaluationId', ev.id)) {
-      objets.notes.push(n);
-      await supprimer('notes', n.id);
-    }
+    objets.notes.push(...(await parIndex('notes', 'evaluationId', ev.id)));
     objets.evaluations.push(ev);
-    await supprimer('evaluations', ev.id);
   }
   const sequence = await lire('sequences', sequenceId);
-  if (sequence) { objets.sequences.push(sequence); await supprimer('sequences', sequenceId); }
+  if (sequence) objets.sequences.push(sequence);
+  await supprimerLot(objets);
   return objets;
 }
 
 export async function supprimerEleveEnCascade(eleveId) {
   const objets = { appels: [], inaptitudes: [], certificats: [], notes: [], observations: [], fichiers: [], eleves: [] };
-  for (const a of await parIndex('appels', 'eleveId', eleveId)) {
-    objets.appels.push(a);
-    await supprimer('appels', a.id);
+  objets.appels = await parIndex('appels', 'eleveId', eleveId);
+  objets.inaptitudes = await parIndex('inaptitudes', 'eleveId', eleveId);
+  objets.certificats = await parIndex('certificats', 'eleveId', eleveId);
+  for (const c of objets.certificats) {
+    if (!c.fichierId) continue;
+    const f = await lire('fichiers', c.fichierId);
+    if (f) objets.fichiers.push(f);
   }
-  for (const i of await parIndex('inaptitudes', 'eleveId', eleveId)) {
-    objets.inaptitudes.push(i);
-    await supprimer('inaptitudes', i.id);
-  }
-  for (const c of await parIndex('certificats', 'eleveId', eleveId)) {
-    if (c.fichierId) {
-      const f = await lire('fichiers', c.fichierId);
-      if (f) { objets.fichiers.push(f); await supprimer('fichiers', c.fichierId); }
-    }
-    objets.certificats.push(c);
-    await supprimer('certificats', c.id);
-  }
-  for (const n of await parIndex('notes', 'eleveId', eleveId)) {
-    objets.notes.push(n);
-    await supprimer('notes', n.id);
-  }
-  for (const o of await parIndex('observations', 'eleveId', eleveId)) {
-    objets.observations.push(o);
-    await supprimer('observations', o.id);
-  }
+  objets.notes = await parIndex('notes', 'eleveId', eleveId);
+  objets.observations = await parIndex('observations', 'eleveId', eleveId);
   const eleve = await lire('eleves', eleveId);
   if (eleve?.photoFichierId) {
     const f = await lire('fichiers', eleve.photoFichierId);
-    if (f) { objets.fichiers.push(f); await supprimer('fichiers', eleve.photoFichierId); }
+    if (f) objets.fichiers.push(f);
   }
-  if (eleve) { objets.eleves.push(eleve); await supprimer('eleves', eleveId); }
+  if (eleve) objets.eleves.push(eleve);
+  await supprimerLot(objets);
   return objets;
-}
-
-// Restaure des enregistrements supprimés (undo) : objets = { store: [records...] }.
-export async function restaurer(objets) {
-  for (const [store, records] of Object.entries(objets || {})) {
-    for (const rec of records) await enregistrer(store, rec);
-  }
 }
 
 // ---------------------------------------------------------------------------
