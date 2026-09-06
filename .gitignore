@@ -12,3 +12,6 @@ blob-report/
 
 # Backups locaux avant corrections (convention audit) — pas dans le dépôt
 archives/
+
+# Restitution d'une autre IA (Codex) — hors dépôt tant que non tranché (ajouté par erreur dans 8ca9d47, retiré aussitôt)
+audit codex/
