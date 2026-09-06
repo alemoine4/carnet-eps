@@ -29,6 +29,7 @@
 
 | Version | Tag | Commit main | Résumé |
 |---|---|---|---|
+| v0.12.7 | `v0.12.7` | `a4e8eb0` | Cascades et annulations atomiques (avis B29) : une transaction multi-stores pour les suppressions en cascade, les « Annuler » et l’import JSON ; suppression 76 → 27 ms — déployée le 2026-09-06 |
 | v0.12.6 | `v0.12.6` | `727d389` | Vision par trimestre (D012, audit B30) : fins de T1/T2 réglables, tableau T1/T2/T3/Année sur la fiche, périodes rapides sur le récap, détail du trimestre dans les alertes — déployée le 2026-09-06 |
 | v0.12.5 | `v0.12.5` | `f7093fa` | Dédoublonnage des helpers (audit B27, avis validé) : `metier.js`/`ui.js` exportent tris, normalisation, formats, `champ()` — refactor sans changement fonctionnel, tests 21/21 inchangés — déployée le 2026-09-06 |
 | v0.12.4 | `v0.12.4` | `28732ad` | 4e audit (34 constats, 30 correctifs) : grille d'appel 2 colonnes à 360 px, import JSON altéré refusé avant écriture, élève « parti », contrastes du thème sombre, appui long vs défilement, double tap/double clic, 13 tests de non-régression — déployée le 2026-09-06 (gh-pages `0391552`) |
