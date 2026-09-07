@@ -32,7 +32,7 @@ Chaque module = une vue + un fichier `app/js/modules/<module>.js` (à partir de 
 
 - Écran d'appel : grille de cartes élèves (nom + photo/initiales), **un tap = cycle de statut**, appui long = menu complet.
 - Statuts : `present` (défaut) · `absent` · `retard` (+ minutes) · `dispense` (mot des parents, ponctuel) · `inapte` (lié à une inaptitude enregistrée) · `oubli_tenue` · `infirmerie` (départ en cours de séance).
-- Pré-remplissage : inaptitude active à la date du jour → statut `inapte` proposé d'office, pastille visible.
+- Pré-remplissage (décision D013, v0.12.9) : inaptitude **totale** active à la date du jour → statut d'office `inapte` (certificat, infirmerie) ou `dispense` (mot des parents) ; inaptitude **partielle** → `present` (pratique aménagée) avec pastille 🩺. « Terminer l'appel » applique la même règle aux élèves non saisis, même sur une séance passée.
 - Compteurs en direct : effectif présent / pratiquants (l'inapte présent n'est pas pratiquant).
 - Historique : par séance, par élève (vue fiche élève), par classe.
 - Alertes : 3 oublis de tenue ou 3 dispenses « mot » **cumulés sur l'année scolaire** → signalement (décision D012). **Vision par trimestre** en complément : tableau T1 / T2 / T3 / Année sur la fiche élève, périodes rapides sur le récap de classe, détail du trimestre en cours dans les alertes ; fins de T1/T2 réglables (Réglages, défaut 15/12 et 15/03).

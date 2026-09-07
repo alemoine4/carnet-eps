@@ -54,10 +54,15 @@ export async function supprimerFichier(fichierId) {
   if (fichierId) await supprimer('fichiers', fichierId);
 }
 
-// URL temporaire pour afficher un blob (penser à revoquerURL après usage).
+// Type MIME fiable d'un enregistrement `fichiers` : le type DÉCLARÉ à l'enregistrement, sinon celui
+// du blob, sinon flux binaire — une sauvegarde tierce sans `mime` faisait planter la fiche
+// d'inaptitude (« Affichage impossible », audit 2026-09-07, A05).
+export const mimeSur = (f) => (typeof f?.mime === 'string' && f.mime ? f.mime : f?.blob?.type || 'application/octet-stream');
+
+// URL temporaire pour afficher un blob (penser à revoquerURL après usage), typée par mimeSur.
 export async function urlDuFichier(fichierId) {
   const rec = await lire('fichiers', fichierId);
-  return rec?.blob ? { url: URL.createObjectURL(rec.blob), fichier: rec } : null;
+  return rec?.blob ? { url: URL.createObjectURL(new Blob([rec.blob], { type: mimeSur(rec) })), fichier: rec } : null;
 }
 
 export function revoquerURL(url) {
@@ -72,7 +77,8 @@ export function ouvrirVisionneuse(conteneur, fichier) {
   // Le type servi est le mime DÉCLARÉ à l'enregistrement, pas celui porté par le blob (qui peut
   // venir d'une sauvegarde JSON tierce) ; tout ce qui n'est ni image ni PDF est servi en flux
   // binaire (téléchargement) au lieu d'une image cassée (audit 2026-09-05, B18).
-  const mime = /^(image\/[a-z0-9.+-]+|application\/pdf)$/i.test(fichier.mime || '') ? fichier.mime : 'application/octet-stream';
+  const declare = mimeSur(fichier);
+  const mime = /^(image\/[a-z0-9.+-]+|application\/pdf)$/i.test(declare) ? declare : 'application/octet-stream';
   const url = URL.createObjectURL(new Blob([fichier.blob], { type: mime }));
   if (!mime.startsWith('image/')) {
     window.open(url, '_blank');
@@ -82,10 +88,10 @@ export function ouvrirVisionneuse(conteneur, fichier) {
   const declencheur = document.activeElement;
   const dlg = document.createElement('dialog');
   dlg.className = 'visionneuse';
-  dlg.setAttribute('aria-label', `Aperçu : ${fichier.nom}`);
+  dlg.setAttribute('aria-label', `Aperçu : ${fichier.nom || 'pièce jointe'}`);
   const img = document.createElement('img');
   img.src = url;
-  img.alt = fichier.nom;
+  img.alt = fichier.nom || 'pièce jointe';
   dlg.append(img);
   dlg.addEventListener('click', () => dlg.close()); // clic n'importe où = fermer (zoom-out)
   dlg.addEventListener('close', () => {

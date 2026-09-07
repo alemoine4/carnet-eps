@@ -17,7 +17,8 @@ const INSTALLATIONS = ['Gymnase', 'Plateau extérieur', 'Stade', 'Piscine', 'Sal
 
 async function vueEDT(c) {
   const rafraichir = () => { c.innerHTML = ''; return vueEDT(c); };
-  const classes = (await tous('classes')).filter((cl) => !cl.archivee).sort(trierClasses);
+  const toutesClasses = (await tous('classes')).sort(trierClasses);
+  const classes = toutesClasses.filter((cl) => !cl.archivee);
   const creneaux = await tous('edt');
 
   // --- Alternance A/B ---
@@ -83,6 +84,14 @@ async function vueEDT(c) {
     selJour.value = String(creneau?.jour ?? 1);
     inpDebut.value = creneau?.heureDebut || '08:00';
     inpFin.value = creneau?.heureFin || '09:00';
+    // Classe du créneau archivée : proposée quand même (marquée) — sinon le <select> retombait sur
+    // une valeur vide et « Enregistrer » effaçait la classe du créneau (audit 2026-09-07, A02).
+    const archiveeDuCreneau = creneau && !classes.some((cl) => cl.id === creneau.classeId)
+      ? toutesClasses.find((cl) => cl.id === creneau.classeId) : null;
+    selClasse.replaceChildren(
+      ...classes.map((cl) => el('option', { value: cl.id }, cl.nom)),
+      ...(archiveeDuCreneau ? [el('option', { value: archiveeDuCreneau.id }, `${archiveeDuCreneau.nom} (archivée)`)] : []),
+    );
     selClasse.value = creneau?.classeId || classes[0].id;
     selSemaine.value = creneau?.semaine || 'AB';
     inpInstal.value = creneau?.installation || '';
@@ -93,6 +102,11 @@ async function vueEDT(c) {
   btnEnregistrer.addEventListener('click', async () => {
     if (!inpDebut.value || !inpFin.value || enMinutes(inpFin.value) <= enMinutes(inpDebut.value)) {
       statutForm.textContent = 'Heures invalides (la fin doit être après le début).';
+      statutForm.className = 'statut statut-erreur';
+      return;
+    }
+    if (!selClasse.value) { // classe supprimée entre-temps : jamais de créneau sans classe (A02)
+      statutForm.textContent = 'Choisissez une classe.';
       statutForm.className = 'statut statut-erreur';
       return;
     }
@@ -110,7 +124,16 @@ async function vueEDT(c) {
     const chevauche = creneaux.find((cr) => cr.id !== rec.id && cr.jour === rec.jour
       && (cr.semaine === 'AB' || rec.semaine === 'AB' || cr.semaine === rec.semaine)
       && enMinutes(rec.heureDebut) < enMinutes(cr.heureFin) && enMinutes(cr.heureDebut) < enMinutes(rec.heureFin));
-    await enregistrer('edt', rec);
+    btnEnregistrer.disabled = true; // anti double-tap (audit 2026-09-07, D-02)
+    try {
+      await enregistrer('edt', rec);
+    } catch (e) {
+      statutForm.textContent = `Enregistrement impossible : ${e?.message || e}`;
+      statutForm.className = 'statut statut-erreur';
+      return;
+    } finally {
+      btnEnregistrer.disabled = false;
+    }
     rafraichir();
     if (chevauche) {
       const cl = classes.find((x) => x.id === chevauche.classeId);
@@ -141,13 +164,13 @@ async function vueEDT(c) {
     if (jour === aujourdHui) h.append(el('span', { class: 'badge badge-accent' }, 'aujourd’hui'));
     section.append(h);
     for (const cr of slots) {
-      const classe = classes.find((cl) => cl.id === cr.classeId);
+      const classe = toutesClasses.find((cl) => cl.id === cr.classeId);
       const pastille = el('span', { class: 'pastille', 'aria-hidden': 'true' });
       pastille.style.background = classe?.couleur || 'var(--c-accent)';
       const ligne = el('button', { class: 'ligne-edt', onclick: () => ouvrirForm(cr) },
         el('span', { class: 'edt-heures' }, `${cr.heureDebut}–${cr.heureFin}`),
         pastille,
-        el('span', { class: 'edt-classe' }, classe?.nom || 'Classe ?'),
+        el('span', { class: 'edt-classe' }, classe ? `${classe.nom}${classe.archivee ? ' (archivée)' : ''}` : 'Classe ?'),
         cr.installation ? el('span', { class: 'edt-instal' }, cr.installation) : '',
         cr.semaine !== 'AB' ? el('span', { class: 'badge' }, `sem. ${cr.semaine}`) : '',
       );

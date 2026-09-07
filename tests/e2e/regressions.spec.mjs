@@ -253,9 +253,9 @@ test('B30 — récap de classe : périodes rapides T1 / Année', async ({ page }
   });
   await page.goto('/#/appel/recap/c1');
   await page.getByRole('button', { name: /^T1/ }).click();
-  await expect(page.locator('#rc-debut')).toHaveValue(`${y}-09-01`);
+  await expect(page.locator('#rc-debut')).toHaveValue(`${y}-08-01`); // 1er août depuis A06 (audit 2026-09-07)
   await expect(page.locator('#rc-fin')).toHaveValue(`${y}-12-15`);
-  await expect(page.locator('#vue')).toContainText(`du 01/09/${y} au 15/12/${y}`);
+  await expect(page.locator('#vue')).toContainText(`du 01/08/${y} au 15/12/${y}`);
   await page.getByRole('button', { name: /^Année/ }).click();
   await expect(page.locator('#rc-fin')).toHaveValue(`${y + 1}-07-31`);
 });

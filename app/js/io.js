@@ -26,6 +26,25 @@ const SCHEMA = {
 
 export const STORES = Object.keys(SCHEMA);
 
+// Champs texte indispensables au rendu (tris, affichages) : un import qui les fournit dans un autre
+// type (nom: 123) faisait planter les vues au premier tri (audit 2026-09-07, V2-05).
+const CHAMPS_TEXTE = {
+  classes: ['nom'],
+  eleves: ['nom', 'prenom', 'classeId'],
+  edt: ['classeId', 'heureDebut', 'heureFin'],
+  sequences: ['classeId', 'apsa'],
+  seances: ['sequenceId', 'date'],
+  appels: ['seanceId', 'eleveId', 'statut'],
+  inaptitudes: ['eleveId'],
+  certificats: ['eleveId'],
+  evaluations: ['sequenceId', 'titre'],
+  notes: ['evaluationId', 'eleveId'],
+  observations: ['eleveId', 'texte'],
+};
+// Champs conservés à l'import pour `eleves` : tout champ inconnu (INE, adresse…) est écarté, la
+// minimisation RGPD ne dépend plus de la provenance du fichier (audit 2026-09-07, A24).
+const CHAMPS_ELEVE = ['id', 'classeId', 'nom', 'prenom', 'sexe', 'dateNaissance', 'notesPerso', 'photoFichierId', 'actif'];
+
 let dbPromesse = null;
 
 export function ouvrirDB() {
@@ -43,15 +62,23 @@ export function ouvrirDB() {
         }
       }
     };
+    let abandonnee = false;
     req.onsuccess = () => {
       const db = req.result;
+      if (abandonnee) { db.close(); return; } // ouverture aboutie après un blocage déjà signalé : la suivante repartira propre
       // Un autre onglet monte le schéma : on libère la connexion (sinon il reste bloqué) et
       // la prochaine opération rouvrira la base à jour (audit 2026-09-05, B16).
       db.onversionchange = () => { db.close(); dbPromesse = null; };
       resoudre(db);
     };
-    req.onerror = () => rejeter(req.error);
-    req.onblocked = () => rejeter(new Error('base de données verrouillée par un autre onglet de l’app — fermez-le puis rechargez'));
+    // Une promesse REJETÉE ne doit pas rester en cache : après un blocage résolu (autre onglet
+    // fermé), la prochaine opération doit pouvoir rouvrir la base (audit 2026-09-07, A04).
+    req.onerror = () => { dbPromesse = null; rejeter(req.error); };
+    req.onblocked = () => {
+      abandonnee = true;
+      dbPromesse = null;
+      rejeter(new Error('base de données verrouillée par un autre onglet de l’app — fermez-le puis rechargez'));
+    };
   });
   return dbPromesse;
 }
@@ -111,7 +138,7 @@ async function lireLot(stores) {
       req.onsuccess = () => { resultat[nom] = req.result; };
     }
     tx.oncomplete = () => resoudre(resultat);
-    tx.onerror = () => rejeter(tx.error);
+    tx.onerror = (ev) => rejeter(ev.target?.error || tx.error || new Error('lecture refusée')); // même motif que l'écriture (D-07, revue du lot 1)
     tx.onabort = () => rejeter(tx.error || new Error('lecture interrompue'));
   });
 }
@@ -197,6 +224,11 @@ export function validerExport(objet) {
         throw new Error(`sauvegarde altérée : « ${nom} » identifiant en double « ${enreg[cle]} » (ligne ${i + 1})`);
       }
       vus.add(enreg[cle]);
+      for (const champ of CHAMPS_TEXTE[nom] || []) {
+        if (typeof enreg[champ] !== 'string') {
+          throw new Error(`sauvegarde altérée : « ${nom} » ligne ${i + 1} — « ${champ} » doit être un texte`);
+        }
+      }
     });
     comptes[nom] = liste.length;
   }
@@ -220,6 +252,9 @@ export async function importerJSON(objet) {
         const okDataURL = typeof donnees === 'string' && donnees.startsWith('data:');
         return { ...reste, blob: okDataURL ? await (await fetch(donnees)).blob() : null };
       }));
+    } else if (nom === 'eleves') {
+      lots.eleves = (objet.stores.eleves || []).map((enreg) =>
+        Object.fromEntries(CHAMPS_ELEVE.filter((k) => k in enreg).map((k) => [k, enreg[k]])));
     } else {
       lots[nom] = objet.stores[nom] || [];
     }
@@ -338,7 +373,9 @@ async function ecrireLot(operations) {
   await new Promise((resoudre, rejeter) => {
     const tx = db.transaction(stores, 'readwrite');
     tx.oncomplete = resoudre;
-    tx.onerror = () => rejeter(tx.error);
+    // Pendant la propagation d'une erreur de requête, tx.error est encore null : l'erreur vit sur
+    // la requête (ev.target) — sinon `e.message` levait un TypeError (audit 2026-09-07, D-07).
+    tx.onerror = (ev) => rejeter(ev.target?.error || tx.error || new Error('écriture refusée'));
     tx.onabort = () => rejeter(tx.error || new Error('écriture interrompue'));
     try {
       for (const o of operations) {

@@ -14,6 +14,23 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-07 (30) — v0.12.9 : lot 1 du 5e audit (44 constats), 43 tests, revue adversariale (19 constats corrigés)
+
+Demande : « fait au mieux » = GO discrétionnaire sur le plan du rapport, lot 1 d'abord.
+
+**Fait** :
+- **79 patchs** à ancrage exact (script `patcher.mjs` hors dépôt : refus si l'ancrage est absent ou ambigu, aucune écriture partielle) sur 17 fichiers `app/` + `.gitignore` ; `node --check` sur tous les modules ; suite existante rejouée d'abord (31/33 : B22 et B30 cassés par des changements voulus → libellé « et » rétabli, borne 1er août reportée dans le test).
+- **Choix d'implémentation** notables : `depasseSeuil(cumul)` et `SEUIL_MEDECIN_JOURS` exportés de `metier.js` (fin des trois périmètres différents du seuil) ; `bornesTrimestres` retombe sur les défauts si T2 ≤ T1 ; `coursDuJour` exclut les classes archivées ; `inaptesMap` (la plus contraignante par élève) + `statutInapte()` partagés entre pré-remplissage, pastille et « Terminer » ; `mimeSur(f)` dans `media.js` ; `effacerPrefs()` dans `state.js` ; `CHAMPS_TEXTE` / `CHAMPS_ELEVE` dans `io.js` ; validations d'édition qui **lèvent** dans `onChange` → `brancherRetour` affiche ✗ + toast (une seule mécanique pour A16, V2-02, B42) ; « Annuler » qui lève → « Annulation impossible : … » (D-01 + D-03 avec la même mécanique).
+- **Tests** : `tests/e2e/audit5-lot1.spec.mjs`, 43 tests = 13 reproductions du scratchpad inversées + 30 nouveaux (dont C10 avec une transaction IndexedDB maintenue ouverte par des lectures en chaîne puis abandonnée sur signal, A04 sur une instance neuve du module `io.js?instance-neuve`, purge de bout en bout avec téléchargement). **76/76**.
+- Pièges rencontrés : `fill()` de Playwright n'émet `change` que sur les champs date (valeur posée directement) — sur number/text il tape, donc `dispatchEvent('change')` reste nécessaire, et l'inverse double l'événement ; `page.goto` sur une URL identique ne re-rend pas la vue (→ `reload()`) ; toasts empilés → `.last()`.
+- **Revue adversariale du diff** : workflow 5 lentilles Opus (régressions, intégrité des données, règles métier, robustesse, qualité des preuves), chaque constat soumis à 2 réfutateurs (≈ 50 agents). Les lentilles ont lu les fichiers réels pendant que je corrigeais : beaucoup de réfutations « déjà corrigé » ; au total **19 constats confirmés et corrigés avant livraison** (P1 : le retour arrière de `definirStatut` restaurait `prec`, jamais confirmé en base → map `confirmes` ; P2 : minuterie du ✓ effaçant le ✗, valeur refusée laissée dans les champs date/nombre, notes des trimestres figées + ordre vérifié contre la voisine effective au lieu de la voisine enregistrée, ratio notes « n/effectif » global au lieu de par classe, départage arbitraire entre deux inaptitudes totales, minutes > 120 rejetées en silence, `lireLot` non aligné sur D-07, alerte A09 pour une classe archivée, moyenne de classe avec les partis et CSV sans mention ; P3 : chips de la fiche hors année, fuite d'URL blob (PDF / image illisible), `compterTout` sans catch, fin de trimestre en août acceptée ; lentille régressions : alertes non triées par gravité avant la troncature à 8 de l'accueil, seuil d'oublis encore émis pour une classe archivée, colonne ⚠ du récap sur la période sans le dire, comptage des pièces relancé à l'import) + **un test de la revue qui ne prouvait rien** (C10 « deux échecs d'affilée » passait aussi avec l'ancien code : échecs séquentiels) réécrit avec deux transactions concurrentes. Constat **tranché contre les relecteurs** (3 lentilles l'ont remonté, 4 réfutateurs l'ont écarté) : le pré-remplissage « dispensé (mot) » alimente le seuil D012 — c'est l'effet demandé par l'audit (C01) : trois séances non pratiquées sur un simple mot appellent un certificat ; consigné dans D013 avec la piste inverse (marquer les enregistrements posés d'office) si le terrain le juge gênant.
+
+**Décidé** : D013 (pré-remplissage selon type et origine de l'inaptitude ; année scolaire des bornes au 1er août). Les constats sans test dynamique : D-07 (erreur de requête asynchrone non simulable de façon déterministe) et A03 (`git check-ignore` vérifié à la main).
+
+**Coincé / à vérifier** : validations terrain (fiche `docs/test-terrain.md`), B31 ; `npx playwright install chromium` depuis le terminal de l'utilisateur.
+
+**Prochaine étape** : lot 2 (créations atomiques) = avis à rédiger ; avis séparé A01 (origine dédiée) ; lots 3 à 5.
+
 ## 2026-09-07 (29) — 5e audit sur v0.12.8 : Codex V2 + 13 lentilles en 3 lots
 
 Demande : « nouvel audit je pense », puis « il y a un audit Codex avant » (`audit codex/AUDIT_V2.md`).

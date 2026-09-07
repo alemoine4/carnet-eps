@@ -5,15 +5,21 @@
 // Rappel D006 : l'appel réglementaire reste fait dans Pronote — ici on trace le suivi EPS.
 
 import { enregistrerVue, el, carte, champZone, ouvrirFeuille, toast } from '../ui.js';
-import { tous, lire, parIndex, enregistrer, telechargerTexte, champCSV } from '../io.js';
+import { tous, lire, parIndex, enregistrer, restaurer, telechargerTexte, champCSV } from '../io.js';
 import {
-  STATUTS, CYCLE_TAP, SEUIL_ALERTE,
+  STATUTS, CYCLE_TAP, SEUIL_ALERTE, depasseSeuil,
   isoAujourdhui, dateFR, coursDuJour, inaptitudesActives, trierEleves, trierClasses,
   bornesTrimestres, periodeTrimestre, compterStatutsParTrimestre,
 } from '../metier.js';
 
 // Raccourcis clavier (PC) sur une carte d'élève focalisée : une lettre = un statut.
 const RACCOURCIS_STATUT = { p: 'present', a: 'absent', r: 'retard', d: 'dispense', i: 'inapte', t: 'oubli_tenue', f: 'infirmerie' };
+// Minutes de retard : entier de 1 à 120, sinon « non précisé » — le champ acceptait 5000 ou -3
+// (audit 2026-09-07, B42/V2-03).
+const minutesRetardDe = (v) => {
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) && n >= 1 && n <= 120 ? n : null;
+};
 
 // ---------------------------------------------------------------------------
 // Vue : sélecteur de séance
@@ -25,10 +31,22 @@ async function vueSelecteur(c) {
   ]);
   const classeDe = (id) => classes.find((cl) => cl.id === id);
   const seqDe = (id) => sequences.find((s) => s.id === id);
-  const effectifs = new Map();
-  for (const e of eleves) if (e.actif !== false) effectifs.set(e.classeId, (effectifs.get(e.classeId) || 0) + 1);
+  const seanceDe = (id) => seances.find((s) => s.id === id);
+  // Effectifs ET appels saisis sur les élèves ACTIFS de la classe de la séance : l'appel d'un
+  // élève parti gonflait « saisis » et affichait « Appel fait ✓ » à tort (audit 2026-09-07, B16/A12).
+  const actifsParClasse = new Map();
+  for (const e of eleves) {
+    if (e.actif === false) continue;
+    if (!actifsParClasse.has(e.classeId)) actifsParClasse.set(e.classeId, new Set());
+    actifsParClasse.get(e.classeId).add(e.id);
+  }
+  const effectifs = new Map([...actifsParClasse].map(([classeId, ids]) => [classeId, ids.size]));
   const saisis = new Map();
-  for (const a of appels) saisis.set(a.seanceId, (saisis.get(a.seanceId) || 0) + 1);
+  for (const a of appels) {
+    const seq = seqDe(seanceDe(a.seanceId)?.sequenceId);
+    if (!seq || !actifsParClasse.get(seq.classeId)?.has(a.eleveId)) continue;
+    saisis.set(a.seanceId, (saisis.get(a.seanceId) || 0) + 1);
+  }
   const auj = isoAujourdhui();
 
   if (!classes.length) {
@@ -57,15 +75,21 @@ async function vueSelecteur(c) {
       action = el('button', { class: 'btn btn-principal' }, 'Créer la séance + appel');
       action.addEventListener('click', async () => {
         action.disabled = true; // un double tap créait deux séances le même jour (audit 2026-09-05, B05)
-        const existante = (await parIndex('seances', 'sequenceId', seq.id)).find((s) => s.date === auj);
-        if (existante) { location.hash = `#/appel/${existante.id}`; return; }
-        const deja = seances.filter((s) => s.sequenceId === seq.id && s.date < auj).length;
-        const nouvelle = {
-          id: crypto.randomUUID(), sequenceId: seq.id, date: auj, edtId: cr.id,
-          numero: deja + 1, theme: '', bilan: '', annulee: false,
-        };
-        await enregistrer('seances', nouvelle);
-        location.hash = `#/appel/${nouvelle.id}`;
+        try {
+          const existante = (await parIndex('seances', 'sequenceId', seq.id)).find((s) => s.date === auj);
+          if (existante) { location.hash = `#/appel/${existante.id}`; return; }
+          const deja = seances.filter((s) => s.sequenceId === seq.id && s.date < auj).length;
+          const nouvelle = {
+            id: crypto.randomUUID(), sequenceId: seq.id, date: auj, edtId: cr.id,
+            numero: deja + 1, theme: '', bilan: '', annulee: false,
+          };
+          await enregistrer('seances', nouvelle);
+          location.hash = `#/appel/${nouvelle.id}`;
+        } catch (e) {
+          // Échec d'écriture : le bouton restait grisé sans un mot (audit 2026-09-07, A11).
+          action.disabled = false;
+          toast(`Séance non créée : ${e?.message || e}`);
+        }
       });
     } else {
       action = el('a', { class: 'btn', href: '#/sequences' }, 'Créer une séquence');
@@ -135,37 +159,62 @@ async function vueAppel(c, seanceId) {
   }
 
   const enregs = new Map((await parIndex('appels', 'seanceId', seanceId)).map((a) => [a.eleveId, a]));
+  // Dernier état CONFIRMÉ en base par élève : c'est lui (et non l'état précédent à l'écran, jamais
+  // vérifié) que le retour arrière d'une écriture refusée rétablit — deux échecs d'affilée
+  // laissaient à l'écran un statut inexistant et « Appel complet ✓ » (revue du lot 1, C10).
+  const confirmes = new Map(enregs);
 
   // Pré-remplissage : inaptitude active à la date de la séance → statut « inapte » d'office
   // (modifiable comme les autres — docs/fonctionnalites.md §4).
   // UNIQUEMENT pour la séance du JOUR (audit A14) : consulter après coup un appel passé
   // ne doit rien écrire en base. La pastille 🩺 reste affichée dans tous les cas.
   const estSeanceDuJour = seance.date === isoAujourdhui();
-  const actives = await inaptitudesActives(seance.date);
-  const inaptesSet = new Set(actives.map((i) => i.eleveId));
+  // Une inaptitude par élève, la plus contraignante (totale > partielle). Seule une inaptitude
+  // TOTALE fixe un statut d'office — « dispensé (mot) » si elle vient d'un mot des parents,
+  // « inapte » sinon ; une partielle laisse « présent » (l'élève pratique avec restrictions) et se
+  // signale par la pastille 🩺 (audit 2026-09-07, C01, décision D013). Voulu : trois séances non
+  // pratiquées sur un simple mot déclenchent le seuil D012 « penser famille / vie scolaire »
+  // (un certificat est attendu au-delà de quelques séances) — la revue du lot 1 l'a confirmé.
+  // Départage déterministe entre deux inaptitudes actives : totale > partielle, puis certificat >
+  // infirmerie > mot — sinon l'ordre des clés (UUID) décidait, donc le hasard (revue du lot 1).
+  const RANG_ORIGINE = { certificat: 3, infirmerie: 2, mot: 1 };
+  const rang = (i) => (i.type === 'totale' ? 10 : 0) + (RANG_ORIGINE[i.origine] || 0);
+  const inaptesMap = new Map();
+  for (const i of await inaptitudesActives(seance.date)) {
+    const prec = inaptesMap.get(i.eleveId);
+    if (!prec || rang(i) > rang(prec)) inaptesMap.set(i.eleveId, i);
+  }
+  const statutInapte = (eleveId) => {
+    const i = inaptesMap.get(eleveId);
+    return i && i.type === 'totale' ? (i.origine === 'mot' ? 'dispense' : 'inapte') : null;
+  };
   if (estSeanceDuJour) {
+    const prerempl = [];
     for (const eleve of eleves) {
-      if (inaptesSet.has(eleve.id) && !enregs.has(eleve.id)) {
-        const rec = {
-          id: `${seanceId}_${eleve.id}`, seanceId, eleveId: eleve.id,
-          statut: 'inapte', minutesRetard: null, commentaire: 'Inaptitude en cours',
-        };
-        await enregistrer('appels', rec);
-        enregs.set(eleve.id, rec);
+      const st = statutInapte(eleve.id);
+      if (st && !enregs.has(eleve.id)) {
+        prerempl.push({
+          id: `${seanceId}_${eleve.id}`, seanceId, eleveId: eleve.id, statut: st, minutesRetard: null,
+          commentaire: st === 'dispense' ? 'Dispense (mot des parents) en cours' : 'Inaptitude en cours',
+        });
       }
+    }
+    // UNE transaction, et l'écran s'affiche même si elle échoue : avant, un pré-remplissage refusé
+    // rendait tout l'écran d'appel inaccessible (audit 2026-09-07, C11).
+    try {
+      if (prerempl.length) {
+        await restaurer({ appels: prerempl });
+        for (const r of prerempl) { enregs.set(r.eleveId, r); confirmes.set(r.eleveId, r); }
+      }
+    } catch (e) {
+      toast(`Pré-remplissage des inaptitudes non enregistré (${e?.message || e}) — statuts à saisir à la main.`);
     }
   }
 
-  // Cumuls tenue/dispense (pour les pastilles ⚠) : seuil sur l'année, détail du trimestre de la séance (D012)
-  const tousAppels = await tous('appels');
-  const cumul = new Map();
-  for (const a of tousAppels) {
-    if (a.statut !== 'oubli_tenue' && a.statut !== 'dispense') continue;
-    if (!cumul.has(a.eleveId)) cumul.set(a.eleveId, { oubli_tenue: 0, dispense: 0 });
-    cumul.get(a.eleveId)[a.statut]++;
-  }
+  // Pastilles ⚠ : seuil sur le cumul de l'ANNÉE SCOLAIRE de la séance (D012), détail du
+  // trimestre — plus sur tous les appels depuis l'origine (audit 2026-09-07, A14/V2-01).
   const bornes = await bornesTrimestres(seance.date);
-  const parTri = compterStatutsParTrimestre(tousAppels, await tous('seances'), bornes);
+  const parTri = compterStatutsParTrimestre(await tous('appels'), await tous('seances'), bornes);
 
   // --- En-tête + compteurs ---
   const seancesSeq = (await parIndex('seances', 'sequenceId', sequence.id)).sort((a, b) => a.date.localeCompare(b.date));
@@ -248,8 +297,14 @@ async function vueAppel(c, seanceId) {
     majCompteurs();
     try {
       await enregistrer('appels', rec);
+      confirmes.set(eleve.id, rec);
     } catch (e) {
-      if (prec) enregs.set(eleve.id, prec); else enregs.delete(eleve.id);
+      // Ne défaire que si aucun tap plus récent n'a remplacé cet enregistrement : sinon l'écran
+      // revenait à un état périmé et mentait sur la base (audit 2026-09-07, C10) — et revenir au
+      // dernier état CONFIRMÉ, pas à `prec` (qui pouvait lui-même ne jamais avoir été écrit).
+      if (enregs.get(eleve.id) !== rec) { toast(`Statut non enregistré : ${e?.message || e}`); return; }
+      const ref = confirmes.get(eleve.id);
+      if (ref) enregs.set(eleve.id, ref); else enregs.delete(eleve.id);
       majBouton(eleve);
       majCompteurs();
       toast(`Statut non enregistré : ${e?.message || e}`);
@@ -266,7 +321,17 @@ async function vueAppel(c, seanceId) {
     inpMinutes.value = rec?.minutesRetard || '';
     const ligneMinutes = el('div', { class: 'champ' }, el('label', { for: 'ap-minutes' }, 'Minutes de retard'), inpMinutes);
     ligneMinutes.hidden = courant !== 'retard';
-    inpMinutes.addEventListener('change', () => definirStatut(eleve, 'retard', { minutesRetard: Number(inpMinutes.value) || null }));
+    // Valeur hors 1..120 : prévenue et retirée du champ, au lieu d'un « non précisé » silencieux
+    // qui laissait 455 affiché et rien en base (revue du lot 1, B42).
+    const minutesSaisies = () => {
+      const brut = inpMinutes.value.trim();
+      const n = minutesRetardDe(brut);
+      if (brut === '' || n !== null) return { minutesRetard: n };
+      toast('Minutes de retard : entier de 1 à 120 attendu — non enregistré.');
+      inpMinutes.value = enregs.get(eleve.id)?.minutesRetard || '';
+      return null;
+    };
+    inpMinutes.addEventListener('change', () => { const m = minutesSaisies(); if (m) definirStatut(eleve, 'retard', m); });
 
     const grilleSt = el('div', { class: 'grille-statuts' });
     for (const [cle, conf] of Object.entries(STATUTS)) {
@@ -274,7 +339,7 @@ async function vueAppel(c, seanceId) {
       b.style.borderColor = conf.couleur;
       if (cle === courant) { b.style.background = conf.couleur; b.style.color = '#fff'; }
       b.addEventListener('click', async () => {
-        await definirStatut(eleve, cle, cle === 'retard' ? { minutesRetard: Number(inpMinutes.value) || null } : {});
+        await definirStatut(eleve, cle, (cle === 'retard' && minutesSaisies()) || {});
         if (cle === 'retard') {
           ligneMinutes.hidden = false;
           for (const x of grilleSt.children) { x.style.background = ''; x.style.color = ''; }
@@ -305,9 +370,10 @@ async function vueAppel(c, seanceId) {
   }
 
   for (const eleve of eleves) {
-    const alerte = cumul.get(eleve.id);
-    const enAlerte = alerte && (alerte.oubli_tenue >= SEUIL_ALERTE || alerte.dispense >= SEUIL_ALERTE);
+    const annee = parTri.get(eleve.id)?.annee || {};
+    const enAlerte = depasseSeuil(annee);
     const tri = parTri.get(eleve.id)?.t[bornes.courant] || {};
+    const inapt = inaptesMap.get(eleve.id);
     const carteE = el('div', { class: 'btn-eleve', role: 'group', 'aria-label': `${eleve.prenom} ${eleve.nom}` });
     const cycle = el('button', { class: 'eleve-cycle', type: 'button' },
       el('span', { class: 'nom-e' }, `${eleve.prenom} ${eleve.nom}`),
@@ -315,8 +381,8 @@ async function vueAppel(c, seanceId) {
         el('span', { class: 'badge-statut', hidden: true }, ''),
         el('span', { class: 'detail-txt' }, ''),
       ),
-      inaptesSet.has(eleve.id) ? el('span', { class: 'pastille-info', title: 'Inaptitude en cours' }, '🩺') : '',
-      enAlerte ? el('span', { class: 'pastille-warn', title: `Année : oublis de tenue ×${alerte.oubli_tenue} · dispenses ×${alerte.dispense} — T${bornes.courant} : ${tri.oubli_tenue || 0} · ${tri.dispense || 0}` }, '⚠') : '',
+      inapt ? el('span', { class: 'pastille-info', title: inapt.type === 'totale' ? 'Inaptitude totale en cours' : 'Inaptitude partielle en cours (pratique avec restrictions)' }, '🩺') : '',
+      enAlerte ? el('span', { class: 'pastille-warn', title: `Année : oublis de tenue ×${annee.oubli_tenue || 0} · dispenses ×${annee.dispense || 0} — T${bornes.courant} : ${tri.oubli_tenue || 0} · ${tri.dispense || 0}` }, '⚠') : '',
     );
     const menu = el('button', {
       class: 'eleve-menu', type: 'button', 'aria-haspopup': 'dialog',
@@ -376,8 +442,10 @@ async function vueAppel(c, seanceId) {
     statutFin,
   );
   btnTerminer.addEventListener('click', async () => {
+    // Le reste = présents, SAUF les élèves sous inaptitude totale (séance passée : rien n'a été
+    // pré-rempli et « Terminer » les marquait présents — audit 2026-09-07, B02).
     for (const eleve of eleves) {
-      if (!enregs.has(eleve.id)) await definirStatut(eleve, 'present');
+      if (!enregs.has(eleve.id)) await definirStatut(eleve, statutInapte(eleve.id) || 'present');
     }
   });
   majCompteurs();
@@ -401,7 +469,9 @@ async function vueRecap(c, classeId) {
   c.append(el('a', { class: 'retour no-print', href: '#/appel' }, '← Appel'));
   const classe = await lire('classes', classeId);
   if (!classe) { c.append(carte('Classe introuvable', '')); return; }
-  const eleves = (await parIndex('eleves', 'classeId', classeId)).filter((e) => e.actif !== false).sort(trierEleves);
+  // Tous les élèves de la classe, partis compris : un « parti » ayant des appels dans la période
+  // reste sur le récapitulatif (mention « parti ») au lieu de disparaître rétroactivement (A13).
+  const tousEleves = (await parIndex('eleves', 'classeId', classeId)).sort(trierEleves);
   const sequencesCl = await parIndex('sequences', 'classeId', classeId);
   const seqIds = new Set(sequencesCl.map((s) => s.id));
   const toutesSeances = (await tous('seances')).filter((s) => seqIds.has(s.sequenceId));
@@ -418,9 +488,11 @@ async function vueRecap(c, classeId) {
   const bornes = await bornesTrimestres();
   const presets = el('div', { class: 'rang-chips no-print', role: 'group', 'aria-label': 'Période rapide' });
   const deselectionner = () => { for (const x of presets.children) x.setAttribute('aria-pressed', 'false'); };
+  let btnAnnee = null;
   for (const [t, lib] of [[1, 'T1'], [2, 'T2'], [3, 'T3'], ['annee', `Année ${bornes.annee}-${bornes.annee + 1}`]]) {
     const b = el('button', { class: 'btn btn-statut', type: 'button', 'aria-pressed': 'false' },
       lib + (t === bornes.courant ? ' (en cours)' : ''));
+    if (t === 'annee') btnAnnee = b;
     b.addEventListener('click', () => {
       const p = periodeTrimestre(t, bornes);
       inpDebut.value = p.du;
@@ -452,21 +524,22 @@ async function vueRecap(c, classeId) {
     const seanceIds = new Set(seancesPeriode.map((s) => s.id));
     const appelsPeriode = tousAppels.filter((a) => seanceIds.has(a.seanceId));
 
-    const lignes = eleves.map((e) => {
+    const lignes = tousEleves.map((e) => {
       const cnt = Object.fromEntries(CLES.map((k) => [k, 0]));
-      for (const a of appelsPeriode) if (a.eleveId === e.id) cnt[a.statut]++;
-      const alerte = cnt.oubli_tenue >= SEUIL_ALERTE || cnt.dispense >= SEUIL_ALERTE;
-      return { e, cnt, alerte };
-    });
+      for (const a of appelsPeriode) if (a.eleveId === e.id && a.statut in cnt) cnt[a.statut]++;
+      return { e, cnt, alerte: depasseSeuil(cnt) };
+    }).filter(({ e, cnt }) => e.actif !== false || Object.values(cnt).some((n) => n > 0));
 
     const table = el('table', { class: 'table-apercu table-recap' },
       el('thead', {}, el('tr', {},
         el('th', {}, 'Élève'),
         ...CLES.map((k) => el('th', { title: STATUTS[k].libelle }, STATUTS[k].court)),
-        el('th', {}, '⚠'),
+        // Ici le seuil porte sur la PÉRIODE affichée (l'année par défaut), alors que la pastille de
+        // l'appel porte toujours sur l'année : le dire (revue du lot 1).
+        el('th', { title: `Seuil de ${SEUIL_ALERTE} oublis de tenue ou dispenses atteint sur la période affichée` }, '⚠'),
       )),
       el('tbody', {}, ...lignes.map(({ e, cnt, alerte }) => el('tr', {},
-        el('td', {}, `${e.nom} ${e.prenom}`),
+        el('td', {}, `${e.nom} ${e.prenom}${e.actif === false ? ' (parti)' : ''}`),
         ...CLES.map((k) => el('td', {}, cnt[k] ? String(cnt[k]) : '')),
         el('td', {}, alerte ? '⚠' : ''),
       ))),
@@ -478,7 +551,7 @@ async function vueRecap(c, classeId) {
       ? `du ${inpDebut.value ? dateLongue(inpDebut.value) : 'début'} au ${inpFin.value ? dateLongue(inpFin.value) : 'aujourd’hui'}`
       : 'toutes dates';
     zoneTable.replaceChildren(
-      el('p', { class: 'note-discrete' }, `${seancesPeriode.length} séance(s) — ${periode} · ${STATUTS.present.court}=présent, A=absent, R=retard, D=dispensé, I=inapte, T=oubli de tenue, INF=infirmerie`),
+      el('p', { class: 'note-discrete' }, `${seancesPeriode.length} séance(s) — ${periode} · ${STATUTS.present.court}=présent, A=absent, R=retard, D=dispensé, I=inapte, T=oubli de tenue, INF=infirmerie · ⚠ = ${SEUIL_ALERTE} oublis de tenue ou dispenses sur la période affichée`),
       table,
     );
     return { lignes, nbSeances: seancesPeriode.length };
@@ -486,14 +559,14 @@ async function vueRecap(c, classeId) {
 
   btnCSV.addEventListener('click', () => {
     const { lignes } = construire();
-    const tete = ['Nom', 'Prénom', ...CLES.map((k) => STATUTS[k].libelle), 'Alerte'].map(champCSV).join(';');
+    const tete = ['Nom', 'Prénom', ...CLES.map((k) => STATUTS[k].libelle), `Alerte (seuil ${SEUIL_ALERTE} sur la période)`].map(champCSV).join(';');
     const corps = lignes.map(({ e, cnt, alerte }) =>
-      [e.nom, e.prenom, ...CLES.map((k) => cnt[k]), alerte ? 'OUI' : ''].map(champCSV).join(';'));
+      [`${e.nom}${e.actif === false ? ' (parti)' : ''}`, e.prenom, ...CLES.map((k) => cnt[k]), alerte ? 'OUI' : ''].map(champCSV).join(';')); // mention « parti » aussi dans le CSV (revue)
     telechargerTexte(`recap-eps_${classe.nom}_${isoAujourdhui()}.csv`, [tete, ...corps].join('\r\n'));
   });
   inpDebut.addEventListener('change', () => { deselectionner(); construire(); });
   inpFin.addEventListener('change', () => { deselectionner(); construire(); });
-  construire();
+  btnAnnee.click(); // période par défaut : l'année scolaire en cours, cohérente avec le seuil ⚠ (A14)
 }
 
 // ---------------------------------------------------------------------------

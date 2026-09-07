@@ -4,6 +4,7 @@
 
 import { enregistrerVue, el, carte, confirmer, toast } from '../ui.js';
 import { exporterJSON, importerJSON, validerExport, telechargerJSON, compterTout, viderTout } from '../io.js';
+import { effacerPrefs } from '../state.js';
 
 // [singulier, pluriel] par store — tout store de données doit figurer ici (sinon il
 // disparaît du résumé affiché avant un import qui REMPLACE tout). `meta` exclu (réglages).
@@ -42,8 +43,12 @@ export function initialiser() {
     // ---- État actuel ----
     const carteEtat = carte('Données sur cet appareil', '…');
     c.append(carteEtat);
-    compterTout().then((comptes) => {
+    // Un seul comptage par affichage : l'import le réutilise au lieu de relire tous les blobs (revue du lot 1).
+    const comptesActuels = compterTout();
+    comptesActuels.then((comptes) => {
       carteEtat.querySelector('p').textContent = resumeComptes(comptes);
+    }).catch((e) => { // lecture refusée : la carte restait sur « … » (C06, revue du lot 1)
+      carteEtat.querySelector('p').textContent = `Comptage impossible (${e?.message || e}) — l’export reste possible.`;
     });
 
     // ---- Export ----
@@ -59,7 +64,7 @@ export function initialiser() {
         const nomFichier = await telechargerJSON(objet, 'sauvegarde');
         statut(statutExp, `Sauvegarde téléchargée : ${nomFichier}`);
       } catch (e) {
-        statut(statutExp, `Échec de l’export : ${e.message}`, false);
+        statut(statutExp, `Échec de l’export : ${e?.message || e}`, false);
       } finally {
         btnExp.disabled = false;
       }
@@ -84,26 +89,34 @@ export function initialiser() {
         const total = Object.values(comptes).reduce((a, b) => a + b, 0);
         // Stores absents du fichier (sauvegarde plus ancienne) : dits avant le remplacement (H04).
         const manque = absents.filter((n) => LIBELLES[n]).map((n) => LIBELLES[n][1]);
+        // Sauvegarde exportée « sans pièces jointes » : les pièces actuelles seraient perdues sans
+        // un mot (audit 2026-09-07, D-14).
+        const piecesActuelles = (await comptesActuels.catch(() => ({ fichiers: 0 }))).fichiers;
+        const piecesPerdues = !comptes.fichiers && piecesActuelles ? piecesActuelles : 0;
         const ok1 = await confirmer({
           titre: 'Importer cette sauvegarde',
           message: `Sauvegarde du ${date} — ${total} enregistrements (${resumeComptes(comptes)}).`
             + (manque.length ? ` Le fichier ne contient pas : ${manque.join(', ')} → seront vidées.` : '')
+            + (piecesPerdues ? ` Le fichier ne contient AUCUNE pièce jointe : les ${piecesPerdues} pièce${piecesPerdues > 1 ? 's' : ''} de cet appareil (photos, certificats) seront supprimée${piecesPerdues > 1 ? 's' : ''}.` : '')
             + ' L’import REMPLACE toutes les données de cet appareil.',
           action: 'Importer',
         });
         if (!ok1) return;
-        await telechargerJSON(await exporterJSON({ avecFichiers: true }), 'avant-import');
+        const nomSecu = await telechargerJSON(await exporterJSON({ avecFichiers: true }), 'avant-import');
         const ok2 = await confirmer({
           titre: 'Confirmer le remplacement',
-          message: 'Une sauvegarde de sécurité vient d’être téléchargée. Remplacer définitivement les données de cet appareil ?',
+          // Aucune API ne confirme qu'un téléchargement a abouti : la vérification est confiée à
+          // l'utilisateur au lieu d'affirmer qu'il a eu lieu (audit 2026-09-07, C17).
+          message: `Une sauvegarde de sécurité « ${nomSecu} » a été proposée au téléchargement : vérifiez sa présence dans vos téléchargements AVANT de continuer. Remplacer définitivement les données de cet appareil ?`,
           action: 'Remplacer',
         });
         if (!ok2) return;
         await importerJSON(objet);
+        effacerPrefs(); // raccourcis « Reprendre » vers des données qui n'existent plus (A25)
         toast('Import terminé — rechargement…');
         setTimeout(() => location.reload(), 900);
       } catch (e) {
-        statut(statutImp, `Import impossible : ${e.message}`, false);
+        statut(statutImp, `Import impossible : ${e?.message || e}`, false);
       } finally {
         inputFichier.value = '';
       }
@@ -121,21 +134,23 @@ export function initialiser() {
         action: 'Continuer',
       });
       if (!ok1) return;
-      await telechargerJSON(await exporterJSON({ avecFichiers: true }), 'avant-purge');
-      const ok2 = await confirmer({
-        titre: 'Confirmer l’effacement',
-        message: 'Sauvegarde téléchargée. Effacer DÉFINITIVEMENT toutes les données de cet appareil ?',
-        action: 'Tout effacer',
-      });
-      if (!ok2) return;
       btnPurge.disabled = true;
       try {
+        // Export de sécurité DANS le try : s'il échoue, la purge s'arrête en le disant (B25).
+        const nomSecu = await telechargerJSON(await exporterJSON({ avecFichiers: true }), 'avant-purge');
+        const ok2 = await confirmer({
+          titre: 'Confirmer l’effacement',
+          message: `Une sauvegarde de sécurité « ${nomSecu} » a été proposée au téléchargement : vérifiez sa présence dans vos téléchargements AVANT de continuer. Effacer DÉFINITIVEMENT toutes les données de cet appareil ?`,
+          action: 'Tout effacer',
+        });
+        if (!ok2) { btnPurge.disabled = false; return; }
         await viderTout(); // une transaction sur les 14 stores : tout ou rien (H01)
+        effacerPrefs(); // sinon « Reprendre » pointait vers une classe fantôme (audit 2026-09-07, A25)
         toast('Données effacées — rechargement…');
         setTimeout(() => location.reload(), 900);
       } catch (e) {
         btnPurge.disabled = false;
-        toast(`Effacement impossible : ${e.message}`);
+        toast(`Effacement annulé : ${e?.message || e}`);
       }
     });
     cartePurge.append(el('div', { class: 'rang-btn' }, btnPurge));

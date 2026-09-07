@@ -65,3 +65,15 @@ Audit du 2026-09-05 (B30) : le seuil ⚠ « 3 oublis de tenue / 3 dispenses « m
 - **Comment** : la date d'un appel vit sur sa séance → `compterStatutsParTrimestre(appels, seances, bornes)` (jointure en mémoire, appels orphelins ignorés). Aucun nouveau store, aucune migration.
 **Écartés** : fenêtre glissante (moins lisible pour un conseil de classe), seuil par trimestre seul (perdrait la vue longue).
 *Réexamen si* : un établissement fonctionne en semestres (ajouter un mode « 2 périodes » : une seule borne).
+*Amendement 2026-09-07 (v0.12.9, A06)* : les bornes de l'année scolaire (`bornesTrimestres().debut`) partent du **1er août** et non du 1er septembre, comme `anneeScolaireDe` — une séance de pré-rentrée (fin août) comptait pour l'année précédente. Bornes inversées (T2 ≤ T1) → défauts pour les deux, valeur ignorée signalée dans Réglages.
+
+## D013 — 2026-09-07 — Pré-remplissage de l'appel selon le type et l'origine de l'inaptitude
+
+5e audit (C01, B02) : toute inaptitude active pré-remplissait « Inapte (certificat) », non pratiquant — y compris une inaptitude **partielle** (l'élève pratique avec restrictions) et une inaptitude fondée sur un **mot des parents** (statut `dispense` prévu pour ça) ; et « Terminer l'appel » sur une séance passée marquait « présent » les élèves sous certificat. Règle adoptée (GO discrétionnaire « fait au mieux ») :
+- **Une inaptitude par élève**, la plus contraignante (totale > partielle) parmi celles actives à la date de la séance.
+- **Totale** → statut d'office : `inapte` si origine certificat ou infirmerie, `dispense` si origine « mot des parents ». **Partielle** → `present` (pratique aménagée), signalée par la pastille 🩺 (infobulle « partielle »).
+- Le pré-remplissage n'écrit que pour la séance du jour (D011/A14) ; **« Terminer l'appel »** applique la même règle aux élèves non saisis (au lieu de « présent » pour tous), quelle que soit la date de la séance.
+- **Conséquence assumée** : les « dispensé (mot) » posés d'office comptent dans le seuil D012 — trois séances couvertes par un seul mot des parents déclenchent « penser famille / vie scolaire » (un certificat est attendu au-delà de quelques séances). Trois relecteurs de la revue du lot 1 y ont vu une alerte fabriquée ; l'audit (C01) et quatre réfutateurs y voient l'effet voulu.
+- **Départage** entre deux inaptitudes actives : totale > partielle, puis certificat > infirmerie > mot (déterministe, indépendant de l'ordre des identifiants).
+**Écartés** : statut `infirmerie` pour l'origine infirmerie (il signifie « parti à l'infirmerie pendant le cours ») ; pré-remplir la partielle en `inapte` (fausse le compteur de pratiquants) ; marquer les enregistrements posés d'office (`auto`) pour les exclure du seuil (retiré du cadre de D012, à rouvrir si le terrain trouve l'alerte gênante).
+*Réexamen si* : besoin d'un statut « aménagé » distinct pour les partielles (compte pratiquant, mais tracé) ; alerte « 3 dispenses » jugée parasite pour une inaptitude sur mot déclarée → exclure les enregistrements posés d'office du seuil.

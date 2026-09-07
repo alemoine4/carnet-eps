@@ -79,7 +79,7 @@ async function vueDocuments(c) {
       });
       rafraichir();
     } catch (e) {
-      statutForm.textContent = `Enregistrement impossible : ${e.message}`;
+      statutForm.textContent = `Enregistrement impossible : ${e?.message || e}`;
       statutForm.className = 'statut statut-erreur';
       btnCreer.disabled = false;
     }

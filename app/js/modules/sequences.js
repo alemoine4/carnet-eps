@@ -79,13 +79,25 @@ async function vueListe(c) {
     if (inpDebut.value && inpFin.value && inpFin.value < inpDebut.value) {
       statutForm.textContent = 'La date de fin est avant le début.'; statutForm.className = 'statut statut-erreur'; return;
     }
-    const id = crypto.randomUUID();
-    await enregistrer('sequences', {
-      id, classeId: selClasse.value, apsa, ca: selCA.value ? Number(selCA.value) : null,
-      afl: [], dateDebut: inpDebut.value || '', dateFin: inpFin.value || '',
-      nbSeancesPrevu: Number(inpNb.value) || null, objectifs: '', bilan: '',
-    });
-    location.hash = `#/sequences/${id}`;
+    // Séances prévues : entier ≥ 1 ou vide — « 0 » ou « -5 » passaient en silence (B42/V2-03).
+    const nb = inpNb.value.trim() === '' ? null : Number(inpNb.value);
+    if (nb !== null && !(Number.isInteger(nb) && nb >= 1)) {
+      statutForm.textContent = 'Le nombre de séances prévues doit être un entier ≥ 1 (ou vide).'; statutForm.className = 'statut statut-erreur'; return;
+    }
+    btnCreer.disabled = true; // anti double-tap (audit 2026-09-07, D-02)
+    try {
+      const id = crypto.randomUUID();
+      await enregistrer('sequences', {
+        id, classeId: selClasse.value, apsa, ca: selCA.value ? Number(selCA.value) : null,
+        afl: [], dateDebut: inpDebut.value || '', dateFin: inpFin.value || '',
+        nbSeancesPrevu: nb, objectifs: '', bilan: '',
+      });
+      location.hash = `#/sequences/${id}`;
+    } catch (e) {
+      statutForm.textContent = `Création impossible : ${e?.message || e}`; statutForm.className = 'statut statut-erreur';
+    } finally {
+      btnCreer.disabled = false;
+    }
   });
 
   // --- Liste (séquences actives d'abord, puis par date de début décroissante) ---
@@ -142,10 +154,20 @@ async function vueDetail(c, id) {
       onChange: async (v) => { sequence.ca = v ? Number(v) : null; await sauver(); },
     }),
     el('div', { class: 'rang-2' },
-      champTexte({ id: 'sd-debut', libelle: 'Début', type: 'date', valeur: sequence.dateDebut || '', onChange: async (v) => { sequence.dateDebut = v; await sauver(); } }),
-      champTexte({ id: 'sd-fin', libelle: 'Fin', type: 'date', valeur: sequence.dateFin || '', onChange: async (v) => { sequence.dateFin = v; await sauver(); } }),
+      // Fin avant début refusée à l'édition comme à la création (audit 2026-09-07, A16).
+      champTexte({ id: 'sd-debut', libelle: 'Début', type: 'date', valeur: sequence.dateDebut || '', onChange: async (v) => {
+        if (v && sequence.dateFin && v > sequence.dateFin) throw new Error('le début est après la fin');
+        sequence.dateDebut = v; await sauver();
+      } }),
+      champTexte({ id: 'sd-fin', libelle: 'Fin', type: 'date', valeur: sequence.dateFin || '', onChange: async (v) => {
+        if (v && sequence.dateDebut && v < sequence.dateDebut) throw new Error('la fin est avant le début');
+        sequence.dateFin = v; await sauver();
+      } }),
     ),
-    champTexte({ id: 'sd-nb', libelle: 'Séances prévues', type: 'number', valeur: String(sequence.nbSeancesPrevu || ''), onChange: async (v) => { sequence.nbSeancesPrevu = Number(v) || null; await sauver(); } }),
+    champTexte({ id: 'sd-nb', libelle: 'Séances prévues', type: 'number', valeur: String(sequence.nbSeancesPrevu || ''), onChange: async (v) => {
+      if (v !== '' && !(Number.isInteger(Number(v)) && Number(v) >= 1)) throw new Error('entier ≥ 1 attendu (ou vide)');
+      sequence.nbSeancesPrevu = v === '' ? null : Number(v); await sauver();
+    } }),
     champZone({ id: 'sd-obj', libelle: 'Objectifs / AFL', valeur: sequence.objectifs || '', placeholder: 'AFL visés, attendus de fin de séquence…', onChange: async (v) => { sequence.objectifs = v; await sauver(); } }),
   );
   c.append(carteSeq);
@@ -163,11 +185,19 @@ async function vueDetail(c, id) {
     if (seances.some((s) => s.date === inpDate.value)) {
       statutSe.textContent = 'Une séance existe déjà à cette date.'; statutSe.className = 'statut statut-erreur'; return;
     }
-    await enregistrer('seances', {
-      id: crypto.randomUUID(), sequenceId: id, date: inpDate.value, edtId: null,
-      numero: seances.filter((s) => s.date < inpDate.value).length + 1,
-      theme: inpTheme.value.trim(), bilan: '', annulee: false,
-    });
+    btnAjout.disabled = true; // anti double-tap (audit 2026-09-07, D-02)
+    try {
+      await enregistrer('seances', {
+        id: crypto.randomUUID(), sequenceId: id, date: inpDate.value, edtId: null,
+        numero: seances.filter((s) => s.date < inpDate.value).length + 1,
+        theme: inpTheme.value.trim(), bilan: '', annulee: false,
+      });
+    } catch (e) {
+      statutSe.textContent = `Ajout impossible : ${e?.message || e}`; statutSe.className = 'statut statut-erreur';
+      return;
+    } finally {
+      btnAjout.disabled = false;
+    }
     rafraichir();
   });
   carteSe.append(el('div', { class: 'rang-2' },
@@ -183,7 +213,11 @@ async function vueDetail(c, id) {
         if (!(await confirmer({ titre: 'Supprimer la séance', message: `Séance ${idx + 1}/${total} du ${dateFR(s.date)} — son appel éventuel sera supprimé.` }))) return;
         const objets = await supprimerSeanceEnCascade(s.id);
         rafraichir();
-        toast('Séance supprimée', { action: async () => { await restaurer(objets); rafraichir(); } });
+        toast('Séance supprimée', { action: async () => {
+          // Une séance a pu être recréée à cette date entre-temps : pas de doublon restauré (D-03).
+          if ((await parIndex('seances', 'sequenceId', id)).some((x) => x.date === s.date)) throw new Error(`une séance existe déjà le ${dateFR(s.date)}`);
+          await restaurer(objets); rafraichir();
+        } });
       });
       listeSe.append(el('div', { class: 'ligne-eleve' },
         el('span', { class: 'badge' }, `${idx + 1}/${total}`),

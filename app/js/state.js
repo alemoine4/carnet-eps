@@ -2,7 +2,7 @@
 // jamais de données élèves ici — elles vivent dans IndexedDB via io.js).
 
 // Version applicative : synchroniser avec VERSION du service-worker à chaque déploiement.
-export const VERSION_APP = '0.12.8';
+export const VERSION_APP = '0.12.9';
 
 const CLE_PREFS = 'carnet-eps:prefs';
 
@@ -38,6 +38,18 @@ export function sauverPrefs(maj) {
   } catch {
     // localStorage plein ou désactivé : la préférence vit en mémoire pour la session,
     // ça ne doit pas casser le rendu de la vue appelante (audit 2026-09-05, B17).
+  }
+  emettre('prefs', etat.prefs);
+}
+
+// Purge / import : les raccourcis « Reprendre » (dernière classe, dernière évaluation) pointaient
+// vers des données disparues ; seul le thème survit (audit 2026-09-07, A25).
+export function effacerPrefs() {
+  etat.prefs = { theme: etat.prefs.theme };
+  try {
+    localStorage.setItem(CLE_PREFS, JSON.stringify(etat.prefs));
+  } catch {
+    // idem sauverPrefs : sans conséquence
   }
   emettre('prefs', etat.prefs);
 }

@@ -5,11 +5,11 @@ Vue d'ensemble des phases : `docs/roadmap.md`.
 
 ## 🎒 Jalon rentrée 2026 : phases 1→9 TERMINÉES — app EN LIGNE (https://alemoine4.github.io/carnet-eps/) — restent les validations terrain ci-dessous
 
-## Phase active : post-v1 — 5e audit du 2026-09-07 sur v0.12.8 (rapport livré, corrections EN ATTENTE DE GO)
+## Phase active : post-v1 — suites du 5e audit du 2026-09-07 (lot 1 livré en v0.12.9 ; lots 2 à 5 « au mieux »)
 
 ### 5e audit du 2026-09-07 (rapport : `docs/audit-2026-09-07.md`, données : `docs/audit-2026-09-07.json`)
-- [x] 2026-09-07 — **Audit livré** : 179 constats (0 P0, **9 P1**, 86 P2, 84 P3) = Codex V2 (6, rejoués 9/9) + 13 lentilles par agents Opus indépendants en 3 lots (173, 71 doublons écartés). Les 9 P1 reproduits ou démontrés ; 13 reproductions dynamiques (spec conservé hors dépôt dans le scratchpad de session, à réintégrer en tests de non-régression au moment des correctifs).
-- [ ] **Lot 1 — Exactitude de l'appel et des données** (v0.12.9, ≈ 45 constats dont les 7 P1 fonctionnels : B02 « Terminer » sur séance passée écrase les inaptes, C01 pré-remplissage inapte pour partielle/mot, A02 créneau d'une classe archivée → classeId vide, D-01 « Annuler » muet en cas d'échec, B04 nouvelle inaptitude sur le mauvais élève, + cohérence élève « parti », seuil annuel borné, validations, filet global des rejets) — **en attente de GO**.
+- [x] 2026-09-07 — **Audit livré** : 179 constats (0 P0, **9 P1**, 86 P2, 84 P3) = Codex V2 (6, rejoués 9/9) + 13 lentilles par agents Opus indépendants en 3 lots (173, 71 doublons écartés). Les 9 P1 reproduits ou démontrés ; 13 reproductions dynamiques réintégrées en tests de non-régression avec le lot 1.
+- [x] 2026-09-07 — **Lot 1 livré en v0.12.9** (« fait au mieux ») : 44 constats — B02, C01 (D013), A02, D-01, B04, A07, A12, B16, A14, V2-01, C09, V2-02, D-10, A16, B42, V2-03, A11, C10, C11, D-02, D-03, B24, V2-04, C06, D-05, A04, D-07, A05, A06, A25, A03, V2-05, A24, D-12, D-13, D-15, D-14, B25, C17, B15, A08, A10, A13, A09 — 43 tests (`tests/e2e/audit5-lot1.spec.mjs`), suite 76/76, revue adversariale du diff (5 lentilles Opus + réfutateurs, 59 agents : 19 constats confirmés, corrigés avant livraison).
 - [ ] **Lot 2 — Créations atomiques** ⚙ (v0.12.10) : avis à rédiger (V2-06, D-04, D-06).
 - [ ] **Lot 3 — Accessibilité et mobile** (v0.12.11) : B01 focus rogné, B03 photo/certificat au clavier, B05–B50.
 - [ ] **Lot 4 — Service-worker et performance** (v0.12.12) : C02 (4 écrans lisent tout `appels`), A17–A20, A39–A43, C07, C08.

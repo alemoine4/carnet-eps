@@ -1,4 +1,4 @@
-# Fiche de test terrain — Carnet EPS (v0.12.8 — points introduits en v0.12.4)
+# Fiche de test terrain — Carnet EPS (v0.12.9 — points introduits en v0.12.4)
 
 > À imprimer (ou garder sur un 2e écran). ~15 min. Coche au fur et à mesure, note ce qui coince.
 > App en ligne : **https://alemoine4.github.io/carnet-eps/** · Guide détaillé : Plus → Aide.
@@ -13,8 +13,8 @@
 - [ ] L'icône **EPS** apparaît sur l'écran d'accueil
 - [ ] L'app s'ouvre en plein écran (sans barre d'adresse)
 - [ ] Plus → Réglages → protection contre l'effacement **active ✓**
-- [ ] Réglages → **Version : v0.12.8** (sinon : Réglages → Vérifier les mises à jour, puis « Recharger »)
-- [ ] Réglages → **Trimestres** : les fins de T1/T2 sont modifiables ; fiche d'un élève : tableau T1 · T2 · T3 · Année (v0.12.6)
+- [ ] Réglages → **Version : v0.12.9** (sinon : Réglages → Vérifier les mises à jour, puis « Recharger »)
+- [ ] Réglages → **Trimestres** : les fins de T1/T2 sont modifiables ; fiche d'un élève : tableau T1 · T2 · T3 · Année (v0.12.6) ; saisir une fin de T2 **avant** la fin de T1 → refusée avec « ✗ » et un message (v0.12.9)
 
 **PC (Chrome/Edge)**
 - [ ] Icône « Installer » dans la barre d'adresse → app dans sa fenêtre
@@ -51,7 +51,7 @@ Résultat / notes : ________________________________________________
 
 - [ ] Suivi → Inaptitudes → Nouvelle → élève + dates + **pièce** → Android propose **Appareil photo / Fichiers / Galerie** (v0.12.4 : l'app n'impose plus la caméra, pour pouvoir joindre un PDF) → prendre la photo
 - [ ] Photo nette et **lisible** dans la visionneuse (toucher la vignette ; Échap/clic pour fermer)
-- [ ] À la date du cours, l'élève est signalé 🩺 à l'appel
+- [ ] À la date du cours, l'élève est signalé 🩺 à l'appel ; inaptitude **totale** sur certificat → « Inapte » d'office, **totale** sur un mot des parents → « Dispensé (mot) », **partielle** → reste « Présent » (pastille seule) — et « Terminer l'appel » respecte la même règle, même en rattrapant un appel de la veille (v0.12.9)
 - [ ] Fiche élève → **Ajouter une photo** → le choix appareil photo (arrière) / galerie est proposé
 
 ## 4 bis. Clavier virtuel (~1 min) — à noter, pas encore corrigé
