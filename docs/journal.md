@@ -29,6 +29,8 @@ Demande : « fait au mieux » = GO discrétionnaire sur le plan du rapport, lot 
 
 **Coincé / à vérifier** : validations terrain (fiche `docs/test-terrain.md`), B31 ; `npx playwright install chromium` depuis le terminal de l'utilisateur.
 
+**Déployé** : main `769528e` (+ `e27615b` docs), gh-pages `f6da580`, tag `v0.12.9`, site vérifié en 0.12.9.
+
 **Prochaine étape** : lot 2 (créations atomiques) = avis à rédiger ; avis séparé A01 (origine dédiée) ; lots 3 à 5.
 
 ## 2026-09-07 (29) — 5e audit sur v0.12.8 : Codex V2 + 13 lentilles en 3 lots

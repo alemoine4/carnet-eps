@@ -10,6 +10,7 @@ Vue d'ensemble des phases : `docs/roadmap.md`.
 ### 5e audit du 2026-09-07 (rapport : `docs/audit-2026-09-07.md`, données : `docs/audit-2026-09-07.json`)
 - [x] 2026-09-07 — **Audit livré** : 179 constats (0 P0, **9 P1**, 86 P2, 84 P3) = Codex V2 (6, rejoués 9/9) + 13 lentilles par agents Opus indépendants en 3 lots (173, 71 doublons écartés). Les 9 P1 reproduits ou démontrés ; 13 reproductions dynamiques réintégrées en tests de non-régression avec le lot 1.
 - [x] 2026-09-07 — **Lot 1 livré en v0.12.9** (« fait au mieux ») : 44 constats — B02, C01 (D013), A02, D-01, B04, A07, A12, B16, A14, V2-01, C09, V2-02, D-10, A16, B42, V2-03, A11, C10, C11, D-02, D-03, B24, V2-04, C06, D-05, A04, D-07, A05, A06, A25, A03, V2-05, A24, D-12, D-13, D-15, D-14, B25, C17, B15, A08, A10, A13, A09 — 43 tests (`tests/e2e/audit5-lot1.spec.mjs`), suite 76/76, revue adversariale du diff (5 lentilles Opus + réfutateurs, 59 agents : 19 constats confirmés, corrigés avant livraison).
+- [x] 2026-09-07 — **v0.12.9 déployée** (main `769528e` + `e27615b`, gh-pages `f6da580`, tag `v0.12.9`).
 - [ ] **Lot 2 — Créations atomiques** ⚙ (v0.12.10) : avis à rédiger (V2-06, D-04, D-06).
 - [ ] **Lot 3 — Accessibilité et mobile** (v0.12.11) : B01 focus rogné, B03 photo/certificat au clavier, B05–B50.
 - [ ] **Lot 4 — Service-worker et performance** (v0.12.12) : C02 (4 écrans lisent tout `appels`), A17–A20, A39–A43, C07, C08.
