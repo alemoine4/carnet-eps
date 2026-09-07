@@ -13,6 +13,7 @@ Vue d'ensemble des phases : `docs/roadmap.md`.
 - [x] 2026-09-07 — **v0.12.9 déployée** (main `769528e` + `e27615b`, gh-pages `f6da580`, tag `v0.12.9`).
 - [ ] **Lot 2 — Créations atomiques** ⚙ (v0.12.10) : avis à rédiger (V2-06, D-04, D-06).
 - [x] 2026-09-07 — **Lot 3 livré en v0.12.10** : 35 constats (B01, B03, B05–B12, B17–B22, B26–B36, B40, B43, B45, B47–B50 + B31 clavier virtuel du 4e audit, préventif) — 25 tests (`tests/e2e/audit5-lot3.spec.mjs`), suite 101/101, revue adversariale du diff (4 lentilles Opus + réfutateurs, 48 agents : 12 défauts confirmés, corrigés avant livraison).
+- [x] 2026-09-07 — **v0.12.10 déployée** (main `5bfdf3f` + `2b829c8`, gh-pages `89766c9`, tag `v0.12.10`).
 - [ ] **Lot 4 — Service-worker et performance** (v0.12.12) : C02 (4 écrans lisent tout `appels`), A17–A20, A39–A43, C07, C08.
 - [ ] **Lot 5 — Tests, qualité, documentation** (fil de l'eau) : C05, C18–C64, A21–A36…
 - [ ] **Décisions structurantes** ⚙ : A01 (origine GitHub Pages partagée avec le Bar Clandestin → sous-domaine/dépôt dédié ?), C64 (CI GitHub Actions), refactors C40/C46/C47/C55.

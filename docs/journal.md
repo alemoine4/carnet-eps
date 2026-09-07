@@ -30,6 +30,8 @@ Demande : « ton avis ? puis lot 3 » (après « quelle suite ? »).
 
 **Coincé / à vérifier** : validations terrain Android (fiche retaillée à 15 min, points v0.12.9 + v0.12.10) ; import Pronote réel.
 
+**Déployé** : main `5bfdf3f` (+ `2b829c8` docs), gh-pages `89766c9`, tag `v0.12.10`, site vérifié en 0.12.10.
+
 **Prochaine étape** : avis lot 2 (créations atomiques) et avis A01 (origine dédiée) ; lot 4 (service-worker et performance) ; lot 5 (qualité).
 
 ## 2026-09-07 (30) — v0.12.9 : lot 1 du 5e audit (44 constats), 43 tests, revue adversariale (19 constats corrigés)
