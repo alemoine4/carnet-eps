@@ -123,6 +123,7 @@ async function vueDocuments(c) {
         return;
       }
       const fichier = await lire('fichiers', doc.fichierId);
+      if (fichier && !fichier.blob) { toast('Pièce absente de cette sauvegarde.'); return; } // même garde que les inaptitudes (revue du lot 4)
       if (!fichier) { toast('Fichier introuvable (supprimé ?).'); return; }
       ouvrirVisionneuse(c, fichier);
     });

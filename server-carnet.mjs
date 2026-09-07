@@ -25,6 +25,9 @@ const MIME = {
 createServer(async (req, res) => {
   try {
     const chemin = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+    // Route de TEST (dev seulement, jamais déployée) : une réponse redirigée, que le service-worker
+    // ne doit pas mettre en cache (tests/e2e/audit5-lot4.spec.mjs, A19).
+    if (chemin === '/__test/redirige') { res.writeHead(302, { Location: '/index.html', 'Cache-Control': 'no-store' }); return res.end(); }
     const fichier = normalize(join(RACINE, chemin === '/' ? 'index.html' : chemin));
     if (fichier !== RACINE && !fichier.startsWith(RACINE + sep)) {
       res.writeHead(403);

@@ -51,7 +51,7 @@ Cadrage : `docs/brief.md` + `docs/fonctionnalites.md`. Avancement : `docs/roadma
 | Service worker | enregistré **uniquement hors localhost** → jamais de cache pendant le dev |
 | Échanges Pronote | `docs/pronote.md` |
 | Décisions actées | `docs/decisions.md` (D001 à D013) |
-| Audits | `docs/audit-2026-07-10.md` (soldé), `docs/audit-2026-09-05.md` (4e passe, suites v0.12.5→v0.12.8, reste B31), `docs/audit-2026-09-07.md` + `.json` (**5e passe sur v0.12.8 : 179 constats, plan en 5 lots — lots 1 et 3 livrés en v0.12.9 / v0.12.10, avis lot 2 et A01 à rédiger, lots 4 et 5 « au mieux »**), `audit codex/` (audits d'une autre IA, dossier hors git) |
+| Audits | `docs/audit-2026-07-10.md` (soldé), `docs/audit-2026-09-05.md` (4e passe, suites v0.12.5→v0.12.8, reste B31), `docs/audit-2026-09-07.md` + `.json` (**5e passe sur v0.12.8 : 179 constats, plan en 5 lots — lots 1, 3 et 4 livrés en v0.12.9 / v0.12.10 / v0.12.11 ; avis lot 2 (`docs/avis/AVIS_CREATIONS_ATOMIQUES.md`) et A01 (`docs/avis/AVIS_ORIGINE_DEDIEE.md`) en attente de décision ; lot 5 « au mieux »**), `audit codex/` (audits d'une autre IA, dossier hors git) |
 
 ---
 

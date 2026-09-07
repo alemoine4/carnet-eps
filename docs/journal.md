@@ -14,6 +14,22 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-08 (32) — v0.12.11 : lot 4 (service-worker et performance, 17 constats), 10 tests + avis lot 2 et A01
+
+Demande : « continue non? » → avis en attente rédigés, puis lot 4.
+
+**Fait** :
+- **Deux avis** : `docs/avis/AVIS_CREATIONS_ATOMIQUES.md` (lot 2 : `preparerFichier` + `enregistrerLot`, 5 tests prévus) et `docs/avis/AVIS_ORIGINE_DEDIEE.md` (A01 : options A documenter / B sous-domaine payant / C organisation GitHub dédiée gratuite — recommandation C ; la migration = export → import par appareil). Rien d'appliqué.
+- **Lot 4** : service-worker réécrit à stratégie constante (A17, A18, A19, A20, A40, A41 ; A39 écarté : stratégie → avis), lectures par index dans les trois écrans d'appel (C02), `compterTout` par `count()` (A23), plafond 8 Mo + PDF sans recopie et URL 60 s (C07, C08, B14, B39), `estLocalhost` sur `isSecureContext` (A35), manifest `id` + theme-color par thème (A37, A38), `app/.nojekyll` + `docs/modules.md` (A42). 18 patchs + réécriture du SW.
+- **Tests** : `tests/e2e/audit5-lot4.spec.mjs`, 10 tests — trois avec le **service-worker réel** sur `app.localhost` : couverture du précache par les requêtes d'un chargement (A43), fichier pirate dans un cache voisin non servi (A18), hors ligne réel par `context.setOffline` (504 sur un fichier absent, index.html en repli de navigation, manifest précaché) ; `statechange` simulé pour A20 (échec puis activation → bouton) ; espions sur `getAll` du store ET des index + compteur de transactions pour C02 (5 040 appels semés en une transaction, volume lu mesuré par écran) et sur `count` pour A23 ; 9,0 et 8,2 Mo refusés ; `window.open`/`revokeObjectURL` stubés ; redirection réelle (`/__test/redirige` du serveur de dev) jamais mise en cache. **112/112** (11 tests).
+- **Revue adversariale du diff** en deux passes (la première coupée par la limite de session, reprise par `resumeFromRunId`) : 3 lentilles Opus (PWA, exactitude des lectures optimisées, preuves) + 2 réfutateurs par constat, 26 + 31 agents, 24 constats. **Corrigés** : C02 accueil (une transaction par séance = 2× plus lent qu'une lecture complète, mesuré par trois réfutateurs → `parIndexLot`, une transaction, employé aux 4 sites), visionneuse Documents sans blob, theme-color = thème effectif, message « 8,2 Mo », `rep.ok` sur l'exemple CSV, bouton « Recharger maintenant » (chemin `controllerchange` avalé confirmé par un réfutateur). **Tests réécrits** parce qu'ils passaient aussi avec l'ancien code : A18 (chemin absent du précache), A35 (hôte hors liste), A40 (manifest retiré du cache), C02 (sonde sur les index + transactions ; vérifié par mutant : 10 transactions détectées), A19 comportemental (mutant `rep.ok` détecté). **Réfutés, non appliqués** : garde positive par type MIME (les assets précachés n'atteignent jamais la branche réseau), échec explicite si les tests SW se sautent (Chromium résout `*.localhost` nativement), `window.open` bout en bout (pas de défaut, PDF non rendu en headless), `.nojekyll` non suivi (état normal avant commit), libellé « localhost » de Réglages sur 192.168.x.x (l'information portée, « hors-ligne désactivé », est vraie).
+
+**Décidé** : A39 (index.html cache-first) reste un choix de stratégie à trancher par avis ; lot 2 et A01 attendent ton « go ».
+
+**Coincé / à vérifier** : sur l'appareil, ouverture d'un certificat PDF (onglet, 60 s) ; validations terrain (fiche 15 min). Leçons d'outillage : une sonde sur `IDBObjectStore.getAll` est aveugle aux lectures par `IDBIndex.getAll` ; une lecture « par index » n'est un gain que si le volume lu baisse ET si les transactions ne se multiplient pas ; un `resumeFromRunId` après édition du script relance les lentilles (résultats différents, non déterministes) — ne pas supposer que la cache a rejoué.
+
+**Prochaine étape** : tes décisions sur les deux avis ; lot 5 (tests, qualité, documentation) au fil de l'eau.
+
 ## 2026-09-07 (31) — v0.12.10 : lot 3 du 5e audit (accessibilité et mobile, 35 constats), 25 tests, revue adversariale (12 défauts corrigés)
 
 Demande : « ton avis ? puis lot 3 » (après « quelle suite ? »).

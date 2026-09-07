@@ -5,7 +5,7 @@
 // Rappel D006 : l'appel réglementaire reste fait dans Pronote — ici on trace le suivi EPS.
 
 import { enregistrerVue, el, carte, champZone, ouvrirFeuille, toast } from '../ui.js';
-import { tous, lire, parIndex, enregistrer, restaurer, telechargerTexte, champCSV } from '../io.js';
+import { tous, lire, parIndex, parIndexLot, enregistrer, restaurer, telechargerTexte, champCSV } from '../io.js';
 import {
   STATUTS, CYCLE_TAP, SEUIL_ALERTE, depasseSeuil,
   isoAujourdhui, dateFR, coursDuJour, inaptitudesActives, trierEleves, trierClasses,
@@ -26,8 +26,8 @@ const minutesRetardDe = (v) => {
 // ---------------------------------------------------------------------------
 
 async function vueSelecteur(c) {
-  const [classes, sequences, seances, appels, eleves] = await Promise.all([
-    tous('classes'), tous('sequences'), tous('seances'), tous('appels'), tous('eleves'),
+  const [classes, sequences, seances, eleves] = await Promise.all([
+    tous('classes'), tous('sequences'), tous('seances'), tous('eleves'),
   ]);
   const classeDe = (id) => classes.find((cl) => cl.id === id);
   const seqDe = (id) => sequences.find((s) => s.id === id);
@@ -41,12 +41,6 @@ async function vueSelecteur(c) {
     actifsParClasse.get(e.classeId).add(e.id);
   }
   const effectifs = new Map([...actifsParClasse].map(([classeId, ids]) => [classeId, ids.size]));
-  const saisis = new Map();
-  for (const a of appels) {
-    const seq = seqDe(seanceDe(a.seanceId)?.sequenceId);
-    if (!seq || !actifsParClasse.get(seq.classeId)?.has(a.eleveId)) continue;
-    saisis.set(a.seanceId, (saisis.get(a.seanceId) || 0) + 1);
-  }
   const auj = isoAujourdhui();
 
   if (!classes.length) {
@@ -56,6 +50,25 @@ async function vueSelecteur(c) {
 
   // --- Aujourd'hui (d'après l'EDT) ---
   const cours = await coursDuJour();
+  // Appels lus par index pour les seules séances affichées (celles du jour + les 10 récentes) :
+  // tout le store (≈ 10 000 en juin) était chargé pour en compter quelques centaines (C02).
+  const recentes = seances
+    .filter((s) => s.date <= auj)
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 10);
+  const utiles = new Set(recentes.map((s) => s.id));
+  for (const cr of cours) {
+    const seq = sequences.find((s) => s.classeId === cr.classeId && (!s.dateDebut || s.dateDebut <= auj) && (!s.dateFin || auj <= s.dateFin));
+    const seance = seq ? seances.find((s) => s.sequenceId === seq.id && s.date === auj) : null;
+    if (seance) utiles.add(seance.id);
+  }
+  const appels = await parIndexLot('appels', 'seanceId', [...utiles]);
+  const saisis = new Map();
+  for (const a of appels) {
+    const seq = seqDe(seanceDe(a.seanceId)?.sequenceId);
+    if (!seq || !actifsParClasse.get(seq.classeId)?.has(a.eleveId)) continue;
+    saisis.set(a.seanceId, (saisis.get(a.seanceId) || 0) + 1);
+  }
   const carteAuj = carte('Aujourd’hui');
   if (!cours.length) carteAuj.append(el('p', {}, 'Pas de cours EPS aujourd’hui (selon l’EDT).'));
   for (const cr of cours) {
@@ -99,10 +112,6 @@ async function vueSelecteur(c) {
   c.append(carteAuj);
 
   // --- Séances récentes ---
-  const recentes = seances
-    .filter((s) => s.date <= auj)
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 10);
   if (recentes.length) {
     const carteRec = carte('Séances récentes');
     for (const s of recentes) {
@@ -214,7 +223,9 @@ async function vueAppel(c, seanceId) {
   // Pastilles ⚠ : seuil sur le cumul de l'ANNÉE SCOLAIRE de la séance (D012), détail du
   // trimestre — plus sur tous les appels depuis l'origine (audit 2026-09-07, A14/V2-01).
   const bornes = await bornesTrimestres(seance.date);
-  const parTri = compterStatutsParTrimestre(await tous('appels'), await tous('seances'), bornes);
+  // Appels des seuls élèves de la classe, par index (plus tout le store — C02).
+  const appelsClasse = await parIndexLot('appels', 'eleveId', eleves.map((e) => e.id));
+  const parTri = compterStatutsParTrimestre(appelsClasse, await tous('seances'), bornes);
 
   // --- En-tête + compteurs ---
   const seancesSeq = (await parIndex('seances', 'sequenceId', sequence.id)).sort((a, b) => a.date.localeCompare(b.date));
@@ -485,7 +496,8 @@ async function vueRecap(c, classeId) {
   const sequencesCl = await parIndex('sequences', 'classeId', classeId);
   const seqIds = new Set(sequencesCl.map((s) => s.id));
   const toutesSeances = (await tous('seances')).filter((s) => seqIds.has(s.sequenceId));
-  const tousAppels = (await tous('appels'));
+  // Appels des seules séances de la classe, par index (C02).
+  const tousAppels = await parIndexLot('appels', 'seanceId', toutesSeances.map((s) => s.id));
 
   const inpDebut = el('input', { type: 'date', id: 'rc-debut' });
   const inpFin = el('input', { type: 'date', id: 'rc-fin' });
@@ -534,9 +546,15 @@ async function vueRecap(c, classeId) {
     const seanceIds = new Set(seancesPeriode.map((s) => s.id));
     const appelsPeriode = tousAppels.filter((a) => seanceIds.has(a.seanceId));
 
+    // Groupés une fois par élève au lieu d'un balayage complet par ligne (C02).
+    const parEleve = new Map();
+    for (const a of appelsPeriode) {
+      if (!parEleve.has(a.eleveId)) parEleve.set(a.eleveId, []);
+      parEleve.get(a.eleveId).push(a);
+    }
     const lignes = tousEleves.map((e) => {
       const cnt = Object.fromEntries(CLES.map((k) => [k, 0]));
-      for (const a of appelsPeriode) if (a.eleveId === e.id && a.statut in cnt) cnt[a.statut]++;
+      for (const a of parEleve.get(e.id) || []) if (a.statut in cnt) cnt[a.statut]++;
       return { e, cnt, alerte: depasseSeuil(cnt) };
     }).filter(({ e, cnt }) => e.actif !== false || Object.values(cnt).some((n) => n > 0));
 

@@ -5,18 +5,18 @@ Vue d'ensemble des phases : `docs/roadmap.md`.
 
 ## 🎒 Jalon rentrée 2026 : phases 1→9 TERMINÉES — app EN LIGNE (https://alemoine4.github.io/carnet-eps/) — restent les validations terrain ci-dessous
 
-## Phase active : post-v1 — suites du 5e audit du 2026-09-07 (lots 1 et 3 livrés en v0.12.9 / v0.12.10 ; avis lot 2 et A01 à rédiger ; lots 4 et 5 « au mieux »)
+## Phase active : post-v1 — suites du 5e audit du 2026-09-07 (lots 1, 3 et 4 livrés en v0.12.9 / v0.12.10 / v0.12.11 ; **avis lot 2 et A01 EN ATTENTE DE DÉCISION** ; lot 5 « au mieux »)
 
 ### 5e audit du 2026-09-07 (rapport : `docs/audit-2026-09-07.md`, données : `docs/audit-2026-09-07.json`)
 - [x] 2026-09-07 — **Audit livré** : 179 constats (0 P0, **9 P1**, 86 P2, 84 P3) = Codex V2 (6, rejoués 9/9) + 13 lentilles par agents Opus indépendants en 3 lots (173, 71 doublons écartés). Les 9 P1 reproduits ou démontrés ; 13 reproductions dynamiques réintégrées en tests de non-régression avec le lot 1.
 - [x] 2026-09-07 — **Lot 1 livré en v0.12.9** (« fait au mieux ») : 44 constats — B02, C01 (D013), A02, D-01, B04, A07, A12, B16, A14, V2-01, C09, V2-02, D-10, A16, B42, V2-03, A11, C10, C11, D-02, D-03, B24, V2-04, C06, D-05, A04, D-07, A05, A06, A25, A03, V2-05, A24, D-12, D-13, D-15, D-14, B25, C17, B15, A08, A10, A13, A09 — 43 tests (`tests/e2e/audit5-lot1.spec.mjs`), suite 76/76, revue adversariale du diff (5 lentilles Opus + réfutateurs, 59 agents : 19 constats confirmés, corrigés avant livraison).
 - [x] 2026-09-07 — **v0.12.9 déployée** (main `769528e` + `e27615b`, gh-pages `f6da580`, tag `v0.12.9`).
-- [ ] **Lot 2 — Créations atomiques** ⚙ (v0.12.10) : avis à rédiger (V2-06, D-04, D-06).
+- [ ] **Lot 2 — Créations atomiques** ⚙ : avis rédigé le 2026-09-07 → `docs/avis/AVIS_CREATIONS_ATOMIQUES.md` (V2-06, D-04, D-06 ; `preparerFichier` + `enregistrerLot`, 5 tests) — **en attente de « go »**.
 - [x] 2026-09-07 — **Lot 3 livré en v0.12.10** : 35 constats (B01, B03, B05–B12, B17–B22, B26–B36, B40, B43, B45, B47–B50 + B31 clavier virtuel du 4e audit, préventif) — 25 tests (`tests/e2e/audit5-lot3.spec.mjs`), suite 101/101, revue adversariale du diff (4 lentilles Opus + réfutateurs, 48 agents : 12 défauts confirmés, corrigés avant livraison).
 - [x] 2026-09-07 — **v0.12.10 déployée** (main `5bfdf3f` + `2b829c8`, gh-pages `89766c9`, tag `v0.12.10`).
-- [ ] **Lot 4 — Service-worker et performance** (v0.12.12) : C02 (4 écrans lisent tout `appels`), A17–A20, A39–A43, C07, C08.
+- [x] 2026-09-08 — **Lot 4 livré en v0.12.11** : C02, A17, A18, A19, A20, A40, A41, A35, A37, A38, A42, A43, C07, C08, B14, B39, A23 — 11 tests (`tests/e2e/audit5-lot4.spec.mjs`, 4 avec le service-worker réel), suite 112/112, revue adversariale du diff en deux passes (57 agents : 6 corrections dont `parIndexLot`, 5 tests réécrits, 12 constats réfutés). Reste **A39** ⚙ (index.html cache-first : changement de stratégie → avis si souhaité).
 - [ ] **Lot 5 — Tests, qualité, documentation** (fil de l'eau) : C05, C18–C64, A21–A36…
-- [ ] **Décisions structurantes** ⚙ : A01 (origine GitHub Pages partagée avec le Bar Clandestin → sous-domaine/dépôt dédié ?), C64 (CI GitHub Actions), refactors C40/C46/C47/C55.
+- [ ] **Décisions structurantes** ⚙ : **A01 → avis rédigé le 2026-09-07 `docs/avis/AVIS_ORIGINE_DEDIEE.md`** (recommandation : organisation GitHub dédiée, gratuite ; sinon documenter la limite) — **en attente de décision** ; C64 (CI GitHub Actions), refactors C40/C46/C47/C55.
 
 ## Suites du 4e audit du 2026-09-05 (v0.12.4 → v0.12.8, toutes déployées le 2026-09-06 ; reste B31 + validations terrain)
 

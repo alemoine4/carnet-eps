@@ -3,6 +3,7 @@
 // la cible ≤ ~300 Ko (docs/modele-donnees.md) ; les PDF sont stockés tels quels.
 
 import { enregistrer, lire, supprimer } from './io.js';
+import { toast } from './ui.js';
 
 export async function compresserImage(fichier, { maxDim = 1600, cibleOctets = 300 * 1024 } = {}) {
   let bitmap;
@@ -38,6 +39,13 @@ export async function stockerFichier(fichier) {
     mime = 'image/jpeg';
     nom = nom.replace(/\.[a-z0-9]+$/i, '') + '.jpg';
   }
+  // Plafond : un PDF de plusieurs dizaines de Mo entrait tel quel et rendait l'export de
+  // sécurité — donc la purge et l'import — impossibles (audit 2026-09-07, C08/B39).
+  const PLAFOND = 8 * 1024 * 1024;
+  if (blob.size > PLAFOND) {
+    // Une décimale : « 8,2 Mo — limite 8 Mo » (l'arrondi à l'entier affichait « 8 Mo — limite 8 Mo », revue du lot 4)
+    throw new Error(`pièce trop lourde (${(blob.size / 1048576).toFixed(1).replace('.', ',')} Mo) — limite 8 Mo : réduisez la qualité du scan ou photographiez le document`);
+  }
   const rec = {
     id: crypto.randomUUID(),
     blob,
@@ -65,8 +73,8 @@ export async function urlDuFichier(fichierId) {
   return rec?.blob ? { url: URL.createObjectURL(new Blob([rec.blob], { type: mimeSur(rec) })), fichier: rec } : null;
 }
 
-export function revoquerURL(url) {
-  if (url) setTimeout(() => URL.revokeObjectURL(url), 1000);
+export function revoquerURL(url, delai = 1000) {
+  if (url) setTimeout(() => URL.revokeObjectURL(url), delai);
 }
 
 // Visionneuse plein écran : image en lightbox <dialog> natif (tap n'importe où ou Échap
@@ -74,15 +82,21 @@ export function revoquerURL(url) {
 // `conteneur` est conservé pour compatibilité d'appel mais inutile : le <dialog> vit
 // dans le top-layer du navigateur.
 export function ouvrirVisionneuse(conteneur, fichier) {
+  // Enregistrement sans blob (sauvegarde tierce ou allégée de ses pièces) : message, pas de TypeError
+  // — le chemin Documents n'avait pas la garde d'urlDuFichier (revue du lot 4).
+  if (!fichier?.blob) { toast('Pièce absente de cette sauvegarde.'); return; }
   // Le type servi est le mime DÉCLARÉ à l'enregistrement, pas celui porté par le blob (qui peut
   // venir d'une sauvegarde JSON tierce) ; tout ce qui n'est ni image ni PDF est servi en flux
   // binaire (téléchargement) au lieu d'une image cassée (audit 2026-09-05, B18).
   const declare = mimeSur(fichier);
   const mime = /^(image\/[a-z0-9.+-]+|application\/pdf)$/i.test(declare) ? declare : 'application/octet-stream';
-  const url = URL.createObjectURL(new Blob([fichier.blob], { type: mime }));
+  // Pas de recopie du blob quand son type est déjà le bon (C07) ; l'onglet du PDF a 60 s pour
+  // charger l'URL, elle était révoquée au bout d'une seconde — pièce « perdue » sur un
+  // téléphone lent (audit 2026-09-07, B14).
+  const url = URL.createObjectURL(fichier.blob.type === mime ? fichier.blob : new Blob([fichier.blob], { type: mime }));
   if (!mime.startsWith('image/')) {
-    window.open(url, '_blank');
-    revoquerURL(url);
+    window.open(url, '_blank', 'noopener');
+    revoquerURL(url, 60_000);
     return;
   }
   const declencheur = document.activeElement;

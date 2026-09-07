@@ -1,6 +1,6 @@
-# Fiche de test terrain — Carnet EPS (v0.12.10 — une seule session, ~15 min)
+# Fiche de test terrain — Carnet EPS (v0.12.11 — une seule session, ~15 min)
 
-> À faire sur ton téléphone Android **une fois**, après la mise à jour en v0.12.10 (les points des v0.12.4 à v0.12.10 sont regroupés). Coche au fur et à mesure, note ce qui coince.
+> À faire sur ton téléphone Android **une fois**, après la mise à jour en v0.12.11 (les points des v0.12.4 à v0.12.11 sont regroupés). Coche au fur et à mesure, note ce qui coince.
 > App : **https://alemoine4.github.io/carnet-eps/** · Guide détaillé : Plus → Aide.
 > Reporte les ❌ ici ou dis-les-moi : je corrige.
 
@@ -9,7 +9,7 @@
 ## 1. Installation et mise à jour (~2 min)
 
 - [ ] Ouvrir l'URL → « Installer » (sinon menu ⋮ → « Installer l'application ») ; l'icône **EPS** apparaît, l'app s'ouvre plein écran
-- [ ] Plus → Réglages → **Version : v0.12.10** (sinon : Vérifier les mises à jour, puis « Recharger ») et protection contre l'effacement **active ✓**
+- [ ] Plus → Réglages → **Version : v0.12.11** (sinon : Vérifier les mises à jour, puis « Recharger ») et protection contre l'effacement **active ✓**
 - [ ] Réglages → **Trimestres** : saisir une fin de T2 **avant** la fin de T1 → refusée avec « ✗ » et un message (v0.12.9)
 
 ## 2. Appel d'une classe de 28 — chrono < 40 s ⏱ (critère officiel)
@@ -28,6 +28,7 @@ Gêne éventuelle : ________________________________________________
 - [ ] Suivi → Inaptitudes → Nouvelle → élève + dates + **pièce** : Android propose **Appareil photo / Fichiers / Galerie** → prendre la photo ; photo nette et **lisible** dans la visionneuse (toucher la vignette)
 - [ ] À la date du cours, l'élève est signalé 🩺 à l'appel : inaptitude **totale** sur certificat → « Inapte » d'office, **totale** sur un mot des parents → « Dispensé (mot) », **partielle** → reste « Présent » (pastille seule) ; « Terminer l'appel » respecte la même règle, même en rattrapant l'appel de la veille (v0.12.9)
 - [ ] Fiche élève → **Ajouter une photo** → choix appareil photo (arrière) / galerie (bouton, v0.12.10)
+- [ ] Une inaptitude avec un **PDF** joint → « Ouvrir … » : le PDF s'ouvre dans un onglet, même sur un téléphone lent (v0.12.11 : l'adresse reste valable 60 s)
 
 ## 4. Clavier virtuel (~1 min) — correctif préventif v0.12.10 à confirmer
 

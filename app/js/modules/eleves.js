@@ -630,6 +630,7 @@ async function vueImport(c) {
   btnExemple.addEventListener('click', async () => {
     try {
       const rep = await fetch('data/exemple_eleves_pronote.csv');
+      if (!rep.ok) throw new Error(`HTTP ${rep.status}`); // hors ligne, le service-worker répond 504 (pas un rejet) — revue du lot 4
       zone.value = await rep.text();
       statutSource.textContent = 'Exemple chargé (10 élèves fictifs) — cliquez sur Analyser.';
       statutSource.className = 'statut statut-ok';

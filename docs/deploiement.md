@@ -23,7 +23,7 @@
    ```
 5. Ajouter la ligne au tableau ci-dessous (version → tag → commit).
 
-> ⚠ La branche **`gh-pages`** contient uniquement le dossier `app/` (pas `docs/`, donc ni les avis ni les rapports d'audit). C'est elle qui est publiée.
+> ⚠ La branche **`gh-pages`** contient uniquement le dossier `app/` (pas `docs/`, donc ni les avis ni les rapports d'audit). C'est elle qui est publiée. `app/.nojekyll` (fichier vide, poussé avec le subtree) désactive le traitement Jekyll de GitHub Pages : sans lui, un fichier ou dossier commençant par `_` disparaîtrait du site en silence (audit 2026-09-07, A42).
 
 ## Historique des versions (tag → commit `main`)
 
