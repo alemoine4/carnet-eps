@@ -29,6 +29,7 @@
 
 | Version | Tag | Commit main | Résumé |
 |---|---|---|---|
+| v0.12.9 | `v0.12.9` | `769528e` | Lot 1 du 5e audit (44 constats : exactitude de l’appel et du pré-remplissage — D013 —, seuil ⚠ borné à l’année scolaire partout, validations, erreurs visibles, import plus strict) + 19 constats de la revue adversariale du diff ; 43 tests de non-régression, suite 76/76 — déployée le 2026-09-07 |
 | v0.12.8 | `v0.12.8` | `8ca9d47` | Hypothèses Codex H01–H05 : écritures qui attendent la validation de la transaction, service-worker qui ne nettoie que ses caches (voisinage GitHub Pages), purge en une transaction, export instantané, doublons refusés à l’import — déployée le 2026-09-06 |
 | v0.12.7 | `v0.12.7` | `a4e8eb0` | Cascades et annulations atomiques (avis B29) : une transaction multi-stores pour les suppressions en cascade, les « Annuler » et l’import JSON ; suppression 76 → 27 ms — déployée le 2026-09-06 |
 | v0.12.6 | `v0.12.6` | `727d389` | Vision par trimestre (D012, audit B30) : fins de T1/T2 réglables, tableau T1/T2/T3/Année sur la fiche, périodes rapides sur le récap, détail du trimestre dans les alertes — déployée le 2026-09-06 |
