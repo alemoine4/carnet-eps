@@ -3,7 +3,7 @@
 // Un document = un fichier (image compressée / PDF, store `fichiers`) OU un lien externe.
 // Pas d'édition en v1 : supprimer puis recréer.
 
-import { enregistrerVue, el, carte, champ, confirmer, toast } from '../ui.js';
+import { enregistrerVue, el, carte, champ, groupe, confirmer, toast } from '../ui.js';
 import { tous, lire, enregistrer, supprimerLot, restaurer } from '../io.js';
 import { stockerFichier, ouvrirVisionneuse } from '../media.js';
 import { dateFR, normaliser, trierClasses } from '../metier.js';
@@ -26,7 +26,7 @@ async function vueDocuments(c) {
   const nomClasse = (id) => classes.find((cl) => cl.id === id)?.nom || '?';
 
   // --- Ajout ---
-  const btnAjouter = el('button', { class: 'btn btn-principal' }, '+ Ajouter un document');
+  const btnAjouter = el('button', { class: 'btn btn-principal', 'aria-expanded': 'false' }, '+ Ajouter un document');
   c.append(el('div', { class: 'barre-actions' }, btnAjouter));
 
   const inpTitre = el('input', { type: 'text', id: 'doc-titre', placeholder: 'Fiche ateliers gym, protocole piscine…', autocomplete: 'off' });
@@ -41,14 +41,14 @@ async function vueDocuments(c) {
   }
   const inpFichier = el('input', { type: 'file', id: 'doc-fichier', accept: 'image/*,.pdf,application/pdf', class: 'champ-fichier' });
   const inpUrl = el('input', { type: 'url', id: 'doc-url', placeholder: 'https://… (si pas de fichier)', autocomplete: 'off' });
-  const statutForm = el('p', { class: 'statut' });
+  const statutForm = el('p', { class: 'statut', role: 'status' });
   const btnCreer = el('button', { class: 'btn btn-principal' }, 'Enregistrer');
   const form = carte('Nouveau document');
   form.append(
     champ('doc-titre', 'Titre *', inpTitre),
     champ('doc-type', 'Type', selType),
     champ('doc-tags', 'Mots-clés', inpTags),
-    actives.length ? champ('', 'Classes concernées (optionnel)', grilleClasses) : '',
+    actives.length ? groupe('Classes concernées (optionnel)', grilleClasses) : '', // fieldset nommé (B47)
     champ('doc-fichier', 'Fichier (photo ou PDF)', inpFichier),
     champ('doc-url', 'ou lien externe', inpUrl),
     el('div', { class: 'rang-btn' }, btnCreer),
@@ -56,7 +56,7 @@ async function vueDocuments(c) {
   );
   form.hidden = true;
   c.append(form);
-  btnAjouter.addEventListener('click', () => { form.hidden = !form.hidden; if (!form.hidden) inpTitre.focus(); });
+  btnAjouter.addEventListener('click', () => { form.hidden = !form.hidden; btnAjouter.setAttribute('aria-expanded', String(!form.hidden)); if (!form.hidden) inpTitre.focus(); });
   btnCreer.addEventListener('click', async () => {
     const titre = inpTitre.value.trim();
     if (!titre) { statutForm.textContent = 'Le titre est obligatoire.'; statutForm.className = 'statut statut-erreur'; return; }

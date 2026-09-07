@@ -47,7 +47,7 @@ async function vueListe(c) {
   }
 
   // --- Formulaire nouvelle séquence ---
-  const btnNouvelle = el('button', { class: 'btn btn-principal' }, '+ Nouvelle séquence');
+  const btnNouvelle = el('button', { class: 'btn btn-principal', 'aria-expanded': 'false' }, '+ Nouvelle séquence');
   c.append(el('div', { class: 'barre-actions' }, btnNouvelle));
 
   const selClasse = el('select', { id: 'sq-classe' }, ...classes.map((cl) => el('option', { value: cl.id }, cl.nom)));
@@ -57,7 +57,7 @@ async function vueListe(c) {
   const inpDebut = el('input', { type: 'date', id: 'sq-debut' });
   const inpFin = el('input', { type: 'date', id: 'sq-fin' });
   const inpNb = el('input', { type: 'number', id: 'sq-nb', min: '1', max: '30', value: '10' });
-  const statutForm = el('p', { class: 'statut' });
+  const statutForm = el('p', { class: 'statut', role: 'status' });
   const btnCreer = el('button', { class: 'btn btn-principal' }, 'Créer la séquence');
   const formCarte = carte('Nouvelle séquence');
   formCarte.append(
@@ -72,7 +72,7 @@ async function vueListe(c) {
   );
   formCarte.hidden = true;
   c.append(formCarte);
-  btnNouvelle.addEventListener('click', () => { formCarte.hidden = !formCarte.hidden; if (!formCarte.hidden) inpApsa.focus(); });
+  btnNouvelle.addEventListener('click', () => { formCarte.hidden = !formCarte.hidden; btnNouvelle.setAttribute('aria-expanded', String(!formCarte.hidden)); if (!formCarte.hidden) inpApsa.focus(); });
   btnCreer.addEventListener('click', async () => {
     const apsa = inpApsa.value.trim();
     if (!apsa) { statutForm.textContent = 'L’APSA est obligatoire.'; statutForm.className = 'statut statut-erreur'; return; }
@@ -179,7 +179,7 @@ async function vueDetail(c, id) {
   inpDate.value = isoAujourdhui();
   const inpTheme = el('input', { type: 'text', id: 'se-theme', placeholder: 'Thème (optionnel)', autocomplete: 'off' });
   const btnAjout = el('button', { class: 'btn btn-principal' }, 'Ajouter');
-  const statutSe = el('p', { class: 'statut' });
+  const statutSe = el('p', { class: 'statut', role: 'status' });
   btnAjout.addEventListener('click', async () => {
     if (!inpDate.value) { statutSe.textContent = 'Choisissez une date.'; statutSe.className = 'statut statut-erreur'; return; }
     if (seances.some((s) => s.date === inpDate.value)) {

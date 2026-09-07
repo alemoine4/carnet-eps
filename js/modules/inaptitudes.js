@@ -3,7 +3,7 @@
 // Règles : pré-remplit l'appel (statut « inapte », géré par appel.js via inaptitudesActives) ;
 // alerte J-7 avant expiration ; inaptitude > 3 mois → rappel médecin scolaire (réglementation).
 
-import { enregistrerVue, el, carte, champ, champTexte, champSelect, champZone, confirmer, toast } from '../ui.js';
+import { enregistrerVue, el, carte, champ, groupe, champTexte, champSelect, champZone, confirmer, toast, rerendre } from '../ui.js';
 import { tous, lire, parIndex, enregistrer, supprimer, supprimerLot, restaurer } from '../io.js';
 import { stockerFichier, supprimerFichier, urlDuFichier, ouvrirVisionneuse, mimeSur, revoquerURL } from '../media.js';
 import { isoAujourdhui, dateFR, jours, trierEleves, trierClasses, SEUIL_MEDECIN_JOURS } from '../metier.js';
@@ -173,7 +173,7 @@ async function vueNouvelle(c, eleveIdInitial) {
     chk.addEventListener('change', () => (chk.checked ? coches.add(cle) : coches.delete(cle)));
     grilleR.append(el('label', { class: 'ligne-option', for: `in-r-${cle}` }, chk, ` ${lib}`));
   }
-  const blocRestrictions = champ('', 'Restrictions (inaptitude partielle)', grilleR);
+  const blocRestrictions = groupe('Restrictions (inaptitude partielle)', grilleR); // fieldset nommé (B47)
   selType.addEventListener('change', () => { blocRestrictions.hidden = selType.value === 'totale'; });
 
   const inpComm = el('input', { type: 'text', id: 'in-comm', placeholder: 'Ex. : pas d’appui sur le poignet droit', autocomplete: 'off' });
@@ -182,14 +182,14 @@ async function vueNouvelle(c, eleveIdInitial) {
   // Sans `capture` : Android propose Appareil photo / Fichiers / Galerie ; avec, il ouvrait la
   // caméra directement et le PDF annoncé était inaccessible (audit 2026-09-05, B13).
   const inpFichier = el('input', { type: 'file', id: 'in-fichier', accept: 'image/*,.pdf,application/pdf', class: 'champ-fichier' });
-  const statutFichier = el('p', { class: 'statut' });
+  const statutFichier = el('p', { class: 'statut', role: 'status' });
   inpFichier.addEventListener('change', () => {
     const f = inpFichier.files[0];
     statutFichier.textContent = f ? `Pièce prête : ${f.name} (${Math.round(f.size / 1024)} Ko${f.type.startsWith('image/') ? ', sera compressée' : ''})` : '';
     statutFichier.className = 'statut statut-ok';
   });
 
-  const statutForm = el('p', { class: 'statut' });
+  const statutForm = el('p', { class: 'statut', role: 'status' });
   const btnCreer = el('button', { class: 'btn btn-principal' }, 'Enregistrer l’inaptitude');
   btnCreer.addEventListener('click', async () => {
     if (!selEleve.value) { statutForm.textContent = 'Choisissez un élève.'; statutForm.className = 'statut statut-erreur'; return; }
@@ -244,7 +244,7 @@ async function vueNouvelle(c, eleveIdInitial) {
 // ---------------------------------------------------------------------------
 
 async function vueDetail(c, id) {
-  const rafraichir = () => { c.innerHTML = ''; return vueDetail(c, id); };
+  const rafraichir = () => rerendre(c, () => vueDetail(c, id));
   c.append(el('a', { class: 'retour', href: '#/inaptitudes' }, '← Inaptitudes'));
   const inapt = await lire('inaptitudes', id);
   if (!inapt) { c.append(carte('Inaptitude introuvable', 'Elle a peut-être été supprimée.')); return; }
@@ -290,14 +290,14 @@ async function vueDetail(c, id) {
       });
       grilleR.append(el('label', { class: 'ligne-option', for: `di-r-${cle}` }, chk, ` ${lib}`));
     }
-    carteI.append(el('div', { class: 'champ' }, el('label', {}, 'Restrictions'), grilleR));
+    carteI.append(groupe('Restrictions', grilleR)); // fieldset nommé (B47)
   }
   carteI.append(champZone({ id: 'di-comm', libelle: 'Commentaire', valeur: inapt.commentaire || '', onChange: async (v) => { inapt.commentaire = v; await sauver(); } }));
   c.append(carteI);
 
   // --- Certificat ---
   const carteC = carte('Certificat / pièce jointe', '');
-  const statutPiece = el('p', { class: 'statut' });
+  const statutPiece = el('p', { class: 'statut', role: 'status' });
   const inpRemplace = el('input', { type: 'file', accept: 'image/*,.pdf,application/pdf', hidden: true }); // sans capture (B13)
   inpRemplace.addEventListener('change', async () => {
     const f = inpRemplace.files[0];
@@ -347,8 +347,10 @@ async function vueDetail(c, id) {
   } else {
     carteC.append(el('p', {}, 'Aucune pièce jointe pour cette inaptitude.'));
   }
-  const labelAjout = el('label', { class: 'btn' }, inapt.certificatId ? 'Remplacer la pièce' : 'Ajouter une photo / un PDF', inpRemplace);
-  carteC.append(el('div', { class: 'rang-btn' }, labelAjout), statutPiece);
+  // Vrai bouton (focalisable) qui relaie le clic au champ fichier (B03)
+  const btnAjout = el('button', { class: 'btn', type: 'button' }, inapt.certificatId ? 'Remplacer la pièce' : 'Ajouter une photo / un PDF');
+  btnAjout.addEventListener('click', () => inpRemplace.click());
+  carteC.append(el('div', { class: 'rang-btn' }, btnAjout, inpRemplace), statutPiece);
   c.append(carteC);
 
   // --- Suppression ---

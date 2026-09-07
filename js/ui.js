@@ -35,7 +35,25 @@ export async function afficherVue(id, params = []) {
         + 'exportez une sauvegarde (Plus → Sauvegarde) avant toute autre manipulation.'));
     }
   }
-  if (gen === generation) conteneur.focus({ preventScroll: true });
+  // Retour en haut à chaque changement de vue : on arrivait au milieu de l'écran suivant (B26).
+  // Le focus n'est pas repris à un toast (le « Annuler » d'une suppression le reçoit juste avant
+  // la navigation qui suit — B28).
+  // Pas de focus au tout premier rendu (chargement) : le lien d'évitement, placé avant <main>,
+  // n'était jamais atteint en tabulation avant (revue du lot 3, B36).
+  if (gen === generation) {
+    window.scrollTo(0, 0);
+    if (gen > 1 && !document.activeElement?.closest('.toasts')) conteneur.focus({ preventScroll: true });
+  }
+}
+
+// Re-rendu d'une vue en place en conservant le focus (par l'id de l'élément actif) : changer un
+// select ou une date relançait le rendu et renvoyait le focus au <body> (audit 2026-09-07, B20).
+export async function rerendre(c, rendu) {
+  const idFocus = document.activeElement?.id;
+  c.innerHTML = '';
+  const r = await rendu();
+  if (idFocus) document.getElementById(idFocus)?.focus({ preventScroll: true });
+  return r;
 }
 
 // el('button', { class: 'btn', onclick: fn }, 'Texte') — création DOM concise et sûre
@@ -120,6 +138,12 @@ export function champ(id, libelle, controle) {
   return el('div', { class: 'champ' }, el('label', { for: id }, libelle), controle);
 }
 
+// Groupe de cases à cocher nommé : <fieldset>/<legend> — un <label> sans contrôle associé ne
+// nommait rien pour les lecteurs d'écran (audit 2026-09-07, B47).
+export function groupe(libelle, controle) {
+  return el('fieldset', { class: 'champ groupe' }, el('legend', {}, libelle), controle);
+}
+
 // ---- Feuille modale (menu bas d'écran) ----
 // <dialog> natif : piège de focus, fermeture par Échap et par clic sur le fond,
 // arrière-plan rendu inerte par le navigateur, focus restitué au déclencheur.
@@ -174,9 +198,12 @@ export function confirmer({ titre, message = '', detail = '', action = 'Supprime
 // Notification brève avec action optionnelle (ex. « Supprimé — Annuler »), auto-disparition.
 // Les toasts S'EMPILENT (max 3, le plus ancien cède la place — audit A12) : un « Annuler »
 // n'est plus perdu quand deux suppressions s'enchaînent. duree: Infinity = reste affiché.
-export function toast(message, { action, libelleAction = 'Annuler', duree = 8000 } = {}) {
+// Un toast porteur d'action dure 20 s (8 s ne laissaient pas le temps d'y aller au clavier — B28),
+// reçoit le focus, et son minuteur est suspendu tant qu'il est survolé ou focalisé.
+export function toast(message, { action, libelleAction = 'Annuler', duree = action ? 20000 : 8000 } = {}) {
+  // Conteneur permanent (index.html) porteur de la région live ; créé ici seulement à défaut (B27).
   let pile = document.querySelector('.toasts');
-  if (!pile) { pile = el('div', { class: 'toasts' }); document.body.append(pile); }
+  if (!pile) { pile = el('div', { class: 'toasts', role: 'status', 'aria-live': 'polite' }); document.body.append(pile); }
   // L'éviction n'emporte que les toasts à durée finie : le toast persistant
   // (ex. « Nouvelle version installée ») survit à une rafale de notifications.
   while (pile.children.length >= 3) {
@@ -184,13 +211,21 @@ export function toast(message, { action, libelleAction = 'Annuler', duree = 8000
     if (!victime) break;
     victime.remove();
   }
-  const t = el('div', { class: 'toast', role: 'status' }, el('span', {}, message));
+  const t = el('div', { class: 'toast' }, el('span', {}, message));
   if (!Number.isFinite(duree)) t.dataset.persistant = '';
   let timer;
+  // Si le toast a le focus au moment de disparaître (« Annuler » au clavier), le focus revient au
+  // déclencheur, sinon à la zone de contenu — pas au <body> (revue du lot 3, B28).
+  const declencheur = document.activeElement;
   const fermer = () => {
     clearTimeout(timer);
+    const avaitFocus = t.contains(document.activeElement);
     t.remove();
-    if (!pile.children.length) pile.remove();
+    if (avaitFocus) (declencheur?.isConnected && !declencheur.closest('.toasts') ? declencheur : document.getElementById('vue'))?.focus({ preventScroll: true });
+  };
+  const armer = () => {
+    clearTimeout(timer);
+    if (Number.isFinite(duree)) timer = setTimeout(fermer, duree);
   };
   if (action) {
     const btn = el('button', { class: 'btn btn-principal', type: 'button' }, libelleAction);
@@ -205,8 +240,16 @@ export function toast(message, { action, libelleAction = 'Annuler', duree = 8000
       }
     });
     t.append(btn);
+    t.addEventListener('focusin', () => clearTimeout(timer));
+    t.addEventListener('mouseenter', () => clearTimeout(timer));
+    t.addEventListener('focusout', armer);
+    t.addEventListener('mouseleave', armer);
   }
   pile.append(t);
-  if (Number.isFinite(duree)) timer = setTimeout(fermer, duree);
+  // Le focus va sur l'action seulement quand elle a une échéance (un toast persistant, comme
+  // « Recharger », ne doit pas voler le focus au milieu d'une saisie) — et AVANT l'armement du
+  // minuteur : le focusin programmatique l'annulait et le toast ne partait plus (revue du lot 3).
+  if (action && Number.isFinite(duree)) t.querySelector('button').focus({ preventScroll: true });
+  armer();
   return t;
 }

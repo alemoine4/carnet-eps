@@ -4,7 +4,7 @@
 // Limite v1 assumée : l'alternance A/B suit la parité calendaire depuis le
 // lundi de référence (les vacances ne décalent pas l'alternance).
 
-import { enregistrerVue, el, carte, champ, champTexte, confirmer, toast } from '../ui.js';
+import { enregistrerVue, el, carte, champ, champTexte, confirmer, toast, rerendre } from '../ui.js';
 import { tous, enregistrer, supprimer, lireMeta, ecrireMeta } from '../io.js';
 import { enMinutes, semaineCourante, trierClasses } from '../metier.js';
 
@@ -16,7 +16,7 @@ const INSTALLATIONS = ['Gymnase', 'Plateau extérieur', 'Stade', 'Piscine', 'Sal
 // ---------------------------------------------------------------------------
 
 async function vueEDT(c) {
-  const rafraichir = () => { c.innerHTML = ''; return vueEDT(c); };
+  const rafraichir = () => rerendre(c, () => vueEDT(c));
   const toutesClasses = (await tous('classes')).sort(trierClasses);
   const classes = toutesClasses.filter((cl) => !cl.archivee);
   const creneaux = await tous('edt');
@@ -41,7 +41,7 @@ async function vueEDT(c) {
   }
 
   // --- Formulaire créneau (ajout / édition) ---
-  const btnAjouter = el('button', { class: 'btn btn-principal' }, '+ Ajouter un créneau');
+  const btnAjouter = el('button', { class: 'btn btn-principal', 'aria-expanded': 'false' }, '+ Ajouter un créneau');
   c.append(el('div', { class: 'barre-actions' }, btnAjouter));
 
   const selJour = el('select', { id: 'cr-jour' }, ...[1, 2, 3, 4, 5, 6].map((j) => el('option', { value: String(j) }, JOURS[j])));
@@ -55,7 +55,7 @@ async function vueEDT(c) {
   );
   const inpInstal = el('input', { type: 'text', id: 'cr-instal', list: 'liste-installations', placeholder: 'Gymnase, plateau…', autocomplete: 'off' });
   const datalist = el('datalist', { id: 'liste-installations' }, ...INSTALLATIONS.map((i) => el('option', { value: i })));
-  const statutForm = el('p', { class: 'statut' });
+  const statutForm = el('p', { class: 'statut', role: 'status' });
   const btnEnregistrer = el('button', { class: 'btn btn-principal' }, 'Enregistrer');
   const btnSupprimer = el('button', { class: 'btn btn-danger' }, 'Supprimer');
   const formCarte = carte('Créneau');
@@ -96,9 +96,15 @@ async function vueEDT(c) {
     selSemaine.value = creneau?.semaine || 'AB';
     inpInstal.value = creneau?.installation || '';
     statutForm.textContent = '';
-    formCarte.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    btnAjouter.setAttribute('aria-expanded', 'true');
+    // Défilement animé seulement si l'utilisateur n'a pas demandé moins de mouvement (B45)
+    formCarte.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest' });
+    selJour.focus({ preventScroll: true }); // le formulaire déplié reçoit le focus, comme les autres (B19)
   };
-  btnAjouter.addEventListener('click', () => (formCarte.hidden ? ouvrirForm() : (formCarte.hidden = true)));
+  btnAjouter.addEventListener('click', () => {
+    if (formCarte.hidden) ouvrirForm();
+    else { formCarte.hidden = true; btnAjouter.setAttribute('aria-expanded', 'false'); }
+  });
   btnEnregistrer.addEventListener('click', async () => {
     if (!inpDebut.value || !inpFin.value || enMinutes(inpFin.value) <= enMinutes(inpDebut.value)) {
       statutForm.textContent = 'Heures invalides (la fin doit être après le début).';
