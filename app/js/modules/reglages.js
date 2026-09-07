@@ -96,7 +96,7 @@ export function initialiser() {
     }
     if (navigator.storage?.persisted) {
       const persiste = await navigator.storage.persisted();
-      const lignePersist = el('div', { class: 'info-ligne' },
+      const lignePersist = el('div', { class: 'info-ligne', role: 'status' },
         el('span', {}, 'Protection contre l’effacement auto'),
         el('strong', {}, persiste ? 'active ✓' : 'non garantie'),
       );
@@ -104,9 +104,13 @@ export function initialiser() {
       if (!persiste && navigator.storage.persist) {
         const btnPersist = el('button', { class: 'btn' }, 'Demander la protection');
         btnPersist.addEventListener('click', async () => {
+          if (btnPersist.getAttribute('aria-disabled') === 'true') return;
           const ok = await navigator.storage.persist();
           lignePersist.querySelector('strong').textContent = ok ? 'active ✓' : 'refusée par le navigateur';
-          btnPersist.remove();
+          // Le bouton reste et garde le focus (aria-disabled, relibellé) : se supprimer — ou passer
+          // `disabled` — sous le focus le renvoyait au <body> (B50)
+          btnPersist.setAttribute('aria-disabled', 'true');
+          btnPersist.textContent = ok ? 'Protection obtenue' : 'Protection refusée';
         });
         lignes.append(el('div', { class: 'rang-btn' }, btnPersist));
       }
@@ -119,7 +123,7 @@ export function initialiser() {
       el('div', { class: 'info-ligne' }, el('span', {}, 'Mode'),
         el('strong', {}, estLocalhost() ? 'développement (localhost, hors-ligne désactivé)' : 'installé / en ligne')),
     );
-    const statutMaj = el('p', { class: 'statut' });
+    const statutMaj = el('p', { class: 'statut', role: 'status' });
     const btnMaj = el('button', { class: 'btn' }, 'Vérifier les mises à jour');
     btnMaj.addEventListener('click', async () => {
       if (estLocalhost() || !('serviceWorker' in navigator)) {

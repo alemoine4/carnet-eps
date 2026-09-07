@@ -3,7 +3,7 @@
 // Règles métier : docs/fonctionnalites.md §1 — minimisation RGPD (jamais d'INE ni d'adresse),
 // suppression d'un élève = cascade documentée (io.supprimerEleveEnCascade).
 
-import { enregistrerVue, el, carte, champTexte, champSelect, champZone, confirmer, toast } from '../ui.js';
+import { enregistrerVue, el, carte, champTexte, champSelect, champZone, confirmer, toast, rerendre } from '../ui.js';
 import {
   tous, lire, parIndex, enregistrer, supprimer, lireMeta,
   parserCSV, lireTexteCSV, supprimerEleveEnCascade,
@@ -60,21 +60,21 @@ async function compterParClasse() {
 // ---------------------------------------------------------------------------
 
 async function vueListeClasses(c) {
-  const rafraichir = () => { c.innerHTML = ''; return vueListeClasses(c); };
+  const rafraichir = () => rerendre(c, () => vueListeClasses(c));
   const classes = (await tous('classes')).sort(trierClasses);
   const actives = classes.filter((cl) => !cl.archivee);
   const archivees = classes.filter((cl) => cl.archivee);
   const comptes = await compterParClasse();
 
   // Barre d'actions
-  const btnNouvelle = el('button', { class: 'btn btn-principal' }, '+ Nouvelle classe');
+  const btnNouvelle = el('button', { class: 'btn btn-principal', 'aria-expanded': 'false' }, '+ Nouvelle classe');
   const btnImport = el('a', { class: 'btn', href: '#/eleves/import' }, 'Importer depuis Pronote (CSV)');
   c.append(el('div', { class: 'barre-actions' }, btnNouvelle, btnImport));
 
   // Formulaire nouvelle classe (replié par défaut)
   const inpNom = el('input', { type: 'text', id: 'nc-nom', placeholder: '6A, 5B, 3PM…', autocomplete: 'off' });
   const inpNiveau = el('input', { type: 'text', id: 'nc-niveau', placeholder: '6e (déduit du nom si vide)', autocomplete: 'off' });
-  const statutForm = el('p', { class: 'statut' });
+  const statutForm = el('p', { class: 'statut', role: 'status' });
   const btnCreer = el('button', { class: 'btn btn-principal' }, 'Créer la classe');
   const formCarte = carte('Nouvelle classe');
   formCarte.append(
@@ -87,6 +87,7 @@ async function vueListeClasses(c) {
   c.append(formCarte);
   btnNouvelle.addEventListener('click', () => {
     formCarte.hidden = !formCarte.hidden;
+    btnNouvelle.setAttribute('aria-expanded', String(!formCarte.hidden)); // état du dépliant exposé (B19)
     if (!formCarte.hidden) inpNom.focus();
   });
   btnCreer.addEventListener('click', async () => {
@@ -152,7 +153,7 @@ async function vueListeClasses(c) {
 // ---------------------------------------------------------------------------
 
 async function vueClasse(c, id) {
-  const rafraichir = () => { c.innerHTML = ''; return vueClasse(c, id); };
+  const rafraichir = () => rerendre(c, () => vueClasse(c, id));
   const classe = await lire('classes', id);
   c.append(el('a', { class: 'retour', href: '#/eleves' }, '← Classes'));
   if (!classe) { c.append(carte('Classe introuvable', 'Elle a peut-être été supprimée.')); return; }
@@ -221,14 +222,14 @@ async function vueClasse(c, id) {
 
   // Carte élèves
   const carteEl = carte('Élèves');
-  const btnAjouter = el('button', { class: 'btn' }, '+ Ajouter un élève');
+  const btnAjouter = el('button', { class: 'btn', 'aria-expanded': 'false' }, '+ Ajouter un élève');
   carteEl.append(el('div', { class: 'rang-btn' }, btnAjouter));
 
   // mini-formulaire d'ajout (replié)
   const inpNom = el('input', { type: 'text', id: 'el-nom', placeholder: 'NOM', autocomplete: 'off' });
   const inpPrenom = el('input', { type: 'text', id: 'el-prenom', placeholder: 'Prénom', autocomplete: 'off' });
   const btnCreer = el('button', { class: 'btn btn-principal' }, 'Ajouter');
-  const statutAjout = el('p', { class: 'statut' });
+  const statutAjout = el('p', { class: 'statut', role: 'status' });
   const formAjout = el('div', {},
     el('div', { class: 'champ' }, el('label', { for: 'el-nom' }, 'Nom *'), inpNom),
     el('div', { class: 'champ' }, el('label', { for: 'el-prenom' }, 'Prénom *'), inpPrenom),
@@ -237,7 +238,7 @@ async function vueClasse(c, id) {
   );
   formAjout.hidden = true;
   carteEl.append(formAjout);
-  btnAjouter.addEventListener('click', () => { formAjout.hidden = !formAjout.hidden; if (!formAjout.hidden) inpNom.focus(); });
+  btnAjouter.addEventListener('click', () => { formAjout.hidden = !formAjout.hidden; btnAjouter.setAttribute('aria-expanded', String(!formAjout.hidden)); if (!formAjout.hidden) inpNom.focus(); });
   btnCreer.addEventListener('click', async () => {
     const nom = inpNom.value.trim();
     const prenom = inpPrenom.value.trim();
@@ -269,7 +270,7 @@ async function vueClasse(c, id) {
         avatar(e, classe.couleur),
         el('span', { class: 'ligne-eleve-nom' }, `${e.nom} ${e.prenom}`),
         e.actif === false ? el('span', { class: 'badge' }, 'parti') : '',
-        e.notesPerso ? el('span', { class: 'badge' }, 'ℹ') : '',
+        e.notesPerso ? el('span', { class: 'badge', title: 'À savoir renseigné' }, el('span', { 'aria-hidden': 'true' }, 'ℹ'), el('span', { class: 'sr-only' }, 'à savoir renseigné')) : '',
         el('span', { class: 'chevron', 'aria-hidden': 'true' }, '›'),
       );
       return { e, ligne };
@@ -291,7 +292,7 @@ async function vueClasse(c, id) {
 // ---------------------------------------------------------------------------
 
 async function vueFiche(c, id) {
-  const rafraichir = () => { c.innerHTML = ''; return vueFiche(c, id); };
+  const rafraichir = () => rerendre(c, () => vueFiche(c, id));
   const eleve = await lire('eleves', id);
   if (!eleve) {
     c.append(el('a', { class: 'retour', href: '#/eleves' }, '← Classes'), carte('Élève introuvable', 'Il a peut-être été supprimé.'));
@@ -322,7 +323,7 @@ async function vueFiche(c, id) {
   // Sans `capture="user"` : il forçait la caméra FRONTALE sur Android ; le sélecteur natif propose
   // désormais appareil photo (arrière) ou galerie (audit 2026-09-05, B13).
   const inpPhoto = el('input', { type: 'file', accept: 'image/*', hidden: true });
-  const statutPhoto = el('p', { class: 'statut' });
+  const statutPhoto = el('p', { class: 'statut', role: 'status' });
   inpPhoto.addEventListener('change', async () => {
     const f = inpPhoto.files[0];
     if (!f) return;
@@ -337,7 +338,11 @@ async function vueFiche(c, id) {
       statutPhoto.className = 'statut statut-erreur';
     }
   });
-  const rangPhoto = el('div', { class: 'rang-btn' }, el('label', { class: 'btn' }, photoOK ? 'Changer la photo' : 'Ajouter une photo', inpPhoto));
+  // Vrai bouton qui relaie le clic au champ fichier : un <label class="btn"> n'était pas focalisable,
+  // on pouvait retirer une photo au clavier mais pas en ajouter (audit 2026-09-07, B03).
+  const btnPhoto = el('button', { class: 'btn', type: 'button' }, photoOK ? 'Changer la photo' : 'Ajouter une photo');
+  btnPhoto.addEventListener('click', () => inpPhoto.click());
+  const rangPhoto = el('div', { class: 'rang-btn' }, btnPhoto, inpPhoto);
   if (photoOK) {
     const btnRetirer = el('button', { class: 'btn' }, 'Retirer la photo');
     btnRetirer.addEventListener('click', async () => {
@@ -397,8 +402,8 @@ async function vueFiche(c, id) {
     for (const [cle, conf] of Object.entries(STATUTS)) {
       if (!cnt[cle]) continue;
       const chip = el('span', { class: 'badge' }, `${conf.libelle} ×${cnt[cle]}`);
-      chip.style.background = conf.couleur;
-      chip.style.color = '#fff';
+      chip.style.background = `var(--stb-${cle})`; // token décliné par thème, pas la couleur brute (B18)
+      chip.style.color = 'var(--c-sur-accent)';
       chips.append(chip);
       nbChips++;
     }
@@ -410,19 +415,23 @@ async function vueFiche(c, id) {
     }
     if (parTri) {
       const cles = Object.keys(STATUTS).filter((k) => parTri.annee[k]);
+      // Vrai tableau (scope, en-tête de ligne, légende ; le « ● » du trimestre en cours a un
+      // équivalent textuel — B07, B43).
       const tableTri = el('table', { class: 'table-apercu' },
+        el('caption', {}, `Par trimestre — année scolaire ${bornes.annee}-${bornes.annee + 1} (bornes : Plus → Réglages)`),
         el('thead', {}, el('tr', {},
-          el('th', {}, 'Statut'),
-          ...[1, 2, 3].map((t) => el('th', { title: t === bornes.courant ? 'trimestre en cours' : '' }, `T${t}${t === bornes.courant ? ' ●' : ''}`)),
-          el('th', {}, 'Année'),
+          el('th', { scope: 'col' }, 'Statut'),
+          ...[1, 2, 3].map((t) => el('th', { scope: 'col', title: t === bornes.courant ? 'trimestre en cours' : '' }, `T${t}`,
+            t === bornes.courant ? el('span', { 'aria-hidden': 'true' }, ' ●') : '', t === bornes.courant ? el('span', { class: 'sr-only' }, ' (trimestre en cours)') : '')),
+          el('th', { scope: 'col' }, 'Année'),
         )),
         el('tbody', {}, ...cles.map((k) => el('tr', {},
-          el('td', {}, STATUTS[k].libelle),
+          el('th', { scope: 'row' }, STATUTS[k].libelle),
           ...[1, 2, 3].map((t) => el('td', {}, parTri.t[t][k] ? String(parTri.t[t][k]) : '')),
           el('td', {}, String(parTri.annee[k])),
         ))),
       );
-      carteAp.append(el('p', { class: 'note-inline' }, `Par trimestre — année scolaire ${bornes.annee}-${bornes.annee + 1} (bornes : Plus → Réglages)`), tableTri);
+      carteAp.append(el('div', { class: 'table-scroll', tabindex: '0', role: 'region', 'aria-label': 'Appels par trimestre' }, tableTri));
     }
     const derniers = appelsE
       .map((a) => ({ a, s: seancesT.find((x) => x.id === a.seanceId) }))
@@ -432,9 +441,9 @@ async function vueFiche(c, id) {
     const listeH = el('div', { class: 'liste-eleves' });
     for (const { a, s } of derniers) {
       const conf = STATUTS[a.statut] || STATUTS.present;
-      const b = el('span', { class: 'badge' }, conf.court);
-      b.style.background = conf.couleur;
-      b.style.color = '#fff';
+      const b = el('span', { class: 'badge', title: conf.libelle }, conf.court);
+      b.style.background = `var(--stb-${a.statut in STATUTS ? a.statut : 'present'})`; // token thématisé (B18)
+      b.style.color = 'var(--c-sur-accent)';
       const seq = seqT.find((q) => q.id === s.sequenceId);
       listeH.append(el('div', { class: 'ligne-eleve' }, b,
         el('span', { class: 'ligne-eleve-nom' },
@@ -613,7 +622,7 @@ async function vueImport(c) {
   const inputFichier = el('input', { type: 'file', accept: '.csv,.txt,text/csv,text/plain', class: 'champ-fichier', 'aria-label': 'Fichier CSV Pronote' });
   const btnAnalyser = el('button', { class: 'btn btn-principal' }, 'Analyser');
   const btnExemple = el('button', { class: 'btn' }, 'Essayer avec l’exemple');
-  const statutSource = el('p', { class: 'statut' });
+  const statutSource = el('p', { class: 'statut', role: 'status' });
   carteSource.append(el('div', { class: 'champ' }, zone), inputFichier, el('div', { class: 'rang-btn' }, btnAnalyser, btnExemple), statutSource);
   const suite = el('div', {});
   c.append(carteSource, suite);
@@ -668,18 +677,21 @@ async function afficherMapping(c, analyse) {
   }
   // aperçu brut des 3 premières lignes
   const table = el('table', { class: 'table-apercu' },
-    el('thead', {}, el('tr', {}, ...entetes.map((e) => el('th', {}, e)))),
+    el('caption', {}, 'Aperçu des 3 premières lignes du fichier'),
+    el('thead', {}, el('tr', {}, ...entetes.map((e) => el('th', { scope: 'col' }, e)))),
     el('tbody', {}, ...lignes.slice(0, 3).map((l) => el('tr', {}, ...entetes.map((_, i) => el('td', {}, l[i] || ''))))),
   );
-  carteMap.append(table);
+  carteMap.append(el('div', { class: 'table-scroll', tabindex: '0', role: 'region', 'aria-label': 'Aperçu du fichier' }, table));
   c.append(carteMap);
 
   // --- Étape 3 : destination ---
   const carteDest = carte('3 · Classe de destination');
   const classes = (await tous('classes')).filter((cl) => !cl.archivee).sort(trierClasses);
+  // Le <label> n'enveloppe que la radio et son texte : un select ou un champ texte à l'intérieur
+  // d'un label en devenait le « nom » (audit 2026-09-07, B21).
   const radio = (valeur, libelle, controle = '') => {
     const r = el('input', { type: 'radio', name: 'dest-mode', value: valeur, id: `dest-${valeur}` });
-    return { r, ligne: el('label', { class: 'ligne-option', for: `dest-${valeur}` }, r, ` ${libelle} `, controle) };
+    return { r, ligne: el('div', { class: 'ligne-option' }, el('label', { for: `dest-${valeur}` }, r, ` ${libelle}`), controle) };
   };
   const selExistante = el('select', { 'aria-label': 'Classe existante' }, ...classes.map((cl) => el('option', { value: cl.id }, cl.nom)));
   const inpNouvelle = el('input', { type: 'text', placeholder: 'Nom de la nouvelle classe', 'aria-label': 'Nom de la nouvelle classe', autocomplete: 'off' });
@@ -689,13 +701,13 @@ async function afficherMapping(c, analyse) {
   if (auto.classe < 0) rColonne.r.disabled = true;
   if (!classes.length) rExistante.r.disabled = true;
   (auto.classe >= 0 ? rColonne : classes.length ? rExistante : rNouvelle).r.checked = true;
-  carteDest.append(rColonne.ligne, rExistante.ligne, rNouvelle.ligne);
+  carteDest.append(el('fieldset', { class: 'groupe' }, el('legend', { class: 'sr-only' }, 'Classe de destination'), rColonne.ligne, rExistante.ligne, rNouvelle.ligne));
   c.append(carteDest);
 
   // --- Étape 4 : import ---
   const carteGo = carte('4 · Importer');
   const btnImporter = el('button', { class: 'btn btn-principal' }, `Importer ${lignes.length} élèves`);
-  const statutImport = el('p', { class: 'statut' });
+  const statutImport = el('p', { class: 'statut', role: 'status' });
   carteGo.append(el('div', { class: 'rang-btn' }, btnImporter), statutImport);
   c.append(carteGo);
 

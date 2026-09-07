@@ -31,7 +31,8 @@
   display: none;
 }
 
-@media (pointer: fine) {
+/* « any-* » : un clavier physique branché sur une tablette compte aussi (B31) */
+@media (any-hover: hover), (any-pointer: fine) {
   .aide-clavier {
     display: inline;
   }
@@ -67,7 +68,7 @@
   gap: 8px;
   min-height: var(--tactile);
   padding: 8px 18px;
-  border: 1px solid var(--c-bordure);
+  border: 1px solid var(--c-bord-controle); /* contour ≥ 3:1 (B06) */
   border-radius: 12px;
   background: var(--c-surface);
   color: var(--c-texte);
@@ -163,7 +164,7 @@
 .champ select {
   min-height: var(--tactile);
   padding: 8px 12px;
-  border: 1px solid var(--c-bordure);
+  border: 1px solid var(--c-bord-controle);
   border-radius: 10px;
   background: var(--c-fond);
   color: var(--c-texte);
@@ -190,6 +191,21 @@
   margin-top: 12px;
   font-size: 0.9rem;
   max-width: 100%;
+}
+
+/* Groupe de cases à cocher nommé (fieldset/legend au lieu d'un <label> orphelin — B47) */
+fieldset.groupe {
+  border: none;
+  padding: 0;
+  margin: 12px 0 0;
+  min-width: 0;
+}
+
+fieldset.groupe legend {
+  padding: 0;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .rang-btn {
@@ -311,7 +327,7 @@
   width: 100%;
   min-height: var(--tactile);
   padding: 8px 12px;
-  border: 1px solid var(--c-bordure);
+  border: 1px solid var(--c-bord-controle);
   border-radius: 10px;
   background: var(--c-fond);
   color: var(--c-texte);
@@ -329,7 +345,7 @@
 .champ textarea {
   min-height: 76px;
   padding: 8px 12px;
-  border: 1px solid var(--c-bordure);
+  border: 1px solid var(--c-bord-controle);
   border-radius: 10px;
   background: var(--c-fond);
   color: var(--c-texte);
@@ -343,12 +359,27 @@
   height: var(--tactile);
 }
 
-.table-apercu {
-  display: block;
+/* Vrai tableau (display: table) : en display:block il perdait sa sémantique pour les lecteurs
+   d'écran ; le défilement horizontal est porté par le conteneur .table-scroll (B07). */
+.table-scroll {
+  position: relative; /* contient aussi les .sr-only absolus des cellules : sinon ils élargissaient la page (sonde 320 px) */
   overflow-x: auto;
+  margin-top: 12px;
+}
+
+.table-apercu {
+  display: table;
+  width: 100%;
   border-collapse: collapse;
   font-size: 0.8rem;
-  margin-top: 12px;
+}
+
+.table-apercu caption {
+  caption-side: bottom;
+  text-align: left;
+  padding: 6px 0 0;
+  font-size: 0.78rem;
+  color: var(--c-texte-2);
 }
 
 .table-apercu th,
@@ -364,10 +395,16 @@
 }
 
 /* ---- EDT & séquences ---- */
+/* Deux colonnes seulement s'il y a la place : « 1fr 1fr » figé faisait défiler la page en travers
+   sur les écrans Documents et Notes à 360 px (B09). */
 .rang-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
+}
+
+.rang-2 > * {
+  min-width: 0;
 }
 
 .jour-section h2 {
@@ -376,6 +413,7 @@
 
 .ligne-edt {
   display: flex;
+  flex-wrap: wrap; /* installation + badge passent à la ligne sur petit écran (B32) */
   align-items: center;
   gap: 10px;
   width: 100%;
@@ -421,7 +459,7 @@
   min-width: var(--tactile);
   min-height: var(--tactile);
   padding: 0;
-  border: 1px solid var(--c-bordure);
+  border: 1px solid var(--c-bord-controle);
   border-radius: 10px;
   background: var(--c-surface);
   color: var(--c-alerte);
@@ -471,7 +509,8 @@
    160 px ne laissait qu'UNE colonne — 28 cartes à dérouler (audit 2026-09-05, B01). */
 .grille-appel {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  /* min(100%, 138px) : encore 2 colonnes à 320 px (2 × 138 + 10 ≤ 288 — B33), inchangé au-delà */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 138px), 1fr));
   gap: 10px;
   margin: 10px 0 16px;
 }
@@ -511,6 +550,13 @@
 
 .eleve-cycle:active {
   transform: scale(0.98);
+}
+
+/* Anneau de focus INTÉRIEUR : la carte rogne (overflow: hidden) tout ce qui dépasse de ses 12 px
+   de rayon, l'anneau extérieur par défaut était invisible (audit 2026-09-07, B01). */
+.eleve-cycle:focus-visible,
+.eleve-menu:focus-visible {
+  outline-offset: -3px;
 }
 
 /* Retour visuel pendant l'appui long (≈450 ms avant l'ouverture du menu de statuts) */
@@ -558,6 +604,14 @@
   font-weight: 600;
   font-size: 0.9rem;
   line-height: 1.2;
+  /* Borné à sa colonne : à 320 px un nom long passait SOUS le bouton « ⋯ » et le tap basculait le
+     statut au lieu d'ouvrir le menu (revue du lot 3). */
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.eleve-cycle > * {
+  max-width: 100%;
 }
 
 .btn-eleve .detail-statut {
@@ -568,12 +622,6 @@
   min-height: 1em;
 }
 
-/* `display` d'auteur > `[hidden]` du navigateur : sans cette règle la pastille « cachée » des
-   élèves non saisis restait rendue (un « P » fantôme, visible en sombre et lu par les lecteurs
-   d'écran) — audit 2026-09-05, B34. */
-.btn-eleve .badge-statut[hidden] {
-  display: none;
-}
 
 .btn-eleve .badge-statut {
   display: inline-block;
@@ -738,9 +786,6 @@ dialog.visionneuse::backdrop {
   object-fit: cover;
 }
 
-.btn input[type="file"][hidden] {
-  display: none;
-}
 
 /* ---- Grille de saisie des notes ---- */
 .ligne-note {
@@ -765,7 +810,7 @@ dialog.visionneuse::backdrop {
   width: 92px;
   min-height: var(--tactile);
   text-align: center;
-  border: 1px solid var(--c-bordure);
+  border: 1px solid var(--c-bord-controle);
   border-radius: 10px;
   background: var(--c-fond);
   color: var(--c-texte);
@@ -786,7 +831,7 @@ dialog.visionneuse::backdrop {
 .rang-2 > select {
   min-height: var(--tactile);
   padding: 8px 12px;
-  border: 1px solid var(--c-bordure);
+  border: 1px solid var(--c-bord-controle);
   border-radius: 10px;
   background: var(--c-fond);
   color: var(--c-texte);
@@ -884,6 +929,8 @@ dialog.visionneuse::backdrop {
   .rang-btn,
   .btn,
   .recherche,
+  .toasts,
+  .saut,
   .no-print {
     display: none !important;
   }
@@ -894,10 +941,30 @@ dialog.visionneuse::backdrop {
     break-inside: avoid;
   }
 
+  /* Colonnes complètes sur le papier : plus de rognage, les libellés longs se replient (B08) */
+  .table-scroll {
+    overflow: visible;
+  }
+
   .table-apercu,
   .table-recap {
     display: table;
     width: 100%;
     font-size: 11px;
+  }
+
+  .table-apercu th,
+  .table-apercu td {
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  /* Fonds des pastilles imprimés : sans ça, texte blanc sur blanc (B10) */
+  .badge,
+  .badge-statut,
+  .avatar,
+  .pastille {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

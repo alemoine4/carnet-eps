@@ -220,13 +220,16 @@ async function vueAppel(c, seanceId) {
   const seancesSeq = (await parIndex('seances', 'sequenceId', sequence.id)).sort((a, b) => a.date.localeCompare(b.date));
   const numero = seancesSeq.findIndex((s) => s.id === seanceId) + 1;
   const total = sequence.nbSeancesPrevu || '?';
-  const compteursEl = el('p', { class: 'compteurs', 'aria-live': 'polite' });
-  const statutFin = el('p', { class: 'statut' });
+  const compteursEl = el('p', { class: 'compteurs' });
+  // Annonce courte du statut appliqué (au lieu de relire les trois compteurs à chaque tap — B40).
+  const annonce = el('p', { class: 'sr-only', role: 'status' });
+  const statutFin = el('p', { class: 'statut', role: 'status' });
   const btnTerminer = el('button', { class: 'btn btn-principal' }, 'Terminer l’appel (le reste = présents)');
   const carteTete = carte(`${classe.nom} — ${sequence.apsa}`, '', dateFR(seance.date));
   carteTete.append(
     el('p', {}, `Séance ${numero}/${total}${seance.theme ? ' · ' + seance.theme : ''}${estSeanceDuJour ? '' : ' · ⚠ séance passée'}`),
     compteursEl,
+    annonce,
   );
   c.append(carteTete);
 
@@ -247,14 +250,15 @@ async function vueAppel(c, seanceId) {
       el('span', {}, el('strong', {}, String(pratiquants)), ' pratiquants'),
       el('span', { class: 'note-inline' }, `${saisis}/${eleves.length} saisis`),
     );
+    // statutFin est une région live : n'écrire que sur changement réel, sinon chaque tap après
+    // « Appel complet » le réannonçait (revue du lot 3).
+    const fin = saisis >= eleves.length ? `Appel complet ✓ (${eleves.length}/${eleves.length})` : '';
+    if (statutFin.textContent !== fin) { statutFin.textContent = fin; statutFin.className = 'statut statut-ok'; }
     if (saisis >= eleves.length) {
       btnTerminer.hidden = true;
-      statutFin.textContent = `Appel complet ✓ (${eleves.length}/${eleves.length})`;
-      statutFin.className = 'statut statut-ok';
     } else {
       const restants = eleves.length - saisis;
       btnTerminer.hidden = false;
-      statutFin.textContent = '';
       btnTerminer.textContent = `Terminer l’appel · ${restants} passé${restants > 1 ? 's' : ''} en présent`;
     }
   }
@@ -293,6 +297,7 @@ async function vueAppel(c, seanceId) {
     // État mis à jour AVANT l'écriture : deux taps très rapprochés lisaient tous deux l'ancien
     // statut et « absent → tenue » devenait « absent → absent » (audit 2026-09-05, B04).
     enregs.set(eleve.id, rec);
+    annonce.textContent = `${eleve.prenom} ${eleve.nom} : ${(STATUTS[statut] || STATUTS.present).libelle}`;
     majBouton(eleve);
     majCompteurs();
     try {
@@ -335,15 +340,16 @@ async function vueAppel(c, seanceId) {
 
     const grilleSt = el('div', { class: 'grille-statuts' });
     for (const [cle, conf] of Object.entries(STATUTS)) {
-      const b = el('button', { class: 'btn btn-statut', type: 'button' }, conf.libelle);
-      b.style.borderColor = conf.couleur;
-      if (cle === courant) { b.style.background = conf.couleur; b.style.color = '#fff'; }
+      // aria-pressed expose le statut courant aux technologies d'assistance (B17) et le style
+      // « enfoncé » vit en CSS ; bordure via les tokens --stb-* déclinés par thème (B18).
+      const b = el('button', { class: 'btn btn-statut', type: 'button', 'aria-pressed': String(cle === courant) }, conf.libelle);
+      b.style.borderColor = `var(--stb-${cle})`;
       b.addEventListener('click', async () => {
         await definirStatut(eleve, cle, (cle === 'retard' && minutesSaisies()) || {});
         if (cle === 'retard') {
           ligneMinutes.hidden = false;
-          for (const x of grilleSt.children) { x.style.background = ''; x.style.color = ''; }
-          b.style.background = conf.couleur; b.style.color = '#fff';
+          for (const x of grilleSt.children) x.setAttribute('aria-pressed', 'false');
+          b.setAttribute('aria-pressed', 'true');
           inpMinutes.focus();
         } else {
           dlg.close();
@@ -381,8 +387,12 @@ async function vueAppel(c, seanceId) {
         el('span', { class: 'badge-statut', hidden: true }, ''),
         el('span', { class: 'detail-txt' }, ''),
       ),
-      inapt ? el('span', { class: 'pastille-info', title: inapt.type === 'totale' ? 'Inaptitude totale en cours' : 'Inaptitude partielle en cours (pratique avec restrictions)' }, '🩺') : '',
-      enAlerte ? el('span', { class: 'pastille-warn', title: `Année : oublis de tenue ×${annee.oubli_tenue || 0} · dispenses ×${annee.dispense || 0} — T${bornes.courant} : ${tri.oubli_tenue || 0} · ${tri.dispense || 0}` }, '⚠') : '',
+      // Pictogrammes doublés d'un texte pour les technologies d'assistance (le title ne leur
+      // suffit pas — B43) ; le title reste pour la souris.
+      inapt ? el('span', { class: 'pastille-info', title: inapt.type === 'totale' ? 'Inaptitude totale en cours' : 'Inaptitude partielle en cours (pratique avec restrictions)' },
+        el('span', { 'aria-hidden': 'true' }, '🩺'), el('span', { class: 'sr-only' }, inapt.type === 'totale' ? 'Inaptitude totale en cours' : 'Inaptitude partielle en cours')) : '',
+      enAlerte ? el('span', { class: 'pastille-warn', title: `Année : oublis de tenue ×${annee.oubli_tenue || 0} · dispenses ×${annee.dispense || 0} — T${bornes.courant} : ${tri.oubli_tenue || 0} · ${tri.dispense || 0}` },
+        el('span', { 'aria-hidden': 'true' }, '⚠'), el('span', { class: 'sr-only' }, `Alerte : ${annee.oubli_tenue || 0} oublis de tenue et ${annee.dispense || 0} dispenses sur l’année`)) : '',
     );
     const menu = el('button', {
       class: 'eleve-menu', type: 'button', 'aria-haspopup': 'dialog',
@@ -530,29 +540,35 @@ async function vueRecap(c, classeId) {
       return { e, cnt, alerte: depasseSeuil(cnt) };
     }).filter(({ e, cnt }) => e.actif !== false || Object.values(cnt).some((n) => n > 0));
 
-    const table = el('table', { class: 'table-apercu table-recap' },
-      el('thead', {}, el('tr', {},
-        el('th', {}, 'Élève'),
-        ...CLES.map((k) => el('th', { title: STATUTS[k].libelle }, STATUTS[k].court)),
-        // Ici le seuil porte sur la PÉRIODE affichée (l'année par défaut), alors que la pastille de
-        // l'appel porte toujours sur l'année : le dire (revue du lot 1).
-        el('th', { title: `Seuil de ${SEUIL_ALERTE} oublis de tenue ou dispenses atteint sur la période affichée` }, '⚠'),
-      )),
-      el('tbody', {}, ...lignes.map(({ e, cnt, alerte }) => el('tr', {},
-        el('td', {}, `${e.nom} ${e.prenom}${e.actif === false ? ' (parti)' : ''}`),
-        ...CLES.map((k) => el('td', {}, cnt[k] ? String(cnt[k]) : '')),
-        el('td', {}, alerte ? '⚠' : ''),
-      ))),
-    );
-    // La période figure dans la ligne de synthèse : les champs de dates sont masqués à
+    // La période figure dans la légende du tableau (caption) : les champs de dates sont masqués à
     // l'impression, le papier ne disait pas quelle période il couvrait (audit 2026-09-05, B21).
     const dateLongue = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('fr-FR');
     const periode = inpDebut.value || inpFin.value
       ? `du ${inpDebut.value ? dateLongue(inpDebut.value) : 'début'} au ${inpFin.value ? dateLongue(inpFin.value) : 'aujourd’hui'}`
       : 'toutes dates';
+    // Vrai tableau pour les lecteurs d'écran : scope sur les en-têtes, nom de l'élève en en-tête de
+    // ligne, légende, défilement porté par une région nommée (audit 2026-09-07, B07).
+    // Légende COURTE dans le <caption> (sa boîte prend la largeur du tableau, coupée dans le
+    // conteneur défilant sur mobile) ; le décodage des colonnes vit dans un <p> hors défilement,
+    // relié par aria-describedby (revue du lot 3).
+    const table = el('table', { class: 'table-apercu table-recap', 'aria-describedby': 'rc-legende' },
+      el('caption', {}, `${seancesPeriode.length} séance(s) — ${periode}`),
+      el('thead', {}, el('tr', {},
+        el('th', { scope: 'col' }, 'Élève'),
+        ...CLES.map((k) => el('th', { scope: 'col', title: STATUTS[k].libelle }, el('span', { 'aria-hidden': 'true' }, STATUTS[k].court), el('span', { class: 'sr-only' }, STATUTS[k].libelle))),
+        // Ici le seuil porte sur la PÉRIODE affichée (l'année par défaut), alors que la pastille de
+        // l'appel porte toujours sur l'année : le dire (revue du lot 1).
+        el('th', { scope: 'col', title: `Seuil de ${SEUIL_ALERTE} oublis de tenue ou dispenses atteint sur la période affichée` }, el('span', { 'aria-hidden': 'true' }, '⚠'), el('span', { class: 'sr-only' }, 'Alerte')),
+      )),
+      el('tbody', {}, ...lignes.map(({ e, cnt, alerte }) => el('tr', {},
+        el('th', { scope: 'row' }, `${e.nom} ${e.prenom}${e.actif === false ? ' (parti)' : ''}`),
+        ...CLES.map((k) => el('td', {}, cnt[k] ? String(cnt[k]) : '')),
+        el('td', {}, alerte ? el('span', { 'aria-hidden': 'true' }, '⚠') : '', alerte ? el('span', { class: 'sr-only' }, 'seuil atteint') : ''), // texte DANS la cellule (revue du lot 3)
+      ))),
+    );
     zoneTable.replaceChildren(
-      el('p', { class: 'note-discrete' }, `${seancesPeriode.length} séance(s) — ${periode} · ${STATUTS.present.court}=présent, A=absent, R=retard, D=dispensé, I=inapte, T=oubli de tenue, INF=infirmerie · ⚠ = ${SEUIL_ALERTE} oublis de tenue ou dispenses sur la période affichée`),
-      table,
+      el('div', { class: 'table-scroll', tabindex: '0', role: 'region', 'aria-label': `Récapitulatif ${classe.nom}` }, table),
+      el('p', { class: 'note-discrete', id: 'rc-legende' }, `${STATUTS.present.court}=présent, A=absent, R=retard, D=dispensé, I=inapte, T=oubli de tenue, INF=infirmerie · ⚠ = ${SEUIL_ALERTE} oublis de tenue ou dispenses sur la période affichée`),
     );
     return { lignes, nbSeances: seancesPeriode.length };
   }

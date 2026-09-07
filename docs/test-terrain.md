@@ -1,88 +1,57 @@
-# Fiche de test terrain — Carnet EPS (v0.12.9 — points introduits en v0.12.4)
+# Fiche de test terrain — Carnet EPS (v0.12.10 — une seule session, ~15 min)
 
-> À imprimer (ou garder sur un 2e écran). ~15 min. Coche au fur et à mesure, note ce qui coince.
-> App en ligne : **https://alemoine4.github.io/carnet-eps/** · Guide détaillé : Plus → Aide.
+> À faire sur ton téléphone Android **une fois**, après la mise à jour en v0.12.10 (les points des v0.12.4 à v0.12.10 sont regroupés). Coche au fur et à mesure, note ce qui coince.
+> App : **https://alemoine4.github.io/carnet-eps/** · Guide détaillé : Plus → Aide.
 > Reporte les ❌ ici ou dis-les-moi : je corrige.
 
 ---
 
-## 1. Installation PWA (~3 min)
+## 1. Installation et mise à jour (~2 min)
 
-**Android (Chrome)**
-- [ ] Ouvrir l'URL → bannière « Installer » (sinon menu ⋮ → « Installer l'application »)
-- [ ] L'icône **EPS** apparaît sur l'écran d'accueil
-- [ ] L'app s'ouvre en plein écran (sans barre d'adresse)
-- [ ] Plus → Réglages → protection contre l'effacement **active ✓**
-- [ ] Réglages → **Version : v0.12.9** (sinon : Réglages → Vérifier les mises à jour, puis « Recharger »)
-- [ ] Réglages → **Trimestres** : les fins de T1/T2 sont modifiables ; fiche d'un élève : tableau T1 · T2 · T3 · Année (v0.12.6) ; saisir une fin de T2 **avant** la fin de T1 → refusée avec « ✗ » et un message (v0.12.9)
-
-**PC (Chrome/Edge)**
-- [ ] Icône « Installer » dans la barre d'adresse → app dans sa fenêtre
-
-Résultat / notes : ________________________________________________
+- [ ] Ouvrir l'URL → « Installer » (sinon menu ⋮ → « Installer l'application ») ; l'icône **EPS** apparaît, l'app s'ouvre plein écran
+- [ ] Plus → Réglages → **Version : v0.12.10** (sinon : Vérifier les mises à jour, puis « Recharger ») et protection contre l'effacement **active ✓**
+- [ ] Réglages → **Trimestres** : saisir une fin de T2 **avant** la fin de T1 → refusée avec « ✗ » et un message (v0.12.9)
 
 ## 2. Appel d'une classe de 28 — chrono < 40 s ⏱ (critère officiel)
 
 - [ ] Créer (ou importer) une classe de ~28, une séquence, ouvrir l'appel du jour
-- [ ] La grille affiche **2 colonnes** sur ton téléphone (v0.12.4 : corrigé pour les écrans de 360 px)
-- [ ] **Chrono en main**, faire l'appel réel : tap = présent→absent→tenue ; ⋯ ou appui long = autres statuts
-- [ ] Faire défiler la grille le doigt posé : **aucun menu** ne doit s'ouvrir tout seul (v0.12.4)
+- [ ] La grille affiche **2 colonnes** (v0.12.4 à 360 px, v0.12.10 dès 320 px)
+- [ ] **Chrono en main**, faire l'appel réel : tap = présent→absent→tenue ; ⋯ ou appui long = autres statuts ; le statut courant est mis en évidence dans le menu (v0.12.10)
+- [ ] Faire défiler la grille le doigt posé : **aucun menu** ne doit s'ouvrir tout seul
 - [ ] Finir avec **« Terminer l'appel »** (le reste = présents)
 
-⏱ Temps mesuré : **______ s**  (cible : < 40 s) — tenu ? ☐ oui ☐ non
-À une main, au pouce, debout ? ☐ oui ☐ non
+⏱ Temps mesuré : **______ s**  (cible : < 40 s) — tenu ? ☐ oui ☐ non · À une main, au pouce, debout ? ☐ oui ☐ non
 Gêne éventuelle : ________________________________________________
 
-## 3. Pronote réel (~5 min) — le critère qui valide la passerelle
+## 3. Inaptitudes et certificats (~3 min)
 
-**Import élèves**
-- [ ] Pronote : copier la liste d'une vraie classe (ou export CSV)
-- [ ] App : Élèves → Importer depuis Pronote → coller → Analyser → vérifier colonnes → Importer
-- [ ] Effectif complet, **accents corrects**, doublons ignorés si on relance
+- [ ] Suivi → Inaptitudes → Nouvelle → élève + dates + **pièce** : Android propose **Appareil photo / Fichiers / Galerie** → prendre la photo ; photo nette et **lisible** dans la visionneuse (toucher la vignette)
+- [ ] À la date du cours, l'élève est signalé 🩺 à l'appel : inaptitude **totale** sur certificat → « Inapte » d'office, **totale** sur un mot des parents → « Dispensé (mot) », **partielle** → reste « Présent » (pastille seule) ; « Terminer l'appel » respecte la même règle, même en rattrapant l'appel de la veille (v0.12.9)
+- [ ] Fiche élève → **Ajouter une photo** → choix appareil photo (arrière) / galerie (bouton, v0.12.10)
 
-**Export notes**
-- [ ] Saisir quelques notes (Notes → une évaluation → grille)
-- [ ] « Copier pour Pronote » → dans Pronote, cliquer la 1re case de la colonne → **coller**
-- [ ] La colonne se cale bien (mêmes élèves, même ordre, même barème)
-
-Résultat / notes : ________________________________________________
-
-## 4. Caméra — certificat (~2 min)
-
-- [ ] Suivi → Inaptitudes → Nouvelle → élève + dates + **pièce** → Android propose **Appareil photo / Fichiers / Galerie** (v0.12.4 : l'app n'impose plus la caméra, pour pouvoir joindre un PDF) → prendre la photo
-- [ ] Photo nette et **lisible** dans la visionneuse (toucher la vignette ; Échap/clic pour fermer)
-- [ ] À la date du cours, l'élève est signalé 🩺 à l'appel ; inaptitude **totale** sur certificat → « Inapte » d'office, **totale** sur un mot des parents → « Dispensé (mot) », **partielle** → reste « Présent » (pastille seule) — et « Terminer l'appel » respecte la même règle, même en rattrapant un appel de la veille (v0.12.9)
-- [ ] Fiche élève → **Ajouter une photo** → le choix appareil photo (arrière) / galerie est proposé
-
-## 4 bis. Clavier virtuel (~1 min) — à noter, pas encore corrigé
+## 4. Clavier virtuel (~1 min) — correctif préventif v0.12.10 à confirmer
 
 - [ ] Fiche élève → **+ Observation** → taper du texte : le bouton **Enregistrer** reste-t-il atteignable clavier ouvert (sans le refermer) ? ☐ oui ☐ non
-- [ ] Appel → ⋯ sur un élève → **Commentaire** : idem
-  > Si « non » : ajouter `interactive-widget=resizes-content` à la balise viewport (`app/index.html`) — piste notée dans `docs/audit-2026-09-05.md` (B31).
+- [ ] Appel → ⋯ sur un élève → **Commentaire** : idem ☐ oui ☐ non
+  > Si « non » malgré la v0.12.10 : le dire, il reste une piste (hauteur des feuilles en `dvh`).
 
-Résultat / notes : ________________________________________________
+## 5. Pronote réel (~4 min) — le critère qui valide la passerelle
 
-## 5. Impression A4 (~2 min)
+- [ ] Pronote : copier la liste d'une vraie classe (ou export CSV) → Élèves → Importer depuis Pronote → coller → Analyser → vérifier les colonnes → Importer : effectif complet, **accents corrects**, doublons ignorés si on relance
+- [ ] Saisir quelques notes → « Copier pour Pronote » → dans Pronote, 1re case de la colonne → **coller** : même ordre, même barème
+  > En cas d'échec à l'analyse : m'envoyer **seulement** la ligne d'en-tête et une ligne avec des noms inventés.
 
-- [ ] Appel → Récapitulatifs → une classe → **Imprimer** : tableau lisible, rien de tronqué, nav/boutons masqués
-- [ ] Notes → Relevé d'une classe → **Imprimer** : idem
+## 6. Impression et hors ligne (~3 min)
 
-Résultat / notes : ________________________________________________
-
-## 6. Hors ligne (~1 min) — ne se teste qu'une fois installée
-
-- [ ] Activer le **mode avion**
-- [ ] Ouvrir l'app : elle se lance et fonctionne (appel, consultation, saisie)
-- [ ] Désactiver le mode avion : tout est toujours là
-- [ ] Si **Le Bar Clandestin** est installé sur le même appareil : après une mise à jour de Carnet EPS, l'ouvrir en mode avion → il se charge toujours (v0.12.8 : Carnet EPS ne touche plus aux caches des autres apps de l'origine)
-
-Résultat / notes : ________________________________________________
+- [ ] Appel → Récapitulatifs → une classe → **Imprimer** (ou aperçu PDF) : tableau lisible, colonnes complètes, pastilles en couleur, nav et boutons masqués (v0.12.10)
+- [ ] Mode avion → l'app s'ouvre et fonctionne (appel, consultation, saisie) ; mode avion coupé → tout est toujours là
+- [ ] Si **Le Bar Clandestin** est installé sur le même appareil : après une mise à jour de Carnet EPS, l'ouvrir en mode avion → il se charge toujours (v0.12.8)
 
 ---
 
 ## Bilan
 
-- Tests OK : ______ / 7
+- Tests OK : ______ / 6
 - Bloquants rencontrés : ________________________________________________
 - À améliorer : ________________________________________________
 

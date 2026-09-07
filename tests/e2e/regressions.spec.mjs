@@ -240,7 +240,7 @@ test('B30 — fiche élève : tableau par trimestre + signalement sur l’année
   await page.goto('/#/eleves/fiche/e1');
   const ligne = page.locator('table.table-apercu tr', { hasText: 'Oubli de tenue' });
   await expect(ligne).toBeVisible();
-  expect(await ligne.locator('td').allTextContents()).toEqual(['Oubli de tenue', '2', '1', '', '3']);
+  expect(await ligne.locator('th, td').allTextContents()).toEqual(['Oubli de tenue', '2', '1', '', '3']); // 1re cellule = <th scope=row> depuis le lot 3 (B07)
   await expect(page.locator('.statut-erreur')).toContainText('sur l’année');
 });
 

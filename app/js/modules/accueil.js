@@ -139,7 +139,7 @@ async function carteAlertes() {
   } else {
     for (const a of alertes.slice(0, 8)) {
       carteA.append(el('a', { class: 'ligne-eleve', href: a.href },
-        el('span', { class: 'badge' + (a.grave ? ' badge-alerte' : '') }, a.grave ? '⚠' : 'ℹ'),
+        el('span', { class: 'badge' + (a.grave ? ' badge-alerte' : '') }, el('span', { 'aria-hidden': 'true' }, a.grave ? '⚠' : 'ℹ'), el('span', { class: 'sr-only' }, a.grave ? 'Alerte' : 'Information')), // B43
         el('span', { class: 'ligne-eleve-nom' }, a.texte),
         el('span', { class: 'chevron pousse-droite', 'aria-hidden': 'true' }, '›'),
       ));

@@ -14,6 +14,24 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-07 (31) — v0.12.10 : lot 3 du 5e audit (accessibilité et mobile, 35 constats), 25 tests, revue adversariale (12 défauts corrigés)
+
+Demande : « ton avis ? puis lot 3 » (après « quelle suite ? »).
+
+**Fait** :
+- Avis donné sur les validations terrain : fiche Android à faire UNE fois après ce lot (il touche les écrans mobiles), B31 clavier virtuel traité préventivement ici (`interactive-widget=resizes-content`), import Pronote réel hors de portée (aucune donnée nominative ne doit passer par ici : en cas d'échec, en-tête + une ligne inventée suffisent).
+- **35 constats** (34 du lot 3 + B31 du 4e audit) en 100 patchs à ancrage exact sur index.html, 3 feuilles CSS et 12 modules JS ; helpers `rerendre(c, rendu)` (re-rendu qui restitue le focus) et `groupe(libelle, controle)` (fieldset/legend) dans ui.js ; `.sr-only`, `.saut`, `.table-scroll`, `fieldset.groupe`, token `--c-bord-controle`. B07 (⚙ dans le plan) tenu dans le lot : wrapper + scope + caption, aucun fichier nouveau.
+- **Tests** : `tests/e2e/audit5-lot3.spec.mjs`, 25 tests (contraste mesuré par formule WCAG sur les couleurs calculées, `emulateMedia({ media: 'print' })`, `reducedMotion`, 320 px, police à 200 %, focus séquentiel, région live observée par MutationObserver). **101/101**.
+- **Deux défauts attrapés par ces tests** avant livraison : le token de contour sombre recommandé (#59688a) ne faisait que 2,84:1 sur la surface sombre → #61708f (3,2:1) ; la barre de navigation était RÉAFFICHÉE à l'impression sur PC (responsive.css chargée après base.css remettait `display: flex`) → `!important`. Une sonde à 320 px a aussi montré que les `.sr-only` absolus des cellules élargissaient la page (le conteneur de défilement n'était pas positionné) → `.table-scroll { position: relative }`.
+- Pièges : `page.goto` rend la vue de façon asynchrone (attendre un élément avant `evaluate`) ; `disabled` sur le bouton focalisé renvoie le focus au body (→ `aria-disabled`) ; la vue focalise `#vue` au rendu, donc le focus posé sur un toast juste avant une navigation était repris (garde dans `afficherVue`) ; un script Playwright hors du dépôt ne résout pas `@playwright/test` (le copier dans le dépôt le temps de la sonde).
+- **Revue adversariale du diff** : workflow 4 lentilles Opus (a11y, rendu, régressions, preuves) + 2 réfutateurs par constat (48 agents, ≈ 3,7 M tokens, 24 min). **12 défauts confirmés et corrigés avant livraison**, dont trois de mon fait dans ce même lot : le lien d'évitement `href="#nav-principale"` était pris pour une route par le routeur (retour à l'accueil, focus repris par la vue) → clic intercepté en JS ; la vue prenait le focus dès le chargement, donc le lien n'était jamais atteint en tabulation avant → pas de focus au premier rendu ; le `<span class="sr-only">seuil atteint</span>` était enfant du `<tr>`, hors cellule. Et des défauts préexistants révélés par le lot : `hidden` inopérant sur `.btn`/`.champ` (règle globale `!important`, les deux rustines ponctuelles retirées) ; nom long sous le bouton « ⋯ » à 320 px (désormais 2 colonnes) ; nav hors écran à 200 % de police (suite de B30) ; `<caption>` coupée dans le conteneur défilant ; toast : focus programmatique qui annulait son minuteur, bouton qui se supprimait sous le focus ; motif de note refusée hors écran et effacé par la saisie suivante ; « Appel complet ✓ » réannoncé à chaque tap. Quatre de mes tests passaient aussi sans correctif (écrêtage du défilement par le navigateur, Chromium de bureau qui matche déjà `pointer: fine`, `env()` = 0 hors encoche, stub `navigator.storage` détruit par le rechargement) → réécrits pour prouver l'appel, la règle CSS ou le stub posé avant chargement.
+
+**Décidé** : B07 traité sans avis séparé (périmètre minimal). Le clavier virtuel Android reste à confirmer sur l'appareil (fiche terrain, case 4 bis).
+
+**Coincé / à vérifier** : validations terrain Android (fiche retaillée à 15 min, points v0.12.9 + v0.12.10) ; import Pronote réel.
+
+**Prochaine étape** : avis lot 2 (créations atomiques) et avis A01 (origine dédiée) ; lot 4 (service-worker et performance) ; lot 5 (qualité).
+
 ## 2026-09-07 (30) — v0.12.9 : lot 1 du 5e audit (44 constats), 43 tests, revue adversariale (19 constats corrigés)
 
 Demande : « fait au mieux » = GO discrétionnaire sur le plan du rapport, lot 1 d'abord.

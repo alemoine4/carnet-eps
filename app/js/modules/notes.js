@@ -47,7 +47,7 @@ async function vueListe(c) {
   }
 
   // --- Création ---
-  const btnNouvelle = el('button', { class: 'btn btn-principal' }, '+ Nouvelle évaluation');
+  const btnNouvelle = el('button', { class: 'btn btn-principal', 'aria-expanded': 'false' }, '+ Nouvelle évaluation');
   c.append(el('div', { class: 'barre-actions' }, btnNouvelle));
 
   const seqTriees = [...sequences].sort((a, b) => String(b.dateDebut || '').localeCompare(String(a.dateDebut || '')));
@@ -65,7 +65,7 @@ async function vueListe(c) {
   blocBareme.hidden = true;
   selType.addEventListener('change', () => { blocBareme.hidden = selType.value !== 'bareme'; });
   const inpCoef = el('input', { type: 'number', id: 'ev-coef', min: '0', max: '10', step: '0.5', value: '1' });
-  const statutForm = el('p', { class: 'statut' });
+  const statutForm = el('p', { class: 'statut', role: 'status' });
   const btnCreer = el('button', { class: 'btn btn-principal' }, 'Créer et saisir les notes');
   const form = carte('Nouvelle évaluation');
   form.append(
@@ -79,7 +79,7 @@ async function vueListe(c) {
   );
   form.hidden = true;
   c.append(form);
-  btnNouvelle.addEventListener('click', () => { form.hidden = !form.hidden; if (!form.hidden) inpTitre.focus(); });
+  btnNouvelle.addEventListener('click', () => { form.hidden = !form.hidden; btnNouvelle.setAttribute('aria-expanded', String(!form.hidden)); if (!form.hidden) inpTitre.focus(); });
   btnCreer.addEventListener('click', async () => {
     const titre = inpTitre.value.trim();
     if (!titre) { statutForm.textContent = 'Le titre est obligatoire.'; statutForm.className = 'statut statut-erreur'; return; }
@@ -211,12 +211,16 @@ async function vueEval(c, evalId) {
   const carteGrille = carte('Saisie', bareme
     ? `Note (virgule acceptée) ou code : ABS, DISP, NN. Entrée = élève suivant. Vide = non saisi.`
     : 'Positionnement libre (ex. AFL1 D3). Non exportable vers Pronote.');
+  // Motif d'un refus, annoncé (role=alert) : la couleur seule ne disait rien (B22). Le message est
+  // déplacé SOUS la ligne fautive au moment du refus (en bas d'une classe de 30, il était hors
+  // écran — revue du lot 3) et relié au champ par aria-describedby.
+  const alerteSaisie = el('p', { class: 'statut statut-erreur', role: 'alert', id: 'note-alerte' });
   const inputs = [];
   eleves.forEach((eleve, idx) => {
     const note = notesMap.get(eleve.id);
     const input = el('input', {
       class: 'input-note', type: 'text', inputmode: bareme ? 'decimal' : 'text',
-      'aria-label': `Note de ${eleve.prenom} ${eleve.nom}`, autocomplete: 'off', placeholder: '—',
+      'aria-label': `Note de ${eleve.nom} ${eleve.prenom}`, autocomplete: 'off', placeholder: '—', // même ordre que le libellé visible (commande vocale — B48)
     });
     input.value = note ? (typeof note.valeur === 'number' ? formatFR(note.valeur) : note.valeur) : '';
     if (note && typeof note.valeur !== 'number') input.classList.add('code');
@@ -237,7 +241,19 @@ async function vueEval(c, evalId) {
         return;
       }
       const r = parserValeur(input.value, bareme);
-      if (r.invalide) { input.classList.add('invalide'); return; }
+      if (r.invalide) {
+        // Refus signalé par un texte annoncé, pas par la seule couleur (B22).
+        input.classList.add('invalide');
+        input.setAttribute('aria-invalid', 'true');
+        input.setAttribute('aria-describedby', 'note-alerte');
+        input.closest('.ligne-note').insertAdjacentElement('afterend', alerteSaisie);
+        alerteSaisie.dataset.pour = eleve.id;
+        alerteSaisie.textContent = `Note refusée pour ${eleve.nom} ${eleve.prenom} : attendu 0 à ${bareme}, ABS, DISP ou NN.`;
+        return;
+      }
+      input.removeAttribute('aria-invalid');
+      input.removeAttribute('aria-describedby');
+      if (alerteSaisie.dataset.pour === eleve.id) alerteSaisie.textContent = ''; // le message d'un AUTRE élève reste
       if (r.vide) { await supprimer('notes', idNote); notesMap.delete(eleve.id); majStats(); return; }
       const valeur = r.code || r.nombre;
       const rec = { id: idNote, evaluationId: evalId, eleveId: eleve.id, valeur, commentaire: '' };
@@ -260,13 +276,14 @@ async function vueEval(c, evalId) {
     carteGrille.append(el('div', { class: 'ligne-note' },
       el('span', { class: 'nom' }, `${eleve.nom} ${eleve.prenom}`), input));
   });
+  carteGrille.append(alerteSaisie);
   c.append(carteGrille);
   majStats();
 
   // --- Export Pronote ---
   if (bareme) {
     const carteExp = carte('Vers Pronote', 'Dans Pronote, ouvrez le service de notation (même classe, même barème), cliquez sur la première case de la colonne et collez.');
-    const statutExp = el('p', { class: 'statut' });
+    const statutExp = el('p', { class: 'statut', role: 'status' });
     const zoneSecours = el('div', {}); // textarea de copie manuelle (si presse-papiers indisponible)
     const zoneRecap = el('div', {});
     const btnCopier = el('button', { class: 'btn btn-principal' }, 'Copier pour Pronote');
@@ -338,12 +355,12 @@ async function vueEval(c, evalId) {
       } catch {
         // Pas de presse-papiers (http réseau local…) : colonne à copier à la main.
         // « Publiée » ne sera marquée qu'à la copie réelle (événement copy).
-        const zone = el('textarea', { rows: 8, 'aria-label': 'Colonne à copier' });
+        const zone = el('textarea', { rows: 8, 'aria-label': 'Colonne à copier' }); // enveloppée dans .champ ci-dessous (style — B49)
         zone.value = texte;
         zone.addEventListener('copy', () => { apresExport(codes); }, { once: true });
         zoneSecours.replaceChildren(
           el('p', {}, 'Copie automatique indisponible : sélectionnez tout puis copiez (Ctrl+C) — l’évaluation sera alors marquée « publiée ».'),
-          zone);
+          el('div', { class: 'champ' }, zone)); // même style que les autres zones de texte (B49)
         zone.focus(); zone.select();
         statutExp.textContent = '';
       }
@@ -428,16 +445,18 @@ async function vueReleve(c, classeId) {
   };
 
   const lignes = eleves.map((e) => ({ e, moyenne: moyenneEleve(e.id) }));
+  // Vrai tableau (scope, en-tête de ligne, légende, région défilable nommée — B07).
   const table = el('table', { class: 'table-apercu table-recap' },
+    el('caption', {}, `Relevé de notes ${classe.nom}`), // court : la boîte du caption prend la largeur du tableau (revue du lot 3)
     el('thead', {}, el('tr', {},
-      el('th', {}, 'Élève'),
-      ...evals.map((ev) => el('th', { title: `${seqDe(ev.sequenceId)?.apsa || ''} · coef ${ev.coef}` },
+      el('th', { scope: 'col' }, 'Élève'),
+      ...evals.map((ev) => el('th', { scope: 'col', title: `${seqDe(ev.sequenceId)?.apsa || ''} · coef ${ev.coef}` },
         `${ev.titre} ${baremeDe(ev) ? `/${baremeDe(ev)}` : '(AFL)'}`)),
-      el('th', {}, 'Moy. /20'),
+      el('th', { scope: 'col' }, 'Moy. /20'),
     )),
     el('tbody', {},
       ...lignes.map(({ e, moyenne }) => el('tr', {},
-        el('td', {}, `${e.nom} ${e.prenom}${e.actif === false ? ' (parti)' : ''}`),
+        el('th', { scope: 'row' }, `${e.nom} ${e.prenom}${e.actif === false ? ' (parti)' : ''}`),
         ...evals.map((ev) => el('td', {}, afficherValeur(noteDe.get(`${ev.id}_${e.id}`), null))),
         el('td', {}, moyenne === null ? '' : formatFR(moyenne)),
       )),
@@ -446,7 +465,7 @@ async function vueReleve(c, classeId) {
   // Moyenne de classe sur l'effectif RÉEL : un parti reste lisible sur son relevé mais ne pèse
   // plus dans la synthèse remontée au conseil de classe (revue du lot 1, A13).
   const moyennes = lignes.filter(({ e }) => e.actif !== false).map((l) => l.moyenne).filter((m) => m !== null);
-  c.append(table);
+  c.append(el('div', { class: 'table-scroll', tabindex: '0', role: 'region', 'aria-label': `Relevé ${classe.nom}` }, table));
   if (moyennes.length) {
     c.append(el('p', { class: 'note-discrete' },
       `Moyenne de classe : ${formatFR(moyennes.reduce((a, b) => a + b, 0) / moyennes.length)}/20 (${moyennes.length} élèves notés)`));

@@ -2,7 +2,7 @@
 // Brique réutilisable : carte « Observations » (timeline + bouton « + Observation ») affichée
 // sur la fiche élève. Le formulaire est une feuille <dialog> ; suppression avec annulation (toast).
 
-import { el, carte, ouvrirFeuille, confirmer, toast } from '../ui.js';
+import { el, carte, groupe, ouvrirFeuille, confirmer, toast } from '../ui.js';
 import { parIndex, enregistrer, supprimer, restaurer } from '../io.js';
 import { TYPES_OBSERVATION, TONS_OBSERVATION, TAGS_OBSERVATION, MODELES_PHRASES, dateFR, isoAujourdhui } from '../metier.js';
 
@@ -23,7 +23,7 @@ export async function carteObservations(eleveId, rafraichir, seanceId = null) {
 
   for (const o of observations) {
     const ligne = el('div', { class: 'obs-ligne', 'data-ton': o.ton || 'neutre' });
-    const btnSuppr = el('button', { class: 'btn-mini', 'aria-label': 'Supprimer cette observation' }, '✕');
+    const btnSuppr = el('button', { class: 'btn btn-mini', 'aria-label': 'Supprimer cette observation' }, '✕'); // .btn : masqué à l'impression (B35)
     btnSuppr.addEventListener('click', async () => {
       if (!(await confirmer({ titre: 'Supprimer l’observation', message: o.texte.length > 90 ? o.texte.slice(0, 90) + '…' : o.texte }))) return;
       await supprimer('observations', o.id);
@@ -48,7 +48,7 @@ function ouvrirFormObservation(eleveId, onSaved, seanceId) {
   const selType = el('select', { id: 'obs-type' }, ...TYPES_OBSERVATION.map((t) => el('option', { value: t }, t)));
   const selTon = el('select', { id: 'obs-ton' }, ...TONS_OBSERVATION.map((t) => el('option', { value: t.cle }, t.libelle)));
   selTon.value = 'neutre';
-  const zone = el('textarea', { rows: 3, placeholder: 'Ce que tu observes… (dictée possible via le micro du clavier)', 'aria-label': 'Observation' });
+  const zone = el('textarea', { id: 'obs-texte', rows: 3, placeholder: 'Ce que tu observes… (dictée possible via le micro du clavier)' });
 
   const modeles = el('div', { class: 'rang-chips' }, ...MODELES_PHRASES.map((p) => {
     const b = el('button', { class: 'btn btn-statut', type: 'button' }, p);
@@ -61,7 +61,7 @@ function ouvrirFormObservation(eleveId, onSaved, seanceId) {
     return { t, cb, ligne: el('label', { class: 'ligne-option' }, cb, ` #${t}`) };
   });
 
-  const statut = el('p', { class: 'statut' });
+  const statut = el('p', { class: 'statut', role: 'status' });
   const btnSave = el('button', { class: 'btn btn-principal' }, 'Enregistrer');
   let dlg;
   btnSave.addEventListener('click', async () => {
@@ -96,11 +96,10 @@ function ouvrirFormObservation(eleveId, onSaved, seanceId) {
         el('div', { class: 'champ' }, el('label', { for: 'obs-type' }, 'Type'), selType),
         el('div', { class: 'champ' }, el('label', { for: 'obs-ton' }, 'Ton'), selTon),
       ),
-      el('div', { class: 'champ' }, el('label', {}, 'Observation'), zone),
+      el('div', { class: 'champ' }, el('label', { for: 'obs-texte' }, 'Observation'), zone), // label relié (B47)
       el('p', { class: 'note-discrete' }, 'Phrases rapides :'),
       modeles,
-      el('p', { class: 'note-discrete' }, 'Étiquettes :'),
-      ...tagsCases.map((x) => x.ligne),
+      groupe('Étiquettes', el('div', {}, ...tagsCases.map((x) => x.ligne))), // groupe nommé (B47)
       el('div', { class: 'rang-btn' }, btnSave),
       statut,
     ],

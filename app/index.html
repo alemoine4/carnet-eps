@@ -2,7 +2,9 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- interactive-widget=resizes-content : le clavier virtuel Android réduit la zone visible au lieu
+       de recouvrir le bouton « Enregistrer » d'une feuille (audit 2026-09-05, B31 ; ignoré ailleurs). -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <!-- Défense en profondeur : tout est local. script-src 'self' (pas d'inline) bloque
        l'exécution d'un éventuel handler injecté ; blob:/data: requis pour photos et import. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self'; connect-src 'self' data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
@@ -17,6 +19,9 @@
   <link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
+  <!-- Lien d'évitement (visible au focus) : sur PC la navigation est à gauche mais parcourue en
+       dernier au clavier (audit 2026-09-07, B36). -->
+  <a class="saut" href="#nav-principale">Aller à la navigation</a>
   <header class="entete">
     <h1>Carnet EPS</h1>
     <p id="entete-contexte" class="entete-contexte"></p>
@@ -24,7 +29,7 @@
 
   <main id="vue" class="vue" tabindex="-1"><!-- rendu par le router (js/main.js) --></main>
 
-  <nav class="nav" aria-label="Navigation principale">
+  <nav class="nav" id="nav-principale" tabindex="-1" aria-label="Navigation principale">
     <!-- Icônes : Lucide (licence MIT), inlinées — aucune dépendance. -->
     <a href="#/accueil" data-route="accueil">
       <svg class="nav-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
@@ -51,6 +56,10 @@
       <span>Plus</span>
     </a>
   </nav>
+
+  <!-- Région live permanente des notifications : créée en même temps que son texte, elle n'était
+       jamais annoncée par les lecteurs d'écran (audit 2026-09-07, B27). -->
+  <div class="toasts" role="status" aria-live="polite"></div>
 
   <script type="module" src="js/main.js"></script>
 </body>

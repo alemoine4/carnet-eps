@@ -55,7 +55,7 @@ export function initialiser() {
     const carteExp = carte('Exporter', 'Télécharge un fichier JSON contenant toutes les données. À conserver précieusement : c’est la seule sauvegarde possible (app 100 % locale).');
     const chkFichiers = el('input', { type: 'checkbox', id: 'export-fichiers' });
     chkFichiers.checked = true;
-    const statutExp = el('p', { class: 'statut' });
+    const statutExp = el('p', { class: 'statut', role: 'status' });
     const btnExp = el('button', { class: 'btn btn-principal' }, 'Télécharger la sauvegarde');
     btnExp.addEventListener('click', async () => {
       btnExp.disabled = true;
@@ -79,7 +79,7 @@ export function initialiser() {
     // ---- Import ----
     const carteImp = carte('Importer', 'Restaure une sauvegarde JSON. Remplace TOUTES les données de cet appareil (une sauvegarde de sécurité est téléchargée automatiquement avant).');
     const inputFichier = el('input', { type: 'file', accept: 'application/json,.json', class: 'champ-fichier', 'aria-label': 'Fichier de sauvegarde à importer' });
-    const statutImp = el('p', { class: 'statut' });
+    const statutImp = el('p', { class: 'statut', role: 'status' });
     inputFichier.addEventListener('change', async () => {
       const fichier = inputFichier.files[0];
       if (!fichier) return;

@@ -5,14 +5,14 @@ Vue d'ensemble des phases : `docs/roadmap.md`.
 
 ## 🎒 Jalon rentrée 2026 : phases 1→9 TERMINÉES — app EN LIGNE (https://alemoine4.github.io/carnet-eps/) — restent les validations terrain ci-dessous
 
-## Phase active : post-v1 — suites du 5e audit du 2026-09-07 (lot 1 livré en v0.12.9 ; lots 2 à 5 « au mieux »)
+## Phase active : post-v1 — suites du 5e audit du 2026-09-07 (lots 1 et 3 livrés en v0.12.9 / v0.12.10 ; avis lot 2 et A01 à rédiger ; lots 4 et 5 « au mieux »)
 
 ### 5e audit du 2026-09-07 (rapport : `docs/audit-2026-09-07.md`, données : `docs/audit-2026-09-07.json`)
 - [x] 2026-09-07 — **Audit livré** : 179 constats (0 P0, **9 P1**, 86 P2, 84 P3) = Codex V2 (6, rejoués 9/9) + 13 lentilles par agents Opus indépendants en 3 lots (173, 71 doublons écartés). Les 9 P1 reproduits ou démontrés ; 13 reproductions dynamiques réintégrées en tests de non-régression avec le lot 1.
 - [x] 2026-09-07 — **Lot 1 livré en v0.12.9** (« fait au mieux ») : 44 constats — B02, C01 (D013), A02, D-01, B04, A07, A12, B16, A14, V2-01, C09, V2-02, D-10, A16, B42, V2-03, A11, C10, C11, D-02, D-03, B24, V2-04, C06, D-05, A04, D-07, A05, A06, A25, A03, V2-05, A24, D-12, D-13, D-15, D-14, B25, C17, B15, A08, A10, A13, A09 — 43 tests (`tests/e2e/audit5-lot1.spec.mjs`), suite 76/76, revue adversariale du diff (5 lentilles Opus + réfutateurs, 59 agents : 19 constats confirmés, corrigés avant livraison).
 - [x] 2026-09-07 — **v0.12.9 déployée** (main `769528e` + `e27615b`, gh-pages `f6da580`, tag `v0.12.9`).
 - [ ] **Lot 2 — Créations atomiques** ⚙ (v0.12.10) : avis à rédiger (V2-06, D-04, D-06).
-- [ ] **Lot 3 — Accessibilité et mobile** (v0.12.11) : B01 focus rogné, B03 photo/certificat au clavier, B05–B50.
+- [x] 2026-09-07 — **Lot 3 livré en v0.12.10** : 35 constats (B01, B03, B05–B12, B17–B22, B26–B36, B40, B43, B45, B47–B50 + B31 clavier virtuel du 4e audit, préventif) — 25 tests (`tests/e2e/audit5-lot3.spec.mjs`), suite 101/101, revue adversariale du diff (4 lentilles Opus + réfutateurs, 48 agents : 12 défauts confirmés, corrigés avant livraison).
 - [ ] **Lot 4 — Service-worker et performance** (v0.12.12) : C02 (4 écrans lisent tout `appels`), A17–A20, A39–A43, C07, C08.
 - [ ] **Lot 5 — Tests, qualité, documentation** (fil de l'eau) : C05, C18–C64, A21–A36…
 - [ ] **Décisions structurantes** ⚙ : A01 (origine GitHub Pages partagée avec le Bar Clandestin → sous-domaine/dépôt dédié ?), C64 (CI GitHub Actions), refactors C40/C46/C47/C55.
@@ -28,7 +28,7 @@ Vue d'ensemble des phases : `docs/roadmap.md`.
 - [x] 2026-09-06 — **v0.12.4 déployée** (push main `857d292`, gh-pages `0391552`, tag `v0.12.4`) — le commit `3b48740` du 30/08 est parti avec.
 - [x] 2026-09-06 — **B27 — dédoublonnage livré en v0.12.5** (avis `docs/avis/AVIS_DEDOUBLONNAGE_HELPERS.md` validé « continue oui ») : tris/normalisation/formats/`jours` dans `metier.js`, `champ()` dans `ui.js`, 7 modules allégés, tests 21/21 inchangés.
 - [x] 2026-09-06 — **B30 tranché (D012) et livré en v0.12.6** : seuil sur le cumul annuel **et** vision par trimestre (Réglages → fins de T1/T2, tableau T1/T2/T3/Année sur la fiche, périodes rapides sur le récap, détail du trimestre dans les alertes). 4 tests.
-- [ ] **B31 — à valider sur Android** : bouton « Enregistrer » d'une feuille (observation, commentaire d'appel) atteignable clavier ouvert ? Sinon `interactive-widget=resizes-content` (fiche terrain 4 bis).
+- [x] 2026-09-07 — **B31 traité préventivement en v0.12.10** (`interactive-widget=resizes-content` dans la balise viewport) — reste à **confirmer sur Android** (fiche terrain 4 bis).
 - [x] 2026-09-06 — **B29 — cascades atomiques livrées en v0.12.7** (avis `docs/avis/AVIS_CASCADES_ATOMIQUES.md` validé « go pour les deux phases ») : `io.js` → `ecrireLot` / `supprimerLot` / `restaurer` / cascades / import en une transaction ; notes, inaptitudes, documents alignés ; 3 tests d'atomicité.
 
 ### Audit /audit-projet du 2026-07-10 (rapport : `docs/audit-2026-07-10.md`)

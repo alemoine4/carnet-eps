@@ -53,4 +53,10 @@
     max-width: none;
     margin-right: 32px;
   }
+
+  /* Plus de barre basse sur PC : la pile de toasts se cale en bas de la zone de contenu (B34) */
+  .toasts {
+    bottom: 16px;
+    left: calc(50% + 104px);
+  }
 }
