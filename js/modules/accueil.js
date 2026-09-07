@@ -5,7 +5,7 @@
 //    évaluations notées non remontées vers Pronote.
 // 3. Reprendre : dernière classe ouverte, dernière évaluation.
 
-import { enregistrerVue, el, carte } from '../ui.js';
+import { enregistrerVue, el, carte, toast } from '../ui.js';
 import { tous, lire, parIndex, enregistrer } from '../io.js';
 import { coursDuJour, semaineCourante, enMinutes, isoAujourdhui, collecterAlertes } from '../metier.js';
 import { etat } from '../state.js';
@@ -38,11 +38,19 @@ async function carteMaintenant() {
   const classe = await lire('classes', creneau.classeId);
   const sem = await semaineCourante(maintenant);
   const cM = carte(enCours ? 'En ce moment' : `À ${creneau.heureDebut}`, '', sem ? `semaine ${sem}` : '');
+  // Alternance A/B non paramétrée alors que des créneaux A/B existent : ils sont TOUS proposés —
+  // le dire (et étiqueter la semaine) plutôt que créer la séance de la mauvaise classe (A10).
+  const abSansRef = !sem && cours.some((cr) => cr.semaine !== 'AB');
   cM.append(el('p', { class: 'maintenant-cours' },
     el('strong', {}, classe ? classe.nom : 'Classe ?'),
     ` · ${creneau.heureDebut}–${creneau.heureFin}`,
     creneau.installation ? ` · ${creneau.installation}` : '',
+    abSansRef && creneau.semaine !== 'AB' ? ` · semaine ${creneau.semaine} ?` : '',
   ));
+  if (abSansRef) {
+    cM.append(el('p', { class: 'note-discrete' }, '⚠ Alternance A/B non paramétrée : les créneaux des semaines A et B sont tous proposés. ',
+      el('a', { href: '#/edt' }, 'Indiquer un lundi de semaine A')));
+  }
 
   const sequences = (await parIndex('sequences', 'classeId', creneau.classeId))
     .filter((s) => (!s.dateDebut || s.dateDebut <= isoJour) && (!s.dateFin || isoJour <= s.dateFin));
@@ -66,10 +74,16 @@ async function carteMaintenant() {
 
   if (duJour) {
     const numero = seances.indexOf(duJour) + 1;
+    // État de l'appel (mêmes libellés que l'onglet Appel) : « Faire l'appel » en bouton principal
+    // alors qu'il était terminé poussait à le refaire (audit 2026-09-07, B15).
+    const idsActifs = new Set((await parIndex('eleves', 'classeId', creneau.classeId)).filter((e) => e.actif !== false).map((e) => e.id));
+    const n = (await parIndex('appels', 'seanceId', duJour.id)).filter((a) => idsActifs.has(a.eleveId)).length;
+    const complet = idsActifs.size > 0 && n >= idsActifs.size;
     cM.append(
       el('p', {}, `${sequence.apsa} — séance ${numero}/${total}${duJour.theme ? ` · ${duJour.theme}` : ''}`),
       el('div', { class: 'rang-btn' },
-        el('a', { class: 'btn btn-principal', href: `#/appel/${duJour.id}` }, 'Faire l’appel'),
+        el('a', { class: complet ? 'btn' : 'btn btn-principal', href: `#/appel/${duJour.id}` },
+          complet ? 'Appel fait ✓' : n > 0 ? `Reprendre l’appel (${n}/${idsActifs.size})` : 'Faire l’appel'),
         el('a', { class: 'btn', href: `#/sequences/${sequence.id}` }, 'Séquence'),
       ),
     );
@@ -78,14 +92,19 @@ async function carteMaintenant() {
     const btnCreer = el('button', { class: 'btn btn-principal' }, `Créer la séance ${numero}/${total} et faire l’appel`);
     btnCreer.addEventListener('click', async () => {
       btnCreer.disabled = true; // anti double-tap : deux séances le même jour (audit 2026-09-05, B05)
-      const existante = (await parIndex('seances', 'sequenceId', sequence.id)).find((s) => s.date === isoJour);
-      if (existante) { location.hash = `#/appel/${existante.id}`; return; }
-      const nouvelle = {
-        id: crypto.randomUUID(), sequenceId: sequence.id, date: isoJour,
-        edtId: creneau.id, numero, theme: '', bilan: '', annulee: false,
-      };
-      await enregistrer('seances', nouvelle);
-      location.hash = `#/appel/${nouvelle.id}`;
+      try {
+        const existante = (await parIndex('seances', 'sequenceId', sequence.id)).find((s) => s.date === isoJour);
+        if (existante) { location.hash = `#/appel/${existante.id}`; return; }
+        const nouvelle = {
+          id: crypto.randomUUID(), sequenceId: sequence.id, date: isoJour,
+          edtId: creneau.id, numero, theme: '', bilan: '', annulee: false,
+        };
+        await enregistrer('seances', nouvelle);
+        location.hash = `#/appel/${nouvelle.id}`;
+      } catch (e) {
+        btnCreer.disabled = false; // le bouton restait grisé sans un mot (audit 2026-09-07, A11)
+        toast(`Séance non créée : ${e?.message || e}`);
+      }
     });
     cM.append(
       el('p', {}, `${sequence.apsa} — prochaine séance : ${numero}/${total}`),
@@ -101,7 +120,7 @@ async function carteMaintenant() {
     const nomDe = (id) => classes.find((cl) => cl.id === id)?.nom || '?';
     const enParallele = autres.filter((cr) => cr.heureDebut === creneau.heureDebut);
     const suivants = autres.filter((cr) => cr.heureDebut !== creneau.heureDebut);
-    const libelle = (cr) => `${cr.heureDebut} ${nomDe(cr.classeId)}`;
+    const libelle = (cr) => `${cr.heureDebut} ${nomDe(cr.classeId)}${abSansRef && cr.semaine !== 'AB' ? ` (sem. ${cr.semaine})` : ''}`;
     if (enParallele.length) cM.append(el('p', { class: 'note-discrete' }, 'En parallèle : ' + enParallele.map(libelle).join(' · ') + ' (voir l’onglet Appel)'));
     if (suivants.length) cM.append(el('p', { class: 'note-discrete' }, 'Ensuite : ' + suivants.map(libelle).join(' · ')));
   }

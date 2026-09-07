@@ -5,8 +5,8 @@
 
 import { enregistrerVue, el, carte, champ, champTexte, champSelect, champZone, confirmer, toast } from '../ui.js';
 import { tous, lire, parIndex, enregistrer, supprimer, supprimerLot, restaurer } from '../io.js';
-import { stockerFichier, supprimerFichier, urlDuFichier, ouvrirVisionneuse } from '../media.js';
-import { isoAujourdhui, dateFR, jours, trierEleves, trierClasses } from '../metier.js';
+import { stockerFichier, supprimerFichier, urlDuFichier, ouvrirVisionneuse, mimeSur, revoquerURL } from '../media.js';
+import { isoAujourdhui, dateFR, jours, trierEleves, trierClasses, SEUIL_MEDECIN_JOURS } from '../metier.js';
 
 const RESTRICTIONS = [
   ['course', 'Course'],
@@ -22,8 +22,6 @@ const ORIGINES = [
   { value: 'mot', label: 'Mot des parents' },
   { value: 'infirmerie', label: 'Infirmerie' },
 ];
-const SEUIL_MEDECIN_JOURS = 90; // > 3 mois → médecin scolaire
-
 function etatDe(i, auj = isoAujourdhui()) {
   if (i.dateDebut && i.dateDebut > auj) return 'a_venir';
   if (i.dateFin && i.dateFin < auj) return 'terminee';
@@ -44,8 +42,10 @@ function badges(i, auj = isoAujourdhui()) {
     }
   }
   if (etat === 'terminee') liste.push(el('span', { class: 'badge' }, `terminée le ${dateFR(i.dateFin)}`));
-  if (i.dateDebut && i.dateFin && jours(i.dateDebut, i.dateFin) > SEUIL_MEDECIN_JOURS) {
-    liste.push(el('span', { class: 'badge badge-accent' }, '> 3 mois · médecin scolaire'));
+  // Sans date de fin, la durée court jusqu'à aujourd'hui : le rappel « > 3 mois » ne s'allumait
+  // jamais pour une inaptitude ouverte (audit 2026-09-07, A09).
+  if (i.dateDebut && jours(i.dateDebut, i.dateFin || auj) > SEUIL_MEDECIN_JOURS) {
+    liste.push(el('span', { class: 'badge badge-accent' }, i.dateFin ? '> 3 mois · médecin scolaire' : '> 3 mois sans date de fin · médecin scolaire'));
   }
   return liste;
 }
@@ -124,22 +124,30 @@ async function vueSynthese(c) {
 
 async function vueNouvelle(c, eleveIdInitial) {
   c.append(el('a', { class: 'retour', href: '#/inaptitudes' }, '← Inaptitudes'));
-  const classes = (await tous('classes')).filter((cl) => !cl.archivee).sort(trierClasses);
-  const eleves = (await tous('eleves')).filter((e) => e.actif !== false);
+  const toutesClasses = (await tous('classes')).sort(trierClasses);
+  const tousEleves = await tous('eleves');
+  // L'élève d'origine (fiche → « + Nouvelle inaptitude ») est proposé même « parti » ou en classe
+  // archivée : avant, le formulaire s'ouvrait en silence sur un AUTRE élève (audit 2026-09-07, B04).
+  const initial = eleveIdInitial ? tousEleves.find((e) => e.id === eleveIdInitial) : null;
+  if (eleveIdInitial && !initial) {
+    c.append(carte('Élève introuvable', 'Il a peut-être été supprimé.'));
+    return;
+  }
+  const classes = toutesClasses.filter((cl) => !cl.archivee || cl.id === initial?.classeId);
+  const eleves = tousEleves.filter((e) => e.actif !== false || e.id === initial?.id);
   if (!classes.length || !eleves.length) {
     c.append(carte('Pas encore d’élèves', 'Importez ou créez vos classes et élèves d’abord (onglet Élèves).'));
     return;
   }
-  const initial = eleveIdInitial ? eleves.find((e) => e.id === eleveIdInitial) : null;
 
   const form = carte('Nouvelle inaptitude');
 
   // élève (classe → élève)
-  const selClasse = el('select', { id: 'in-classe' }, ...classes.map((cl) => el('option', { value: cl.id }, cl.nom)));
+  const selClasse = el('select', { id: 'in-classe' }, ...classes.map((cl) => el('option', { value: cl.id }, `${cl.nom}${cl.archivee ? ' (archivée)' : ''}`)));
   const selEleve = el('select', { id: 'in-eleve' });
   const majEleves = () => {
     const liste = eleves.filter((e) => e.classeId === selClasse.value).sort(trierEleves);
-    selEleve.replaceChildren(...liste.map((e) => el('option', { value: e.id }, `${e.nom} ${e.prenom}`)));
+    selEleve.replaceChildren(...liste.map((e) => el('option', { value: e.id }, `${e.nom} ${e.prenom}${e.actif === false ? ' (parti)' : ''}`)));
   };
   selClasse.addEventListener('change', majEleves);
   selClasse.value = initial ? initial.classeId : classes[0].id;
@@ -209,7 +217,7 @@ async function vueNouvelle(c, eleveIdInitial) {
       });
       location.hash = `#/inaptitudes/${id}`;
     } catch (e) {
-      statutForm.textContent = `Enregistrement impossible : ${e.message}`;
+      statutForm.textContent = `Enregistrement impossible : ${e?.message || e}`;
       statutForm.className = 'statut statut-erreur';
       btnCreer.disabled = false;
     }
@@ -258,8 +266,15 @@ async function vueDetail(c, id) {
     }),
     champSelect({ id: 'di-origine', libelle: 'Origine', valeur: inapt.origine || 'certificat', options: ORIGINES, onChange: async (v) => { inapt.origine = v; await sauver(); } }),
     el('div', { class: 'rang-2' },
-      champTexte({ id: 'di-debut', libelle: 'Début', type: 'date', valeur: inapt.dateDebut || '', onChange: async (v) => { inapt.dateDebut = v; await sauver(); rafraichir(); } }),
-      champTexte({ id: 'di-fin', libelle: 'Fin', type: 'date', valeur: inapt.dateFin || '', onChange: async (v) => { inapt.dateFin = v; await sauver(); rafraichir(); } }),
+      // Fin avant début refusée à l'édition comme à la création (audit 2026-09-07, A16).
+      champTexte({ id: 'di-debut', libelle: 'Début', type: 'date', valeur: inapt.dateDebut || '', onChange: async (v) => {
+        if (v && inapt.dateFin && v > inapt.dateFin) throw new Error('le début est après la fin');
+        inapt.dateDebut = v; await sauver(); rafraichir();
+      } }),
+      champTexte({ id: 'di-fin', libelle: 'Fin', type: 'date', valeur: inapt.dateFin || '', onChange: async (v) => {
+        if (v && inapt.dateDebut && v < inapt.dateDebut) throw new Error('la fin est avant le début');
+        inapt.dateFin = v; await sauver(); rafraichir();
+      } }),
     ),
   );
   if (inapt.type !== 'totale') {
@@ -302,7 +317,7 @@ async function vueDetail(c, id) {
       await sauver();
       rafraichir();
     } catch (e) {
-      statutPiece.textContent = `Pièce non enregistrée : ${e.message}`;
+      statutPiece.textContent = `Pièce non enregistrée : ${e?.message || e}`;
       statutPiece.className = 'statut statut-erreur';
     }
   });
@@ -311,21 +326,23 @@ async function vueDetail(c, id) {
     const res = cert ? await urlDuFichier(cert.fichierId) : null;
     if (res) {
       const { url, fichier } = res;
-      if (fichier.mime.startsWith('image/')) {
+      if (mimeSur(fichier).startsWith('image/')) { // mime absent (sauvegarde tierce) : plus de plantage (A05)
         // Vignette dans un vrai bouton : ouverture au clavier / lecteur d'écran (audit 2026-09-05, B09).
         const vignette = el('img', { class: 'vignette', src: url, alt: '' });
         vignette.addEventListener('load', () => URL.revokeObjectURL(url), { once: true }); // plus de fuite d'URL (B19)
+        vignette.addEventListener('error', () => URL.revokeObjectURL(url), { once: true }); // blob illisible : idem (revue du lot 1)
         const btnVignette = el('button', { class: 'btn-vignette', type: 'button', 'aria-label': `Agrandir le certificat${eleve ? ` de ${eleve.prenom}` : ''}` }, vignette);
         btnVignette.addEventListener('click', () => ouvrirVisionneuse(c, fichier));
         carteC.append(btnVignette);
       } else {
-        const btnPdf = el('button', { class: 'btn' }, `Ouvrir ${fichier.nom}`);
+        revoquerURL(url); // la visionneuse crée sa propre URL : celle-ci ne sert pas (fuite, revue du lot 1)
+        const btnPdf = el('button', { class: 'btn' }, `Ouvrir ${fichier.nom || 'la pièce'}`);
         btnPdf.addEventListener('click', () => ouvrirVisionneuse(c, fichier));
         carteC.append(el('div', { class: 'rang-btn' }, btnPdf));
       }
-      carteC.append(el('p', { class: 'note-inline' }, `Déposé le ${dateFR(cert.dateDepot)} · ${Math.round(fichier.taille / 1024)} Ko`));
+      carteC.append(el('p', { class: 'note-inline' }, `Déposé le ${dateFR(cert.dateDepot)} · ${Math.round((fichier.taille ?? fichier.blob?.size ?? 0) / 1024)} Ko`));
     } else {
-      carteC.append(el('p', {}, 'Pièce introuvable (supprimée ?).'));
+      carteC.append(el('p', {}, 'Pièce introuvable (absente de cette sauvegarde, ou supprimée).'));
     }
   } else {
     carteC.append(el('p', {}, 'Aucune pièce jointe pour cette inaptitude.'));

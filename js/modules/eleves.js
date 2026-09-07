@@ -10,7 +10,7 @@ import {
   apercuSuppressionEleve, detailSuppression, restaurer,
 } from '../io.js';
 import {
-  STATUTS, SEUIL_ALERTE, dateFR, isoAujourdhui, trierEleves, trierClasses, cleTexte, baremeDe, formatFR,
+  STATUTS, SEUIL_ALERTE, depasseSeuil, dateFR, isoAujourdhui, trierEleves, trierClasses, cleTexte, baremeDe, formatFR,
   bornesTrimestres, compterStatutsParTrimestre,
 } from '../metier.js';
 import { stockerFichier, supprimerFichier, urlDuFichier } from '../media.js';
@@ -95,15 +95,22 @@ async function vueListeClasses(c) {
     if (classes.some((cl) => cleTexte(cl.nom) === cleTexte(nom))) {
       statutForm.textContent = 'Une classe porte déjà ce nom.'; statutForm.className = 'statut statut-erreur'; return;
     }
-    await enregistrer('classes', {
-      id: crypto.randomUUID(),
-      nom,
-      niveau: inpNiveau.value.trim() || devinerNiveau(nom),
-      anneeScolaire: await lireMeta('anneeScolaire', ''),
-      couleur: PALETTE[classes.length % PALETTE.length],
-      ordre: classes.length,
-      archivee: false,
-    });
+    btnCreer.disabled = true; // un double clic créait deux classes homonymes (audit 2026-09-07, D-02)
+    try {
+      await enregistrer('classes', {
+        id: crypto.randomUUID(),
+        nom,
+        niveau: inpNiveau.value.trim() || devinerNiveau(nom),
+        anneeScolaire: await lireMeta('anneeScolaire', ''),
+        couleur: PALETTE[classes.length % PALETTE.length],
+        ordre: classes.length,
+        archivee: false,
+      });
+    } catch (e) {
+      statutForm.textContent = `Création impossible : ${e?.message || e}`; statutForm.className = 'statut statut-erreur';
+      btnCreer.disabled = false;
+      return;
+    }
     rafraichir();
   });
 
@@ -185,18 +192,27 @@ async function vueClasse(c, id) {
     btnSuppr.addEventListener('click', async () => {
       // Une classe encore référencée par des séquences ou des créneaux EDT laisserait des
       // orphelins « Classe ? » partout (audit 2026-09-05, B22) : on refuse tant qu'ils existent.
-      const [seqs, crens] = await Promise.all([parIndex('sequences', 'classeId', classe.id), parIndex('edt', 'classeId', classe.id)]);
+      const [seqs, crens, docs] = await Promise.all([
+        parIndex('sequences', 'classeId', classe.id), parIndex('edt', 'classeId', classe.id),
+        tous('documents').then((liste) => liste.filter((d) => (d.classeIds || []).includes(classe.id))), // oubliés du refus (D-12)
+      ]);
       const restes = [];
       if (seqs.length) restes.push(`${seqs.length} séquence${seqs.length > 1 ? 's' : ''}`);
       if (crens.length) restes.push(`${crens.length} créneau${crens.length > 1 ? 'x' : ''} EDT`);
+      if (docs.length) restes.push(`${docs.length} document${docs.length > 1 ? 's' : ''}`);
       if (restes.length) {
-        toast(`Classe non supprimée : elle a encore ${restes.join(' et ')} — à supprimer d’abord (Plus → Séquences / Emploi du temps).`);
+        const liste = restes.length > 1 ? `${restes.slice(0, -1).join(', ')} et ${restes.at(-1)}` : restes[0];
+        toast(`Classe non supprimée : elle a encore ${liste} — à supprimer ou détacher d’abord (Plus → Séquences / Emploi du temps / Documents).`);
         return;
       }
       if (!(await confirmer({ titre: 'Supprimer la classe', message: `Supprimer définitivement la classe ${classe.nom} (vide) ?` }))) return;
       await supprimer('classes', classe.id);
       location.hash = '#/eleves';
-      toast(`Classe ${classe.nom} supprimée`, { action: async () => { await restaurer({ classes: [classe] }); location.hash = `#/eleves/classe/${classe.id}`; } });
+      toast(`Classe ${classe.nom} supprimée`, { action: async () => {
+        // Une classe homonyme a pu être créée entre-temps : pas de doublon restauré (D-03).
+        if ((await tous('classes')).some((cl) => cleTexte(cl.nom) === cleTexte(classe.nom))) throw new Error(`une classe « ${classe.nom} » existe déjà`);
+        await restaurer({ classes: [classe] }); location.hash = `#/eleves/classe/${classe.id}`;
+      } });
     });
     actions.append(btnSuppr);
   }
@@ -229,10 +245,17 @@ async function vueClasse(c, id) {
     if (eleves.some((e) => cleTexte(e.nom) === cleTexte(nom) && cleTexte(e.prenom) === cleTexte(prenom))) {
       statutAjout.textContent = 'Cet élève existe déjà dans la classe.'; statutAjout.className = 'statut statut-erreur'; return;
     }
-    await enregistrer('eleves', {
-      id: crypto.randomUUID(), classeId: id, nom, prenom,
-      sexe: '', dateNaissance: '', notesPerso: '', actif: true,
-    });
+    btnCreer.disabled = true; // anti double-clic (audit 2026-09-07, D-02)
+    try {
+      await enregistrer('eleves', {
+        id: crypto.randomUUID(), classeId: id, nom, prenom,
+        sexe: '', dateNaissance: '', notesPerso: '', actif: true,
+      });
+    } catch (e) {
+      statutAjout.textContent = `Ajout impossible : ${e?.message || e}`; statutAjout.className = 'statut statut-erreur';
+      btnCreer.disabled = false;
+      return;
+    }
     rafraichir();
   });
 
@@ -290,6 +313,7 @@ async function vueFiche(c, id) {
     if (res) {
       const img = el('img', { class: 'avatar avatar-photo', src: res.url, alt: '' });
       img.addEventListener('load', () => URL.revokeObjectURL(res.url), { once: true }); // plus de fuite d'URL (B19)
+      img.addEventListener('error', () => URL.revokeObjectURL(res.url), { once: true }); // blob illisible : idem (revue du lot 1)
       h2Fiche.prepend(img);
       photoOK = true;
     }
@@ -309,7 +333,7 @@ async function vueFiche(c, id) {
       await sauver();
       rafraichir();
     } catch (e) {
-      statutPhoto.textContent = `Photo non enregistrée : ${e.message}`;
+      statutPhoto.textContent = `Photo non enregistrée : ${e?.message || e}`;
       statutPhoto.className = 'statut statut-erreur';
     }
   });
@@ -359,24 +383,28 @@ async function vueFiche(c, id) {
   if (!appelsE.length) {
     carteAp.append(el('p', {}, 'Aucun appel enregistré pour l’instant.'));
   } else {
-    const cnt = {};
-    for (const a of appelsE) cnt[a.statut] = (cnt[a.statut] || 0) + 1;
-    const chips = el('div', { class: 'rang-chips' });
-    for (const [cle, conf] of Object.entries(STATUTS)) {
-      if (!cnt[cle]) continue;
-      const chip = el('span', { class: 'badge' }, `${conf.libelle} ×${cnt[cle]}`);
-      chip.style.background = conf.couleur;
-      chip.style.color = '#fff';
-      chips.append(chip);
-    }
-    carteAp.append(chips);
     const seancesT = await tous('seances');
     const seqT = await tous('sequences');
     // Vision par trimestre (D012) : l'alerte reste sur le cumul, le tableau situe dans l'année.
     const bornes = await bornesTrimestres();
     const parTri = compterStatutsParTrimestre(appelsE, seancesT, bornes).get(id);
     const triCourant = parTri?.t[bornes.courant] || {};
-    if ((cnt.oubli_tenue || 0) >= SEUIL_ALERTE || (cnt.dispense || 0) >= SEUIL_ALERTE) {
+    // Chips sur l'ANNÉE SCOLAIRE, comme le signalement et le tableau : elles comptaient tout
+    // l'historique et contredisaient le tableau juste en dessous (A14, revue du lot 1).
+    const cnt = parTri?.annee || {};
+    const chips = el('div', { class: 'rang-chips' }, el('span', { class: 'note-inline' }, `Année ${bornes.annee}-${bornes.annee + 1} :`));
+    let nbChips = 0;
+    for (const [cle, conf] of Object.entries(STATUTS)) {
+      if (!cnt[cle]) continue;
+      const chip = el('span', { class: 'badge' }, `${conf.libelle} ×${cnt[cle]}`);
+      chip.style.background = conf.couleur;
+      chip.style.color = '#fff';
+      chips.append(chip);
+      nbChips++;
+    }
+    if (!nbChips) chips.append(el('span', { class: 'note-inline' }, 'aucun appel cette année'));
+    carteAp.append(chips);
+    if (depasseSeuil(parTri?.annee)) { // seuil sur l'année scolaire, pas sur tout l'historique (A14)
       carteAp.append(el('p', { class: 'statut statut-erreur' },
         `⚠ Signalement : ${SEUIL_ALERTE} oublis de tenue ou dispenses atteints sur l’année (T${bornes.courant} : ${triCourant.oubli_tenue || 0} tenue · ${triCourant.dispense || 0} disp.) — penser famille / vie scolaire.`));
     }
@@ -484,7 +512,13 @@ async function vueFiche(c, id) {
     }))) return;
     const objets = await supprimerEleveEnCascade(eleve.id);
     location.hash = `#/eleves/classe/${eleve.classeId}`;
-    toast(`${eleve.prenom} ${eleve.nom} supprimé`, { action: async () => { await restaurer(objets); location.hash = `#/eleves/fiche/${eleve.id}`; } });
+    toast(`${eleve.prenom} ${eleve.nom} supprimé`, { action: async () => {
+      // Un homonyme a pu être (ré)importé entre-temps dans la classe : pas de doublon restauré (D-03).
+      const homonyme = (await parIndex('eleves', 'classeId', eleve.classeId))
+        .some((x) => cleTexte(x.nom) === cleTexte(eleve.nom) && cleTexte(x.prenom) === cleTexte(eleve.prenom));
+      if (homonyme) throw new Error(`${eleve.prenom} ${eleve.nom} existe déjà dans la classe`);
+      await restaurer(objets); location.hash = `#/eleves/fiche/${eleve.id}`;
+    } });
   });
   carteSuppr.append(el('div', { class: 'rang-btn' }, btnSuppr));
   c.append(carteSuppr);
@@ -509,7 +543,15 @@ function detecterColonnes(entetes) {
 async function executerImport(lignes, dest) {
   const annee = await lireMeta('anneeScolaire', '');
   const classes = await tous('classes');
-  const parCle = new Map(classes.map((cl) => [cleTexte(cl.nom), cl]));
+  // Une classe ARCHIVÉE ne reçoit pas d'import en silence (les élèves resteraient invisibles) :
+  // refus AVANT toute écriture, avec la marche à suivre (audit 2026-09-07, D-15).
+  const parCle = new Map(classes.filter((cl) => !cl.archivee).map((cl) => [cleTexte(cl.nom), cl]));
+  const archivees = new Map(classes.filter((cl) => cl.archivee).map((cl) => [cleTexte(cl.nom), cl]));
+  const nomsVises = dest.mode === 'nouvelle' ? [dest.nom] : dest.mode === 'colonne' ? lignes.map((l) => l.classe).filter(Boolean) : [];
+  const bloquee = nomsVises.map((nom) => cleTexte(nom)).find((cle) => !parCle.has(cle) && archivees.has(cle));
+  if (bloquee) {
+    throw new Error(`la classe « ${archivees.get(bloquee).nom} » est archivée : restaurez-la d’abord (Élèves → Classes archivées) ou choisissez une autre destination`);
+  }
   let ordre = classes.length;
   const classesCreees = [];
   const assurerClasse = async (nom) => {
@@ -530,16 +572,27 @@ async function executerImport(lignes, dest) {
   if (dest.mode === 'nouvelle') classeFixe = await assurerClasse(dest.nom);
 
   const existants = await tous('eleves');
-  const dejaLa = new Set(existants.map((e) => `${cleTexte(e.nom)}|${cleTexte(e.prenom)}@${e.classeId}`));
-  const resultat = { importes: 0, doublons: 0, ignores: 0, classesCreees, classesTouchees: new Set() };
+  const dejaLa = new Map(existants.map((e) => [`${cleTexte(e.nom)}|${cleTexte(e.prenom)}@${e.classeId}`, e]));
+  const resultat = { importes: 0, doublons: 0, reactives: 0, ignores: 0, classesCreees, classesTouchees: new Set() };
 
   for (const l of lignes) {
     if (!l.nom || !l.prenom) { resultat.ignores++; continue; }
     const classe = classeFixe || (l.classe ? await assurerClasse(l.classe) : null);
     if (!classe) { resultat.ignores++; continue; }
     const cle = `${cleTexte(l.nom)}|${cleTexte(l.prenom)}@${classe.id}`;
-    if (dejaLa.has(cle)) { resultat.doublons++; continue; }
-    dejaLa.add(cle);
+    const deja = dejaLa.get(cle);
+    if (deja) {
+      // Élève « parti » qui revient dans la liste Pronote : réactivé au lieu d'être ignoré en
+      // silence comme un doublon (audit 2026-09-07, D-13).
+      if (deja.actif === false) {
+        deja.actif = true;
+        await enregistrer('eleves', deja);
+        resultat.reactives++;
+        resultat.classesTouchees.add(classe.nom);
+      } else resultat.doublons++;
+      continue;
+    }
+    dejaLa.set(cle, { actif: true });
     await enregistrer('eleves', {
       id: crypto.randomUUID(), classeId: classe.id, nom: l.nom, prenom: l.prenom,
       sexe: normaliserSexe(l.sexe), dateNaissance: dateFRversISO(l.dateNaissance),
@@ -586,7 +639,7 @@ async function vueImport(c) {
       statutSource.className = 'statut statut-ok';
       afficherMapping(suite, analyse);
     } catch (e) {
-      statutSource.textContent = `Analyse impossible : ${e.message}`;
+      statutSource.textContent = `Analyse impossible : ${e?.message || e}`;
       statutSource.className = 'statut statut-erreur';
     }
   });
@@ -670,13 +723,14 @@ async function afficherMapping(c, analyse) {
       const morceaux = [`${r.importes} élève${r.importes > 1 ? 's' : ''} importé${r.importes > 1 ? 's' : ''}`];
       if (r.classesTouchees.size) morceaux.push(`dans ${[...r.classesTouchees].join(', ')}`);
       if (r.classesCreees.length) morceaux.push(`(${r.classesCreees.length} classe${r.classesCreees.length > 1 ? 's' : ''} créée${r.classesCreees.length > 1 ? 's' : ''})`);
+      if (r.reactives) morceaux.push(`· ${r.reactives} élève${r.reactives > 1 ? 's' : ''} parti${r.reactives > 1 ? 's' : ''} réactivé${r.reactives > 1 ? 's' : ''}`);
       if (r.doublons) morceaux.push(`· ${r.doublons} doublon${r.doublons > 1 ? 's' : ''} ignoré${r.doublons > 1 ? 's' : ''}`);
       if (r.ignores) morceaux.push(`· ${r.ignores} ligne${r.ignores > 1 ? 's' : ''} incomplète${r.ignores > 1 ? 's' : ''}`);
       statutImport.textContent = morceaux.join(' ') + '.';
       statutImport.className = 'statut statut-ok';
       carteGo.append(el('div', { class: 'rang-btn' }, el('a', { class: 'btn btn-principal', href: '#/eleves' }, 'Voir les classes')));
     } catch (e) {
-      statutImport.textContent = `Import impossible : ${e.message}`;
+      statutImport.textContent = `Import impossible : ${e?.message || e}`;
       statutImport.className = 'statut statut-erreur';
     } finally {
       btnImporter.disabled = false;

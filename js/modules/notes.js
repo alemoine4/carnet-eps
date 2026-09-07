@@ -83,26 +83,51 @@ async function vueListe(c) {
   btnCreer.addEventListener('click', async () => {
     const titre = inpTitre.value.trim();
     if (!titre) { statutForm.textContent = 'Le titre est obligatoire.'; statutForm.className = 'statut statut-erreur'; return; }
-    const id = crypto.randomUUID();
     // Coefficient 0 accepté (évaluation blanche, non comptée) : `|| 1` le transformait en 1 sans
-    // rien dire (audit 2026-09-05, B23). Vide ou invalide → 1.
-    const coefSaisi = Number(inpCoef.value);
-    await enregistrer('evaluations', {
-      id, sequenceId: selSeq.value, titre, date: inpDate.value || isoAujourdhui(),
-      type: selType.value, bareme: selType.value === 'bareme' ? Number(inpBareme.value) || 20 : null,
-      coef: inpCoef.value.trim() !== '' && Number.isFinite(coefSaisi) && coefSaisi >= 0 ? coefSaisi : 1, publieePronote: null,
-    });
-    location.hash = `#/notes/eval/${id}`;
+    // rien dire (audit 2026-09-05, B23). Vide → 1 ; négatif ou non numérique → refusé (B42).
+    const coefSaisi = inpCoef.value.trim() === '' ? 1 : Number(inpCoef.value);
+    if (!(Number.isFinite(coefSaisi) && coefSaisi >= 0)) {
+      statutForm.textContent = 'Le coefficient doit être un nombre ≥ 0.'; statutForm.className = 'statut statut-erreur'; return;
+    }
+    // Barème personnalisé : entre 1 et 200 — « 0 » ou « -10 » passaient (min/max HTML non bloquants).
+    const bareme = selType.value === 'bareme' ? Number(inpBareme.value) : null;
+    if (selType.value === 'bareme' && !(Number.isFinite(bareme) && bareme >= 1 && bareme <= 200)) {
+      statutForm.textContent = 'Le barème doit être compris entre 1 et 200.'; statutForm.className = 'statut statut-erreur'; return;
+    }
+    btnCreer.disabled = true; // anti double-clic (audit 2026-09-07, D-02)
+    try {
+      const id = crypto.randomUUID();
+      await enregistrer('evaluations', {
+        id, sequenceId: selSeq.value, titre, date: inpDate.value || isoAujourdhui(),
+        type: selType.value, bareme, coef: coefSaisi, publieePronote: null,
+      });
+      location.hash = `#/notes/eval/${id}`;
+    } catch (e) {
+      statutForm.textContent = `Création impossible : ${e?.message || e}`; statutForm.className = 'statut statut-erreur';
+    } finally {
+      btnCreer.disabled = false;
+    }
   });
 
   // --- Liste ---
   if (!evaluations.length) {
     c.append(carte('Aucune évaluation', 'Créez votre première évaluation : la saisie se fait en grille, dans l’ordre alphabétique de Pronote.'));
   } else {
-    const effectifs = new Map();
-    for (const e of eleves) if (e.actif !== false) effectifs.set(e.classeId, (effectifs.get(e.classeId) || 0) + 1);
+    // « 28/27 notes » : seules comptent les notes des élèves ACTIFS DE LA CLASSE de l'évaluation —
+    // un parti, ou un élève passé dans une autre classe, ne gonfle plus le ratio (B16, revue du lot 1).
+    const actifsParClasse = new Map();
+    for (const e of eleves) {
+      if (e.actif === false) continue;
+      if (!actifsParClasse.has(e.classeId)) actifsParClasse.set(e.classeId, new Set());
+      actifsParClasse.get(e.classeId).add(e.id);
+    }
+    const effectifs = new Map([...actifsParClasse].map(([classeId, ids]) => [classeId, ids.size]));
+    const evalDe = (id) => evaluations.find((ev) => ev.id === id);
     const nbNotes = new Map();
-    for (const n of notes) nbNotes.set(n.evaluationId, (nbNotes.get(n.evaluationId) || 0) + 1);
+    for (const n of notes) {
+      const classeId = seqDe(evalDe(n.evaluationId)?.sequenceId)?.classeId;
+      if (actifsParClasse.get(classeId)?.has(n.eleveId)) nbNotes.set(n.evaluationId, (nbNotes.get(n.evaluationId) || 0) + 1);
+    }
     const liste = el('div', { class: 'liste-cartes' });
     for (const ev of [...evaluations].sort((a, b) => String(b.date).localeCompare(String(a.date)))) {
       const seq = seqDe(ev.sequenceId);
@@ -167,8 +192,11 @@ async function vueEval(c, evalId) {
   c.append(carteTete);
 
   function majStats() {
-    const nums = [...notesMap.values()].map((n) => n.valeur).filter((v) => typeof v === 'number');
-    const enfants = [el('span', { class: 'note-inline' }, `${notesMap.size}/${eleves.length} saisies`)];
+    // Sur les élèves ACTIFS de la grille : les notes d'un parti gonflaient « saisies » (B16).
+    const valeurs = eleves.map((e) => notesMap.get(e.id)?.valeur);
+    const nums = valeurs.filter((v) => typeof v === 'number');
+    const saisies = valeurs.filter((v) => v !== undefined).length;
+    const enfants = [el('span', { class: 'note-inline' }, `${saisies}/${eleves.length} saisies`)];
     if (bareme && nums.length) {
       const moy = nums.reduce((a, b) => a + b, 0) / nums.length;
       enfants.unshift(
@@ -195,7 +223,7 @@ async function vueEval(c, evalId) {
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); (inputs[idx + 1] || input).focus(); inputs[idx + 1]?.select?.(); }
     });
-    input.addEventListener('change', async () => {
+    const appliquer = async () => {
       input.classList.remove('invalide', 'code');
       const idNote = `${evalId}_${eleve.id}`;
       if (!bareme) { // afl : texte libre
@@ -218,6 +246,15 @@ async function vueEval(c, evalId) {
       if (r.code) { input.value = r.code; input.classList.add('code'); }
       else input.value = formatFR(r.nombre);
       majStats();
+    };
+    input.addEventListener('change', async () => {
+      try {
+        await appliquer();
+      } catch (e) {
+        // Écriture refusée : la case restait « propre » comme si la note était en base (D-05).
+        input.classList.add('invalide');
+        toast(`Note non enregistrée : ${e?.message || e}`);
+      }
     });
     inputs.push(input);
     carteGrille.append(el('div', { class: 'ligne-note' },
@@ -285,6 +322,12 @@ async function vueEval(c, evalId) {
     };
 
     btnCopier.addEventListener('click', async () => {
+      // Rien à copier → rien à marquer « publiée » : une grille vide désarmait l'alerte (B24).
+      if (!eleves.some((e) => notesMap.has(e.id))) {
+        statutExp.textContent = 'Aucune note à copier : saisissez d’abord la grille.';
+        statutExp.className = 'statut statut-erreur';
+        return;
+      }
       const { texte, codes } = construireColonne();
       try {
         await navigator.clipboard.writeText(texte);
@@ -349,13 +392,18 @@ async function vueReleve(c, classeId) {
   c.append(el('a', { class: 'retour no-print', href: '#/notes' }, '← Notes'));
   const classe = await lire('classes', classeId);
   if (!classe) { c.append(carte('Classe introuvable', '')); return; }
-  const eleves = (await parIndex('eleves', 'classeId', classeId)).filter((e) => e.actif !== false).sort(trierEleves);
   const sequencesCl = await parIndex('sequences', 'classeId', classeId);
   const seqIds = new Set(sequencesCl.map((s) => s.id));
   const evals = (await tous('evaluations')).filter((ev) => seqIds.has(ev.sequenceId))
     .sort((a, b) => String(a.date).localeCompare(String(b.date)));
   const notes = await tous('notes');
   const noteDe = new Map(notes.map((n) => [`${n.evaluationId}_${n.eleveId}`, n.valeur]));
+  // Élèves actifs + partis ayant au moins une note dans ces évaluations : un « parti » ne
+  // disparaît plus rétroactivement du relevé (audit 2026-09-07, A13).
+  const evalIds = new Set(evals.map((ev) => ev.id));
+  const eleves = (await parIndex('eleves', 'classeId', classeId))
+    .filter((e) => e.actif !== false || notes.some((n) => n.eleveId === e.id && evalIds.has(n.evaluationId)))
+    .sort(trierEleves);
   const seqDe = (id) => sequencesCl.find((s) => s.id === id);
 
   const btnImprimer = el('button', { class: 'btn' }, 'Imprimer');
@@ -389,13 +437,15 @@ async function vueReleve(c, classeId) {
     )),
     el('tbody', {},
       ...lignes.map(({ e, moyenne }) => el('tr', {},
-        el('td', {}, `${e.nom} ${e.prenom}`),
+        el('td', {}, `${e.nom} ${e.prenom}${e.actif === false ? ' (parti)' : ''}`),
         ...evals.map((ev) => el('td', {}, afficherValeur(noteDe.get(`${ev.id}_${e.id}`), null))),
         el('td', {}, moyenne === null ? '' : formatFR(moyenne)),
       )),
     ),
   );
-  const moyennes = lignes.map((l) => l.moyenne).filter((m) => m !== null);
+  // Moyenne de classe sur l'effectif RÉEL : un parti reste lisible sur son relevé mais ne pèse
+  // plus dans la synthèse remontée au conseil de classe (revue du lot 1, A13).
+  const moyennes = lignes.filter(({ e }) => e.actif !== false).map((l) => l.moyenne).filter((m) => m !== null);
   c.append(table);
   if (moyennes.length) {
     c.append(el('p', { class: 'note-discrete' },
@@ -405,7 +455,7 @@ async function vueReleve(c, classeId) {
   btnCSV.addEventListener('click', () => {
     const tete = ['Nom', 'Prénom', ...evals.map((ev) => `${ev.titre}${baremeDe(ev) ? ` /${baremeDe(ev)}` : ' (AFL)'}`), 'Moyenne /20'].map(champCSV).join(';');
     const corps = lignes.map(({ e, moyenne }) =>
-      [e.nom, e.prenom,
+      [`${e.nom}${e.actif === false ? ' (parti)' : ''}`, e.prenom, // même mention qu'à l'écran (revue du lot 1)
         ...evals.map((ev) => afficherValeur(noteDe.get(`${ev.id}_${e.id}`), null)),
         moyenne === null ? '' : formatFR(moyenne)].map(champCSV).join(';'));
     telechargerTexte(`releve_${classe.nom}_${isoAujourdhui()}.csv`, [tete, ...corps].join('\r\n'));

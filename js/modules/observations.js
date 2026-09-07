@@ -67,19 +67,26 @@ function ouvrirFormObservation(eleveId, onSaved, seanceId) {
   btnSave.addEventListener('click', async () => {
     const texte = zone.value.trim();
     if (!texte) { statut.textContent = 'Écris quelques mots avant d’enregistrer.'; statut.className = 'statut statut-erreur'; return; }
-    await enregistrer('observations', {
-      id: crypto.randomUUID(),
-      eleveId,
-      date: isoAujourdhui(),
-      type: selType.value,
-      ton: selTon.value,
-      tags: tagsCases.filter((x) => x.cb.checked).map((x) => x.t),
-      texte,
-      seanceId: seanceId || null,
-      dateAjout: new Date().toISOString(),
-    });
-    dlg.close();
-    if (onSaved) onSaved();
+    btnSave.disabled = true; // anti double-tap (audit 2026-09-07, D-02)
+    try {
+      await enregistrer('observations', {
+        id: crypto.randomUUID(),
+        eleveId,
+        date: isoAujourdhui(),
+        type: selType.value,
+        ton: selTon.value,
+        tags: tagsCases.filter((x) => x.cb.checked).map((x) => x.t),
+        texte,
+        seanceId: seanceId || null,
+        dateAjout: new Date().toISOString(),
+      });
+      dlg.close();
+      if (onSaved) onSaved();
+    } catch (e) {
+      statut.textContent = `Enregistrement impossible : ${e?.message || e}`; statut.className = 'statut statut-erreur';
+    } finally {
+      btnSave.disabled = false;
+    }
   });
 
   dlg = ouvrirFeuille({

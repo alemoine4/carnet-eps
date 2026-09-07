@@ -170,16 +170,24 @@ appliquerTheme(etat.prefs.theme);
 
 // ---- Démarrage ----
 
-ouvrirDB(); // ouverture anticipée (création des stores avant la première vue)
+// Ouverture anticipée (création des stores avant la première vue) ; en cas d'échec la première
+// vue réessaiera (le rejet n'est plus mis en cache, A04) — sans promesse flottante (C06).
+ouvrirDB().catch((e) => console.warn('Ouverture anticipée de la base :', e));
+
+// Filet global : un rejet de promesse non géré (écriture refusée hors des try/catch locaux)
+// ne laissait qu'une ligne en console, l'utilisateur croyait sa saisie enregistrée (C06, D-05).
+window.addEventListener('unhandledrejection', (e) => {
+  toast(`Erreur inattendue : ${e.reason?.message || e.reason}`);
+});
 
 document.getElementById('entete-contexte').textContent =
   new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
 // Persistance du stockage : évite l'éviction silencieuse d'IndexedDB (surtout Android).
 if (navigator.storage?.persist) {
-  navigator.storage.persisted().then((deja) => {
-    if (!deja) navigator.storage.persist();
-  });
+  navigator.storage.persisted()
+    .then((deja) => (deja ? true : navigator.storage.persist()))
+    .catch(() => { /* API refusée ou absente : sans conséquence */ });
 }
 
 // Service-worker : jamais sur localhost (décision D008 — pas de cache fantôme en dev).

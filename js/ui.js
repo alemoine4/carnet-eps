@@ -64,10 +64,30 @@ export function carte(titre, texte = '', badge = '') {
 function brancherRetour(controle, onChange, transformer = (v) => v.trim()) {
   const retour = el('span', { class: 'statut statut-ok', role: 'status' });
   if (onChange) {
+    let minuteur = null;
+    let valeurAcceptee = controle.value; // posée par la vue avant le branchement (champTexte, champSelect, champZone)
+    // Les valeurs courtes et structurées (date, nombre, liste) reprennent la dernière valeur
+    // acceptée quand la saisie est refusée : l'écran ne doit pas afficher une date que la base
+    // n'a pas (revue du lot 1, A16). Un texte tapé est conservé pour ne pas le perdre (✗ visible).
+    const restaurable = controle.tagName === 'SELECT' || ['date', 'number', 'time'].includes(controle.type);
     controle.addEventListener('change', async () => {
-      await onChange(transformer(controle.value));
+      clearTimeout(minuteur); // sinon le « ✓ » précédent effaçait le « ✗ » 1,5 s plus tard (revue du lot 1)
+      const saisie = controle.value;
+      // Un échec d'écriture (quota, base fermée) ou une valeur refusée par la vue laissait le
+      // champ muet, voire « ✓ » : le champ marque « ✗ » et le motif part en toast (V2-04).
+      try {
+        await onChange(transformer(saisie));
+      } catch (e) {
+        if (restaurable) controle.value = valeurAcceptee;
+        retour.className = 'statut statut-erreur';
+        retour.textContent = '✗';
+        toast(`Non enregistré : ${e?.message || e}`);
+        return;
+      }
+      valeurAcceptee = saisie;
+      retour.className = 'statut statut-ok';
       retour.textContent = '✓';
-      setTimeout(() => { retour.textContent = ''; }, 1500);
+      minuteur = setTimeout(() => { retour.textContent = ''; }, 1500);
     });
   }
   return retour;
@@ -174,7 +194,16 @@ export function toast(message, { action, libelleAction = 'Annuler', duree = 8000
   };
   if (action) {
     const btn = el('button', { class: 'btn btn-principal', type: 'button' }, libelleAction);
-    btn.addEventListener('click', async () => { fermer(); await action(); });
+    btn.addEventListener('click', async () => {
+      fermer();
+      try {
+        await action();
+      } catch (e) {
+        // La restauration peut échouer (quota, doublon revérifié…) : le dire, plutôt qu'un
+        // rejet muet pendant que l'utilisateur croit l'annulation faite (audit 2026-09-07, D-01).
+        toast(`Annulation impossible : ${e?.message || e}`, { duree: 12000 });
+      }
+    });
     t.append(btn);
   }
   pile.append(t);

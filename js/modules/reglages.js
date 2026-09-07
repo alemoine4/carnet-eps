@@ -4,6 +4,7 @@
 import { enregistrerVue, el, carte, champTexte } from '../ui.js';
 import { lireMeta, ecrireMeta } from '../io.js';
 import { etat, sauverPrefs, estLocalhost, VERSION_APP } from '../state.js';
+import { bornesTrimestres, dateFR } from '../metier.js';
 
 function octetsLisibles(n) {
   if (!Number.isFinite(n)) return '?';
@@ -24,10 +25,51 @@ export function initialiser() {
     c.append(carteEtab);
 
     // ---- Trimestres (D012 : alertes sur le cumul de l'année, vision par trimestre) ----
-    const carteTri = carte('Trimestres', 'Bornes utilisées par la fiche élève, les récapitulatifs et les alertes. Laisser vide = 15/12 et 15/03 (l’année scolaire va de septembre à juillet).');
+    const carteTri = carte('Trimestres', 'Bornes utilisées par la fiche élève, les récapitulatifs et les alertes. Laisser vide = 15/12 et 15/03 (l’année scolaire court du 1er août au 31 juillet).');
+    // Une borne hors année scolaire ou dans le mauvais ordre était ignorée SANS le dire, tout en
+    // restant affichée dans le champ (audit 2026-09-07, V2-02/D-10) : refus à la saisie (✗ + motif)
+    // et note sous le champ quand la valeur enregistrée n'est pas celle appliquée.
+    let bornes = await bornesTrimestres();
+    // L'ordre est vérifié contre la borne voisine ENREGISTRÉE (si elle est dans l'année), pas contre
+    // la borne effective : sinon une saisie pouvait être acceptée (« ✓ ») et rester ignorée parce
+    // que la voisine stockée, inversée, faisait retomber les deux aux défauts (revue du lot 1).
+    const voisineStockee = async (cle) => {
+      const v = await lireMeta(cle === 'finTrimestre1' ? 'finTrimestre2' : 'finTrimestre1', '');
+      const dansAnnee = /^\d{4}-\d{2}-\d{2}$/.test(v) && v >= bornes.debut && v <= bornes.fin;
+      return dansAnnee ? v : (cle === 'finTrimestre1' ? bornes.finT2 : bornes.finT1);
+    };
+    const verifier = async (cle, v) => {
+      if (!v) return;
+      // Une fin de trimestre en août (faute de frappe pour décembre) basculerait toutes les séances
+      // de l'automne en T2 : plancher au 1er septembre, l'année des cumuls restant au 1er août (D-10).
+      if (v < `${bornes.annee}-09-01` || v > bornes.fin) throw new Error(`date hors de l’année scolaire ${bornes.annee}-${bornes.annee + 1} (du 1er septembre au 31 juillet)`);
+      const autre = await voisineStockee(cle);
+      const aide = ' — videz l’autre borne pour repartir des valeurs par défaut';
+      if (cle === 'finTrimestre1' && v >= autre) throw new Error(`la fin du 1er trimestre doit précéder celle du 2e (${dateFR(autre)})${aide}`);
+      if (cle === 'finTrimestre2' && v <= autre) throw new Error(`la fin du 2e trimestre doit suivre celle du 1er (${dateFR(autre)})${aide}`);
+    };
+    const notes = { finTrimestre1: el('p', { class: 'statut statut-erreur' }), finTrimestre2: el('p', { class: 'statut statut-erreur' }) };
+    // Notes recalculées après chaque enregistrement : figées au rendu, elles affirmaient encore
+    // « ignorée » après la correction de la borne (revue du lot 1).
+    const majNotes = async () => {
+      bornes = await bornesTrimestres();
+      for (const [cle, appliquee] of [['finTrimestre1', bornes.finT1], ['finTrimestre2', bornes.finT2]]) {
+        const valeur = await lireMeta(cle, '');
+        notes[cle].textContent = valeur && valeur !== appliquee
+          ? `Valeur enregistrée ignorée (hors année scolaire ou ordre inversé) — ${dateFR(appliquee)} utilisé.` : '';
+      }
+    };
+    const enregistrerBorne = async (cle, v) => {
+      await verifier(cle, v);
+      await ecrireMeta(cle, v);
+      await majNotes();
+    };
+    await majNotes();
     carteTri.append(
-      champTexte({ id: 'reg-t1', libelle: 'Fin du 1er trimestre', type: 'date', valeur: await lireMeta('finTrimestre1'), onChange: (v) => ecrireMeta('finTrimestre1', v) }),
-      champTexte({ id: 'reg-t2', libelle: 'Fin du 2e trimestre', type: 'date', valeur: await lireMeta('finTrimestre2'), onChange: (v) => ecrireMeta('finTrimestre2', v) }),
+      champTexte({ id: 'reg-t1', libelle: 'Fin du 1er trimestre', type: 'date', valeur: await lireMeta('finTrimestre1', ''), onChange: (v) => enregistrerBorne('finTrimestre1', v) }),
+      notes.finTrimestre1,
+      champTexte({ id: 'reg-t2', libelle: 'Fin du 2e trimestre', type: 'date', valeur: await lireMeta('finTrimestre2', ''), onChange: (v) => enregistrerBorne('finTrimestre2', v) }),
+      notes.finTrimestre2,
     );
     c.append(carteTri);
 
@@ -96,7 +138,7 @@ export function initialiser() {
           statutMaj.textContent = `Vous êtes à jour (v${VERSION_APP}).`;
         }
       } catch (e) {
-        statutMaj.textContent = `Vérification impossible : ${e.message}`;
+        statutMaj.textContent = `Vérification impossible : ${e?.message || e}`;
       }
     });
     carteApp.append(el('div', { class: 'rang-btn' }, btnMaj), statutMaj);
