@@ -2,7 +2,7 @@
 // jamais de données élèves ici — elles vivent dans IndexedDB via io.js).
 
 // Version applicative : synchroniser avec VERSION du service-worker à chaque déploiement.
-export const VERSION_APP = '0.12.10';
+export const VERSION_APP = '0.12.11';
 
 const CLE_PREFS = 'carnet-eps:prefs';
 
@@ -54,7 +54,10 @@ export function effacerPrefs() {
   emettre('prefs', etat.prefs);
 }
 
-// Environnement : en dev local le service-worker est désactivé (décision D008).
+// Environnement : en dev local le service-worker est désactivé (décision D008). Un contexte NON
+// sécurisé (http://192.168.x.x en test sur téléphone) compte aussi : le SW n'y est pas enregistrable
+// et Réglages disait « installé / en ligne » (audit 2026-09-07, A35). app.localhost, [::1] et
+// 127.0.0.2 restent des contextes sécurisés hors de la liste → le test réel du SW y passe toujours.
 export function estLocalhost() {
-  return ['localhost', '127.0.0.1'].includes(location.hostname);
+  return !window.isSecureContext || ['localhost', '127.0.0.1'].includes(location.hostname);
 }

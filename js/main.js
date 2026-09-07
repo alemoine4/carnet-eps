@@ -168,11 +168,18 @@ document.querySelector('.saut')?.addEventListener('click', (e) => {
 
 // ---- Thème (auto / clair / sombre) ----
 
+const mediaSombre = matchMedia('(prefers-color-scheme: dark)');
 function appliquerTheme(theme) {
   if (theme === 'auto') delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = theme;
+  // Couleur de la barre système = thème EFFECTIF (réglage « Sombre » sur un appareil clair compris),
+  // pas seulement celui de l'appareil (audit 2026-09-07, A38 ; revue du lot 4).
+  const sombre = theme === 'sombre' || (theme === 'auto' && mediaSombre.matches);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = sombre ? '#0f1626' : '#15459c';
 }
 abonner('prefs', (prefs) => appliquerTheme(prefs.theme));
+mediaSombre.addEventListener('change', () => appliquerTheme(etat.prefs.theme));
 appliquerTheme(etat.prefs.theme);
 
 // ---- Démarrage ----

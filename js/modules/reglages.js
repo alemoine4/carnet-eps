@@ -134,10 +134,24 @@ export function initialiser() {
         const reg = await navigator.serviceWorker.getRegistration();
         if (!reg) { statutMaj.textContent = 'Service-worker non enregistré.'; return; }
         await reg.update();
-        if (reg.waiting || reg.installing) {
+        const w = reg.installing || reg.waiting;
+        if (w) {
           // Le SW fait skipWaiting + claim : la nouvelle version prend la main toute seule et
           // le toast « Recharger » apparaît — inutile de fermer l'app (audit 2026-09-05, B20).
           statutMaj.textContent = 'Mise à jour trouvée : elle s’installe, un bouton « Recharger » va apparaître.';
+          // État réel de l'installation : un échec (réseau, espace disque) était muet et l'écran
+          // promettait un bouton qui n'arrivait jamais (audit 2026-09-07, A20).
+          w.addEventListener('statechange', () => {
+            if (w.state === 'redundant') statutMaj.textContent = 'Installation de la mise à jour échouée (réseau ou espace disque) — réessayez.';
+            if (w.state === 'activated') {
+              // Un vrai bouton ICI : le toast « Recharger » de main.js est avalé quand la page n'était
+              // pas contrôlée au chargement (rechargement forcé) — revue du lot 4.
+              statutMaj.textContent = 'Mise à jour installée.';
+              const btnRecharger = el('button', { class: 'btn btn-principal' }, 'Recharger maintenant');
+              btnRecharger.addEventListener('click', () => location.reload());
+              statutMaj.after(el('div', { class: 'rang-btn' }, btnRecharger));
+            }
+          });
         } else {
           statutMaj.textContent = `Vous êtes à jour (v${VERSION_APP}).`;
         }

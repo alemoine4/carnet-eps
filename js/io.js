@@ -105,6 +105,24 @@ export async function parIndex(store, index, valeur) {
   return attendre(db.transaction(store).objectStore(store).index(index).getAll(valeur));
 }
 
+// Plusieurs valeurs d'un même index lues dans UNE transaction readonly : une transaction par valeur
+// coûtait 2× plus cher qu'une lecture complète du store dès quelques centaines de valeurs (C02, revue du lot 4).
+export async function parIndexLot(store, index, valeurs) {
+  const db = await ouvrirDB();
+  return new Promise((resoudre, rejeter) => {
+    const tx = db.transaction(store, 'readonly');
+    const idx = tx.objectStore(store).index(index);
+    const resultats = [];
+    for (const v of valeurs) {
+      const req = idx.getAll(v);
+      req.onsuccess = () => { for (const r of req.result) resultats.push(r); };
+    }
+    tx.oncomplete = () => resoudre(resultats);
+    tx.onerror = (ev) => rejeter(ev.target?.error || tx.error || new Error('lecture refusée'));
+    tx.onabort = () => rejeter(tx.error || new Error('lecture interrompue'));
+  });
+}
+
 // Les trois écritures unitaires passent par ecrireLot : elles ne résolvent qu'à la VALIDATION de
 // la transaction (tx.oncomplete), pas au succès de la requête. Un quota plein ou une erreur disque
 // remontés au commit deviennent un rejet visible au lieu d'un « ✓ » mensonger (hypothèse Codex H03).
@@ -279,9 +297,21 @@ export async function telechargerJSON(objet, suffixe = 'sauvegarde') {
   return nom;
 }
 
+// Comptage par `count()` dans UNE transaction readonly (instantané H02 conservé) : `getAll` chargeait
+// toute la base, blobs compris, pour n'afficher que des nombres (audit 2026-09-07, A23).
 export async function compterTout() {
-  const brut = await lireLot(STORES); // un seul instantané (H02)
-  return Object.fromEntries(STORES.map((nom) => [nom, brut[nom].length]));
+  const db = await ouvrirDB();
+  return new Promise((resoudre, rejeter) => {
+    const tx = db.transaction(STORES, 'readonly');
+    const comptes = {};
+    for (const nom of STORES) {
+      const req = tx.objectStore(nom).count();
+      req.onsuccess = () => { comptes[nom] = req.result; };
+    }
+    tx.oncomplete = () => resoudre(comptes);
+    tx.onerror = (ev) => rejeter(ev.target?.error || tx.error || new Error('lecture refusée'));
+    tx.onabort = () => rejeter(tx.error || new Error('lecture interrompue'));
+  });
 }
 
 // Télécharge un texte (CSV…) — BOM UTF-8 en tête pour qu'Excel lise les accents.

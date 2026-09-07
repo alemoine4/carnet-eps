@@ -4,7 +4,7 @@
    ⚠ Incrémenter VERSION à chaque déploiement (synchroniser avec VERSION_APP de state.js).
    Non enregistré sur localhost (voir main.js, décision D008). */
 
-const VERSION = '0.12.10';
+const VERSION = '0.12.11';
 const CACHE = `carnet-eps-${VERSION}`;
 const ASSETS = [
   './',
@@ -37,9 +37,26 @@ const ASSETS = [
   './assets/icons/icon-512-maskable.png',
 ];
 
+// Une réponse n'est mise en cache que si elle vient bien de NOTRE serveur, sans redirection :
+// une page de blocage (proxy scolaire, portail captif) répondait 200 et devenait le filet hors
+// ligne de toute la version (audit 2026-09-07, A19).
+const cachable = (rep) => rep.ok && rep.type === 'basic' && !rep.redirected;
+
+// Écriture en cache hors du chemin de réponse, tenue par waitUntil et tracée en cas d'échec
+// (quota) : elle partait seule et muette (A41).
+const mettreEnCache = (e, req, rep) => {
+  const copie = rep.clone();
+  e.waitUntil(caches.open(CACHE).then((c) => c.put(req, copie)).catch((err) => console.warn('Mise en cache impossible :', req.url, err)));
+};
+
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting())
+    // cache: 'reload' : le précache d'une nouvelle version ne doit pas être rempli depuis le cache
+    // HTTP avec les fichiers de l'ANCIENNE (A17) ; un échec est tracé avec l'asset fautif (A20).
+    caches.open(CACHE)
+      .then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
+      .catch((err) => { console.error('Précache de Carnet EPS impossible :', err); throw err; })
   );
 });
 
@@ -60,36 +77,35 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== location.origin) return;
 
   const estDocument = req.mode === 'navigate' || url.pathname.endsWith('manifest.webmanifest');
+  // Lectures scopées à NOTRE cache (l'isolation H05 ne valait qu'en écriture : un fichier d'une
+  // autre app de l'origine pouvait être servi à sa place — A18).
+  const depuisCache = (r) => caches.open(CACHE).then((c) => c.match(r));
 
   if (estDocument) {
     // network-first : on sert le réseau, le cache n'est qu'un filet hors ligne.
-    // Seules les réponses OK sont mises en cache : une 404/5xx passagère (déploiement en cours)
-    // ne doit pas devenir le filet hors ligne de toute la version (audit 2026-09-05, B12).
+    // Seules les réponses OK de notre serveur sont mises en cache : une 404/5xx passagère
+    // (déploiement en cours) ne doit pas devenir le filet hors ligne (audit 2026-09-05, B12).
     e.respondWith(
       fetch(req)
         .then((rep) => {
-          if (rep.ok) {
-            const copie = rep.clone();
-            caches.open(CACHE).then((c) => c.put(req, copie));
-          }
+          if (cachable(rep)) mettreEnCache(e, req, rep);
           return rep;
         })
-        .catch(() => caches.match(req).then((r) => r || caches.match('./index.html')))
+        // Hors ligne : le document demandé, sinon index.html pour une NAVIGATION seulement (le
+        // manifest ne doit pas recevoir du HTML — A40), sinon une réponse claire plutôt qu'undefined.
+        .catch(() => depuisCache(req)
+          .then((r) => r || (req.mode === 'navigate' ? depuisCache('./index.html') : undefined))
+          .then((r) => r || new Response('Hors ligne — reconnectez-vous une fois pour installer l’application.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })))
     );
   } else {
     // cache-first : les assets sont invalidés par changement de VERSION.
     e.respondWith(
-      caches.match(req).then(
-        (r) =>
-          r ||
-          fetch(req).then((rep) => {
-            if (rep.ok) {
-              const copie = rep.clone();
-              caches.open(CACHE).then((c) => c.put(req, copie));
-            }
-            return rep;
-          })
-      )
+      depuisCache(req)
+        .then((r) => r || fetch(req).then((rep) => {
+          if (cachable(rep)) mettreEnCache(e, req, rep);
+          return rep;
+        }))
+        .catch(() => new Response('', { status: 504 })) // hors ligne et absent du cache : jamais undefined (A40)
     );
   }
 });

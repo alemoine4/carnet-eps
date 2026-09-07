@@ -1,7 +1,7 @@
 // metier.js — vocabulaire et règles métier partagés entre modules
 // (les modules métier ne s'importent jamais entre eux : ce qui est commun vit ici).
 
-import { tous, lireMeta } from './io.js';
+import { tous, parIndexLot, lireMeta } from './io.js';
 
 // ---- Statuts d'appel (docs/modele-donnees.md) ----
 // `pratiquant` : participe physiquement au cours. L'inapte/dispensé présent n'est pas pratiquant.
@@ -166,11 +166,16 @@ export async function inaptitudesActives(dateISO = isoAujourdhui()) {
 // notées non remontées vers Pronote. Retourne [{ grave, href, texte }].
 export async function collecterAlertes() {
   const auj = isoAujourdhui();
-  const [inaptitudes, eleves, classes, appels, evaluations, notes, sequences, seances] = await Promise.all([
-    tous('inaptitudes'), tous('eleves'), tous('classes'), tous('appels'),
+  const [inaptitudes, eleves, classes, evaluations, notes, sequences, seances] = await Promise.all([
+    tous('inaptitudes'), tous('eleves'), tous('classes'),
     tous('evaluations'), tous('notes'), tous('sequences'), tous('seances'),
   ]);
   const bornes = await bornesTrimestres(auj);
+  // Appels de l'ANNÉE SCOLAIRE seulement, lus par index sur ses séances en UNE transaction : l'accueil
+  // (route par défaut) chargeait tout le store à chaque lancement (C02) ; une transaction par séance
+  // coûtait 2× plus cher qu'une lecture complète (mesuré, revue du lot 4).
+  const seancesAnnee = seances.filter((s) => s.date >= bornes.debut && s.date <= bornes.fin);
+  const appels = await parIndexLot('appels', 'seanceId', seancesAnnee.map((s) => s.id));
   const parTri = compterStatutsParTrimestre(appels, seances, bornes);
   const eleveDe = (id) => eleves.find((e) => e.id === id);
   const classeDe = (id) => classes.find((cl) => cl.id === id);
