@@ -28,6 +28,8 @@ Demande : « continue non? » → avis en attente rédigés, puis lot 4.
 
 **Coincé / à vérifier** : sur l'appareil, ouverture d'un certificat PDF (onglet, 60 s) ; validations terrain (fiche 15 min). Leçons d'outillage : une sonde sur `IDBObjectStore.getAll` est aveugle aux lectures par `IDBIndex.getAll` ; une lecture « par index » n'est un gain que si le volume lu baisse ET si les transactions ne se multiplient pas ; un `resumeFromRunId` après édition du script relance les lentilles (résultats différents, non déterministes) — ne pas supposer que la cache a rejoué.
 
+**Déployé** : main `82939d6`, gh-pages `86dae78`, tag `v0.12.11` (2026-09-08).
+
 **Prochaine étape** : tes décisions sur les deux avis ; lot 5 (tests, qualité, documentation) au fil de l'eau.
 
 ## 2026-09-07 (31) — v0.12.10 : lot 3 du 5e audit (accessibilité et mobile, 35 constats), 25 tests, revue adversariale (12 défauts corrigés)
