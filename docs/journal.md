@@ -14,6 +14,23 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-07 (29) — 5e audit sur v0.12.8 : Codex V2 + 13 lentilles en 3 lots
+
+Demande : « nouvel audit je pense », puis « il y a un audit Codex avant » (`audit codex/AUDIT_V2.md`).
+
+**Fait** :
+- **Codex V2** lu et rejoué : 33/33 sur Chrome, 6 défauts reproduits par tests (V2-01…06), 3 contrôles positifs (aller-retour 14 stores, SW hors ligne réel via `app.localhost`, import par l’interface). Ses 9 tests passent ici (9/9). Son premier lancement n’a pas trouvé le navigateur Playwright : **le binaire installé par Claude vit dans le cache MSIX virtualisé** (`Packages\Claude_…\LocalCache\Local\ms-playwright`), invisible d’un terminal normal — Codex a basculé sur `channel: 'chrome'`.
+- **Workflow 13 lentilles** : refusé deux fois (limite de session, puis limite du modèle Fable pour les sous-agents), ≈ 1,6 M de tokens perdus. Relancé **par lots avec des sous-agents Opus** (script `audit5-lot`, paramètre `model`) : lot données (Fable, seul rescapé : 15 constats), lot A (revue des changements, logique, sécurité, PWA : 43), lot B (a11y, terrain, mobile, limites : 51), lot C (perf, qualité, tests, Pronote : 64). Chaque lot fusionné avec relecture des preuves ; 71 doublons écartés.
+- **Rapport `docs/audit-2026-09-07.md`** généré depuis les JSON structurés (+ `docs/audit-2026-09-07.json` complet) : **179 constats** — 0 P0, **9 P1**, 86 P2, 84 P3. P1 : B02 (« Terminer » sur séance passée → inaptes « présents »), C01 (pré-remplissage inapte pour partielle/mot), A02 (créneau d’une classe archivée → `classeId: ''`), D-01 (« Annuler » muet), B04 (nouvelle inaptitude sur le mauvais élève), B01 (focus rogné), B03 (photo/certificat hors clavier), A01 (origine partagée), C02 (4 écrans lisent tout `appels`).
+- **Reproductions** : spec temporaire (13 tests : A02, A05, A06, A07, A12, A16, A25, D-01, D-02, B01–B04) → 13/13, conservé dans le scratchpad de session (hors dépôt) pour devenir des tests de non-régression.
+- Plan en 5 lots + décisions structurantes ; docs de suivi à jour. Aucune correction appliquée.
+
+**Décidé** : pas de contre-vérification adversariale des 170 P2/P3 en bloc (≈ 5 M de tokens) — elle se fera lot par lot avant correction, par reproduction. Sous-agents : Opus dès que la limite Fable tombe.
+
+**Coincé / à vérifier** : `npm test` côté utilisateur exige `npx playwright install chromium` depuis SON terminal (cache virtualisé). Dossier `audit codex/` hors git (ignoré).
+
+**Prochaine étape** : GO sur le lot 1 (v0.12.9) ; avis pour le lot 2 et pour A01 (origine dédiée).
+
 ## 2026-09-06 (28) — Retour Codex : hypothèses H01–H05 vérifiées et corrigées (v0.12.8)
 
 L’utilisateur a transmis la stratégie d’audit d’une autre IA (`audit codex/STRATEGIE_AUDIT.md`, dossier non suivi par git). Pas de constats dedans, mais 5 hypothèses précises et un signalement de dérive documentaire.

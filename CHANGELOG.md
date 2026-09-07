@@ -4,6 +4,10 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-07 — 5e audit (documentation uniquement, aucun code touché)
+
+Rapport `docs/audit-2026-09-07.md` (+ `docs/audit-2026-09-07.json`) sur v0.12.8 : **179 constats** (0 P0, 9 P1, 86 P2, 84 P3) issus de l'audit Codex V2 (6 défauts reproduits, rejoués ici) et de 13 lentilles d'audit par agents indépendants (Opus) en 3 lots. Les 9 P1 sont reproduits ou démontrés (dont : « Terminer l'appel » sur une séance passée écrase les inaptes en « présent », pré-remplissage « inapte » pour une inaptitude partielle ou un mot des parents, créneau d'une classe archivée réenregistré avec une classe vide, « Annuler » muet en cas d'échec, anneau de focus rogné sur la grille d'appel, origine GitHub Pages partagée). Plan de correction en 5 lots, **en attente de validation** ; aucune correction appliquée.
+
 ## 2026-09-06 — v0.12.8 : durabilité des écritures, purge et export cohérents, caches d'origine (hypothèses Codex H01–H05)
 
 Cinq hypothèses issues d'une stratégie d'audit tierce (`audit codex/STRATEGIE_AUDIT.md`), vérifiées et démontrées, corrigées d'après l'avis `docs/avis/AVIS_DURABILITE_ECRITURES.md`.

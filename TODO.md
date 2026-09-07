@@ -5,7 +5,18 @@ Vue d'ensemble des phases : `docs/roadmap.md`.
 
 ## 🎒 Jalon rentrée 2026 : phases 1→9 TERMINÉES — app EN LIGNE (https://alemoine4.github.io/carnet-eps/) — restent les validations terrain ci-dessous
 
-## Phase active : post-v1 — suites du 4e audit du 2026-09-05 (v0.12.7 déployée le 2026-09-06 ; reste B31 + validations terrain) et hypothèses Codex (avis v0.12.8 en attente)
+## Phase active : post-v1 — 5e audit du 2026-09-07 sur v0.12.8 (rapport livré, corrections EN ATTENTE DE GO)
+
+### 5e audit du 2026-09-07 (rapport : `docs/audit-2026-09-07.md`, données : `docs/audit-2026-09-07.json`)
+- [x] 2026-09-07 — **Audit livré** : 179 constats (0 P0, **9 P1**, 86 P2, 84 P3) = Codex V2 (6, rejoués 9/9) + 13 lentilles par agents Opus indépendants en 3 lots (173, 71 doublons écartés). Les 9 P1 reproduits ou démontrés ; 13 reproductions dynamiques (spec conservé hors dépôt dans le scratchpad de session, à réintégrer en tests de non-régression au moment des correctifs).
+- [ ] **Lot 1 — Exactitude de l'appel et des données** (v0.12.9, ≈ 45 constats dont les 7 P1 fonctionnels : B02 « Terminer » sur séance passée écrase les inaptes, C01 pré-remplissage inapte pour partielle/mot, A02 créneau d'une classe archivée → classeId vide, D-01 « Annuler » muet en cas d'échec, B04 nouvelle inaptitude sur le mauvais élève, + cohérence élève « parti », seuil annuel borné, validations, filet global des rejets) — **en attente de GO**.
+- [ ] **Lot 2 — Créations atomiques** ⚙ (v0.12.10) : avis à rédiger (V2-06, D-04, D-06).
+- [ ] **Lot 3 — Accessibilité et mobile** (v0.12.11) : B01 focus rogné, B03 photo/certificat au clavier, B05–B50.
+- [ ] **Lot 4 — Service-worker et performance** (v0.12.12) : C02 (4 écrans lisent tout `appels`), A17–A20, A39–A43, C07, C08.
+- [ ] **Lot 5 — Tests, qualité, documentation** (fil de l'eau) : C05, C18–C64, A21–A36…
+- [ ] **Décisions structurantes** ⚙ : A01 (origine GitHub Pages partagée avec le Bar Clandestin → sous-domaine/dépôt dédié ?), C64 (CI GitHub Actions), refactors C40/C46/C47/C55.
+
+## Suites du 4e audit du 2026-09-05 (v0.12.4 → v0.12.8, toutes déployées le 2026-09-06 ; reste B31 + validations terrain)
 
 ### Stratégie Codex du 2026-09-06 (`audit codex/STRATEGIE_AUDIT.md`)
 - [x] 2026-09-06 — 5 hypothèses H01–H05 **vérifiées contre le code** par 6 vérificateurs indépendants : toutes démontrées (H03 durabilité des écritures P2, H05 caches d'origine partagée avec Le Bar Clandestin P2, H01 purge non atomique P3, H02 export sans instantané P3, H04 doublons d'id à l'import P3) ; dérive documentaire signalée corrigée (roadmap, TODO, CLAUDE.md, fiche terrain, README, rapport d'audit).

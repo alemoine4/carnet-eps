@@ -1,4 +1,4 @@
-# Fiche de test terrain — Carnet EPS (v0.12.7 — points introduits en v0.12.4)
+# Fiche de test terrain — Carnet EPS (v0.12.8 — points introduits en v0.12.4)
 
 > À imprimer (ou garder sur un 2e écran). ~15 min. Coche au fur et à mesure, note ce qui coince.
 > App en ligne : **https://alemoine4.github.io/carnet-eps/** · Guide détaillé : Plus → Aide.
@@ -13,7 +13,7 @@
 - [ ] L'icône **EPS** apparaît sur l'écran d'accueil
 - [ ] L'app s'ouvre en plein écran (sans barre d'adresse)
 - [ ] Plus → Réglages → protection contre l'effacement **active ✓**
-- [ ] Réglages → **Version : v0.12.7** (sinon : Réglages → Vérifier les mises à jour, puis « Recharger »)
+- [ ] Réglages → **Version : v0.12.8** (sinon : Réglages → Vérifier les mises à jour, puis « Recharger »)
 - [ ] Réglages → **Trimestres** : les fins de T1/T2 sont modifiables ; fiche d'un élève : tableau T1 · T2 · T3 · Année (v0.12.6)
 
 **PC (Chrome/Edge)**
