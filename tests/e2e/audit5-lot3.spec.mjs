@@ -196,15 +196,17 @@ test('B21 / B47 — import : labels des radios sans contrôle enfant et fieldset
   await page.goto('/#/eleves/import');
   await page.locator('textarea[aria-label="Données CSV collées"]').fill('Nom;Prénom\nX;Y');
   await page.getByRole('button', { name: 'Analyser' }).click();
+  await expect(page.locator('#dest-existante')).toHaveCount(1); // afficherMapping est ASYNCHRONE : sans cette attente, le test lisait un écran vide sur une machine lente (intégration continue, 2026-09-09)
   const info = await page.evaluate(() => {
     const labels = [...document.querySelectorAll('label[for^="dest-"]')];
     return {
+      nbLabels: labels.length, // every() sur une liste VIDE vaut true : le compte porte la preuve
       labelsSansControle: labels.every((l) => !l.querySelector('select, input[type=text]')),
       fieldset: !!document.querySelector('fieldset legend')?.textContent.includes('Classe de destination'),
       nomRadio: document.getElementById('dest-existante')?.labels?.[0]?.textContent.trim(),
     };
   });
-  expect(info).toEqual({ labelsSansControle: true, fieldset: true, nomRadio: 'Tout mettre dans :' });
+  expect(info).toEqual({ nbLabels: 3, labelsSansControle: true, fieldset: true, nomRadio: 'Tout mettre dans :' });
   await page.goto('/#/inaptitudes/nouvelle/e0');
   await expect(page.locator('fieldset.groupe legend', { hasText: 'Restrictions' })).toHaveCount(1);
   await page.goto('/#/eleves/fiche/e0');
