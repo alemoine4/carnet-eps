@@ -7,13 +7,13 @@ import { enregistrerVue, el, carte, champTexte, champSelect, champZone, confirme
 import {
   tous, lire, parIndex, enregistrer, supprimer, lireMeta,
   parserCSV, lireTexteCSV, supprimerEleveEnCascade,
-  apercuSuppressionEleve, detailSuppression, restaurer,
+  apercuSuppressionEleve, detailSuppression, restaurer, enregistrerLot,
 } from '../io.js';
 import {
   STATUTS, SEUIL_ALERTE, depasseSeuil, dateFR, isoAujourdhui, trierEleves, trierClasses, cleTexte, baremeDe, formatFR, inaptitudesActives,
   bornesTrimestres, compterStatutsParTrimestre,
 } from '../metier.js';
-import { stockerFichier, supprimerFichier, urlDuFichier } from '../media.js';
+import { preparerFichier, urlDuFichier } from '../media.js';
 import { carteObservations } from './observations.js';
 import { sauverPrefs } from '../state.js';
 
@@ -334,10 +334,16 @@ async function vueFiche(c, id) {
     if (!f) return;
     try {
       statutPhoto.textContent = 'Compression de la photo…'; statutPhoto.className = 'statut'; // retour pendant l'attente (audit 2026-09-07, C44)
-      const rec = await stockerFichier(f);
-      if (eleve.photoFichierId) await supprimerFichier(eleve.photoFichierId);
-      eleve.photoFichierId = rec.id;
-      await sauver();
+      const rec = await preparerFichier(f); // compression HORS transaction (asynchrone)
+      // Nouvelle photo, référence de l'élève et suppression de l'ancienne d'un SEUL bloc : une
+      // coupure entre les deux laissait un blob orphelin ou une fiche sans photo (avis lot 2, D-04).
+      const operations = [
+        { store: 'fichiers', op: 'put', valeur: rec },
+        { store: 'eleves', op: 'put', valeur: { ...eleve, photoFichierId: rec.id } },
+      ];
+      if (eleve.photoFichierId) operations.push({ store: 'fichiers', op: 'delete', cle: eleve.photoFichierId });
+      await enregistrerLot(operations);
+      eleve.photoFichierId = rec.id; // mémoire alignée seulement après l'écriture
       rafraichir();
     } catch (e) {
       statutPhoto.textContent = `Photo non enregistrée : ${e?.message || e}`;
@@ -352,9 +358,12 @@ async function vueFiche(c, id) {
   if (photoOK) {
     const btnRetirer = el('button', { class: 'btn' }, 'Retirer la photo');
     btnRetirer.addEventListener('click', async () => {
-      await supprimerFichier(eleve.photoFichierId);
+      // Retrait de la référence et suppression du blob d'un seul bloc (avis lot 2, D-04).
+      await enregistrerLot([
+        { store: 'eleves', op: 'put', valeur: { ...eleve, photoFichierId: null } },
+        { store: 'fichiers', op: 'delete', cle: eleve.photoFichierId },
+      ]);
       eleve.photoFichierId = null;
-      await sauver();
       rafraichir();
     });
     rangPhoto.append(btnRetirer);
@@ -569,22 +578,26 @@ async function executerImport(lignes, dest) {
   }
   let ordre = classes.length;
   const classesCreees = [];
-  const assurerClasse = async (nom) => {
+  // Rien n'est écrit dans la boucle : tout est collecté, puis écrit en UNE transaction (avis
+  // « créations atomiques », lot 2, D-06) — un import interrompu laissait une classe à moitié
+  // remplie sans le dire, et payait une transaction par classe et par élève (150+ sur un import réel).
+  const aEcrire = { classes: [], eleves: [] };
+  const assurerClasse = (nom) => {
     const cle = cleTexte(nom);
     if (parCle.has(cle)) return parCle.get(cle);
     const cl = {
       id: crypto.randomUUID(), nom: String(nom).trim(), niveau: devinerNiveau(nom),
       anneeScolaire: annee, couleur: PALETTE[ordre % PALETTE.length], ordre: ordre++, archivee: false,
     };
-    await enregistrer('classes', cl);
     parCle.set(cle, cl);
+    aEcrire.classes.push(cl);
     classesCreees.push(cl.nom);
     return cl;
   };
 
   let classeFixe = null;
   if (dest.mode === 'existante') classeFixe = await lire('classes', dest.classeId);
-  if (dest.mode === 'nouvelle') classeFixe = await assurerClasse(dest.nom);
+  if (dest.mode === 'nouvelle') classeFixe = assurerClasse(dest.nom);
 
   const existants = await tous('eleves');
   const dejaLa = new Map(existants.map((e) => [`${cleTexte(e.nom)}|${cleTexte(e.prenom)}@${e.classeId}`, e]));
@@ -592,7 +605,7 @@ async function executerImport(lignes, dest) {
 
   for (const l of lignes) {
     if (!l.nom || !l.prenom) { resultat.ignores++; continue; }
-    const classe = classeFixe || (l.classe ? await assurerClasse(l.classe) : null);
+    const classe = classeFixe || (l.classe ? assurerClasse(l.classe) : null);
     if (!classe) { resultat.ignores++; continue; }
     const cle = `${cleTexte(l.nom)}|${cleTexte(l.prenom)}@${classe.id}`;
     const deja = dejaLa.get(cle);
@@ -601,7 +614,7 @@ async function executerImport(lignes, dest) {
       // silence comme un doublon (audit 2026-09-07, D-13).
       if (deja.actif === false) {
         deja.actif = true;
-        await enregistrer('eleves', deja);
+        aEcrire.eleves.push(deja);
         resultat.reactives++;
         resultat.classesTouchees.add(classe.nom);
       } else resultat.doublons++;
@@ -610,7 +623,7 @@ async function executerImport(lignes, dest) {
     dejaLa.set(cle, { actif: true });
     const naissance = dateFRversISO(l.dateNaissance);
     if (String(l.dateNaissance || '').trim() && !naissance) resultat.datesRejetees++; // renseignée mais non reconnue ou impossible (B46, C51)
-    await enregistrer('eleves', {
+    aEcrire.eleves.push({
       id: crypto.randomUUID(), classeId: classe.id, nom: l.nom, prenom: l.prenom,
       sexe: normaliserSexe(l.sexe), dateNaissance: naissance,
       notesPerso: '', actif: true,
@@ -622,6 +635,9 @@ async function executerImport(lignes, dest) {
     if (ailleurs) resultat.homonymes.push(classes.find((cl) => cl.id === ailleurs.classeId)?.nom || '?');
     resultat.classesTouchees.add(classe.nom);
   }
+  // Tout ou rien : si l'écriture est refusée, aucune classe ni aucun élève n'est créé et le message
+  // d'erreur de l'appelant s'affiche (avis lot 2, D-06).
+  await restaurer(aEcrire);
   return resultat;
 }
 

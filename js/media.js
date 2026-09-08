@@ -29,9 +29,10 @@ export async function compresserImage(fichier, { maxDim = 1600, cibleOctets = 30
   return dernier;
 }
 
-// Stocke un fichier dans le store `fichiers` (image → compressée JPEG, reste → tel quel).
-// Retourne l'enregistrement { id, blob, mime, nom, taille, dateAjout }.
-export async function stockerFichier(fichier) {
+// Prépare l'enregistrement `fichiers` (image → compressée JPEG, reste → tel quel) SANS l'écrire :
+// permet à l'appelant de composer l'écriture avec d'autres stores en une seule transaction
+// (avis créations atomiques, fix 1, v0.12.13). Retourne { id, blob, mime, nom, taille, dateAjout }.
+export async function preparerFichier(fichier) {
   let blob = fichier;
   let mime = fichier.type || 'application/octet-stream';
   let nom = fichier.name || 'fichier';
@@ -47,7 +48,7 @@ export async function stockerFichier(fichier) {
     // Une décimale : « 8,2 Mo — limite 8 Mo » (l'arrondi à l'entier affichait « 8 Mo — limite 8 Mo », revue du lot 4)
     throw new Error(`pièce trop lourde (${(blob.size / 1048576).toFixed(1).replace('.', ',')} Mo) — limite 8 Mo : réduisez la qualité du scan ou photographiez le document`);
   }
-  const rec = {
+  return {
     id: crypto.randomUUID(),
     blob,
     mime,
@@ -55,8 +56,15 @@ export async function stockerFichier(fichier) {
     taille: blob.size,
     dateAjout: isoAujourdhui(), // date LOCALE (audit 2026-09-07, C49)
   };
+}
+
+// Stocke un fichier dans le store `fichiers` (conservé pour compatibilité — les créations qui
+// combinent un fichier avec un autre store appellent désormais `preparerFichier` puis
+// `enregistrerLot`, avis créations atomiques, fix 1, v0.12.13).
+export async function stockerFichier(fichier) {
+  const rec = await preparerFichier(fichier);
   await enregistrer('fichiers', rec);
-  return rec;
+  return rec; // les appelants (et les tests C08/C49) lisent l’enregistrement rendu
 }
 
 export async function supprimerFichier(fichierId) {
