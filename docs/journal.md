@@ -31,6 +31,8 @@ Demande : « fait comme tu penses le mieux » — j'ai tranché les trois avis e
 
 **Coincé / à vérifier** : sur l'appareil, ajouter une inaptitude avec photo puis la remplacer (le geste que le lot rend atomique) ; première exécution de l'intégration continue à surveiller.
 
+**Déployé** : main `4b698a8`, gh-pages `3e04344`, tag `v0.12.13` (2026-09-09).
+
 **Prochaine étape** : v0.12.14 avec les points retenus de l'avis du lot 5 + A39 + le projet mobile Playwright ; puis l'avis sur les **grilles d'évaluation EPS** (demande du 2026-09-09).
 
 ## 2026-09-08 (33) — v0.12.12 : lot 5 (tests, qualité, documentation), 72 constats triés, 63 traités, 35 tests + avis des restes
