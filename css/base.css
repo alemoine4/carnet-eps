@@ -14,8 +14,8 @@
   --c-bord-controle: #6b7893; /* contour des champs et boutons secondaires : 3,1:1 sur blanc (WCAG 1.4.11, audit 2026-09-07 B06) */
   --c-texte-badge: #465672; /* texte des badges gris sur --c-bordure : 5,7:1 (B08) */
   color-scheme: light; /* contrôles natifs (select, date, cases) assortis au thème */
-  /* Bordures des cartes d'appel par statut (miroir de STATUTS dans metier.js, déclinées
-     par thème pour rester visibles sur fond clair ET sombre — audit UX P2). */
+  /* Bordures et pastilles d'appel par statut : SEULE palette des statuts (les clés suivent STATUTS
+     de metier.js, qui ne porte plus de couleur — C48), déclinée par thème clair ET sombre — audit UX P2. */
   --stb-present: #0f7a46;
   --stb-absent: #d03a3a;
   --stb-retard: #a35f00;

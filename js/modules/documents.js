@@ -6,7 +6,7 @@
 import { enregistrerVue, el, carte, champ, groupe, confirmer, toast } from '../ui.js';
 import { tous, lire, enregistrer, supprimerLot, restaurer } from '../io.js';
 import { stockerFichier, ouvrirVisionneuse } from '../media.js';
-import { dateFR, normaliser, trierClasses } from '../metier.js';
+import { dateFR, isoAujourdhui, normaliser, trierClasses } from '../metier.js';
 
 const TYPES_DOC = [
   ['fiche', 'Fiche / situation'],
@@ -19,7 +19,7 @@ const TYPES_DOC = [
 const LIBELLE_TYPE = Object.fromEntries(TYPES_DOC);
 
 async function vueDocuments(c) {
-  const rafraichir = () => { c.innerHTML = ''; return vueDocuments(c); };
+  const rafraichir = () => { c.replaceChildren(); return vueDocuments(c); };
   c.append(el('a', { class: 'retour', href: '#/plus' }, '← Retour'));
   const [documents, classes] = await Promise.all([tous('documents'), tous('classes')]);
   const actives = classes.filter((cl) => !cl.archivee).sort(trierClasses);
@@ -69,13 +69,13 @@ async function vueDocuments(c) {
     btnCreer.disabled = true;
     try {
       let fichierId = null;
-      if (f) fichierId = (await stockerFichier(f)).id;
+      if (f) { statutForm.textContent = f.type.startsWith('image/') ? 'Compression de l’image…' : 'Enregistrement de la pièce…'; statutForm.className = 'statut'; fichierId = (await stockerFichier(f)).id; } // retour pendant l'attente (C44)
       await enregistrer('documents', {
         id: crypto.randomUUID(), titre, type: selType.value,
         tags: inpTags.value.split(',').map((t) => t.trim()).filter(Boolean),
         classeIds: [...cochesClasses],
         fichierId, url: f ? '' : url,
-        dateAjout: new Date().toISOString().slice(0, 10),
+        dateAjout: isoAujourdhui(), // date LOCALE, comme partout (audit 2026-09-07, C49)
       });
       rafraichir();
     } catch (e) {
@@ -125,7 +125,7 @@ async function vueDocuments(c) {
       const fichier = await lire('fichiers', doc.fichierId);
       if (fichier && !fichier.blob) { toast('Pièce absente de cette sauvegarde.'); return; } // même garde que les inaptitudes (revue du lot 4)
       if (!fichier) { toast('Fichier introuvable (supprimé ?).'); return; }
-      ouvrirVisionneuse(c, fichier);
+      ouvrirVisionneuse(fichier);
     });
     const btnSuppr = el('button', { class: 'btn btn-mini', 'aria-label': `Supprimer ${doc.titre}` }, '✕');
     btnSuppr.addEventListener('click', async () => {

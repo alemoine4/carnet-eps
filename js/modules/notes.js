@@ -6,8 +6,8 @@
 // voie B = CSV Nom;Prénom;Note. Type « afl » = positionnement libre, non exportable vers Pronote.
 
 import { enregistrerVue, el, carte, champ, champTexte, confirmer, toast } from '../ui.js';
-import { tous, lire, parIndex, enregistrer, supprimer, supprimerLot, restaurer, telechargerTexte, champCSV } from '../io.js';
-import { isoAujourdhui, dateFR, trierEleves, trierClasses, baremeDe, formatFR } from '../metier.js';
+import { tous, lire, lireMeta, parIndex, enregistrer, supprimer, supprimerLot, restaurer, telechargerTexte, champCSV } from '../io.js';
+import { isoAujourdhui, dateFR, trierEleves, trierClasses, baremeDe, formatFR, inaptitudesActives } from '../metier.js';
 import { sauverPrefs } from '../state.js';
 
 const CODES = ['ABS', 'DISP', 'NN'];
@@ -165,7 +165,7 @@ async function vueListe(c) {
 // ---------------------------------------------------------------------------
 
 async function vueEval(c, evalId) {
-  const rafraichir = () => { c.innerHTML = ''; return vueEval(c, evalId); };
+  const rafraichir = () => { c.replaceChildren(); return vueEval(c, evalId); };
   c.append(el('a', { class: 'retour', href: '#/notes' }, '← Notes'));
   const ev = await lire('evaluations', evalId);
   if (!ev) { c.append(carte('Évaluation introuvable', 'Elle a peut-être été supprimée.')); return; }
@@ -174,6 +174,7 @@ async function vueEval(c, evalId) {
   if (!sequence || !classe) { c.append(carte('Évaluation orpheline', 'Sa séquence ou sa classe a été supprimée.')); return; }
   sauverPrefs({ derniereEvalId: evalId }); // raccourci « Reprendre » de l'accueil
   const eleves = (await parIndex('eleves', 'classeId', classe.id)).filter((e) => e.actif !== false).sort(trierEleves);
+  const inaptes = new Set((await inaptitudesActives()).map((i) => i.eleveId)); // pastille « partout » (audit 2026-09-07, C53)
   const notesMap = new Map((await parIndex('notes', 'evaluationId', evalId)).map((n) => [n.eleveId, n]));
   const bareme = baremeDe(ev);
   const sauverEv = () => enregistrer('evaluations', ev);
@@ -184,7 +185,7 @@ async function vueEval(c, evalId) {
   carteTete.append(
     el('p', {}, `${sequence.apsa} · ${bareme ? `noté /${bareme}` : 'AFL / positionnement'} · coef ${ev.coef}`),
     el('div', { class: 'rang-2' },
-      champTexte({ id: 'ge-titre', libelle: 'Titre', valeur: ev.titre, onChange: async (v) => { if (v) { ev.titre = v; await sauverEv(); } } }),
+      champTexte({ id: 'ge-titre', libelle: 'Titre', valeur: ev.titre, onChange: async (v) => { if (!v) throw new Error('le titre ne peut pas être vide'); ev.titre = v; await sauverEv(); } }), // A36 (revue du lot 5)
       champTexte({ id: 'ge-date', libelle: 'Date', type: 'date', valeur: ev.date || '', onChange: async (v) => { ev.date = v; await sauverEv(); } }),
     ),
     statsEl,
@@ -274,7 +275,7 @@ async function vueEval(c, evalId) {
     });
     inputs.push(input);
     carteGrille.append(el('div', { class: 'ligne-note' },
-      el('span', { class: 'nom' }, `${eleve.nom} ${eleve.prenom}`), input));
+      el('span', { class: 'nom' }, `${eleve.nom} ${eleve.prenom}`, inaptes.has(eleve.id) ? el('span', { class: 'pastille-info', title: 'Inaptitude en cours' }, el('span', { 'aria-hidden': 'true' }, ' 🩺'), el('span', { class: 'sr-only' }, ' Inaptitude en cours')) : ''), input));
   });
   carteGrille.append(alerteSaisie);
   c.append(carteGrille);
@@ -300,7 +301,7 @@ async function vueEval(c, evalId) {
           if (v) codes.push(`ligne ${i + 1} — ${e.nom} ${e.prenom} : ${v}`);
         }
       });
-      return { texte: lignes.join('\r\n'), codes };
+      return { texte: lignes.join('\r\n'), codes, vides: lignes.filter((l) => l === '').length };
     };
 
     // « Publiée » n'est marquée que sur PREUVE de copie (presse-papiers réussi, ou copie
@@ -325,14 +326,15 @@ async function vueEval(c, evalId) {
       majMarquer();
     });
 
-    const apresExport = async (codes) => {
+    const apresExport = async (codes, vides = 0) => {
       ev.publieePronote = isoAujourdhui();
       await sauverEv();
       majBadgePubliee();
       majMarquer();
       zoneRecap.replaceChildren(
         el('p', { class: 'statut statut-ok' },
-          `${eleves.length} lignes (ordre alphabétique). Garde-fou : vérifiez que le service Pronote compte bien ${eleves.length} élèves et le barème /${bareme}.`),
+          // Lignes vides comptées (non saisies + codes) : le total seul masquait une colonne à trous (audit 2026-09-07, C16).
+          `${eleves.length} lignes dont ${vides} vide${vides > 1 ? 's' : ''} (${eleves.length - vides} note${eleves.length - vides > 1 ? 's' : ''}, ordre alphabétique). Garde-fou : vérifiez que le service Pronote compte bien ${eleves.length} élèves et le barème /${bareme}.`),
         ...(codes.length ? [el('p', {}, 'À saisir à la main dans Pronote :'),
           el('ul', {}, ...codes.map((t) => el('li', {}, t)))] : []),
       );
@@ -345,19 +347,19 @@ async function vueEval(c, evalId) {
         statutExp.className = 'statut statut-erreur';
         return;
       }
-      const { texte, codes } = construireColonne();
+      const { texte, codes, vides } = construireColonne();
       try {
         await navigator.clipboard.writeText(texte);
         statutExp.textContent = 'Colonne copiée dans le presse-papiers ✓';
         statutExp.className = 'statut statut-ok';
         zoneSecours.replaceChildren();
-        await apresExport(codes); // copie réussie = preuve
+        await apresExport(codes, vides); // copie réussie = preuve
       } catch {
         // Pas de presse-papiers (http réseau local…) : colonne à copier à la main.
         // « Publiée » ne sera marquée qu'à la copie réelle (événement copy).
         const zone = el('textarea', { rows: 8, 'aria-label': 'Colonne à copier' }); // enveloppée dans .champ ci-dessous (style — B49)
         zone.value = texte;
-        zone.addEventListener('copy', () => { apresExport(codes); }, { once: true });
+        zone.addEventListener('copy', () => { apresExport(codes, vides); }, { once: true });
         zoneSecours.replaceChildren(
           el('p', {}, 'Copie automatique indisponible : sélectionnez tout puis copiez (Ctrl+C) — l’évaluation sera alors marquée « publiée ».'),
           el('div', { class: 'champ' }, zone)); // même style que les autres zones de texte (B49)
@@ -427,6 +429,8 @@ async function vueReleve(c, classeId) {
   btnImprimer.addEventListener('click', () => window.print());
   const btnCSV = el('button', { class: 'btn' }, 'Exporter CSV');
   const carteTete = carte(`Relevé de notes — ${classe.nom}`, 'Moyenne /20 pondérée par les coefficients ; les codes (ABS, DISP, NN) et les AFL ne comptent pas dans la moyenne.');
+  // Établissement (Réglages) et date d'édition : la carte de tête s'imprime, le papier était anonyme et non daté (audit 2026-09-07, B44).
+  carteTete.append(el('p', { class: 'note-discrete', id: 'rl-edition' }, [(await lireMeta('etablissement')) || '', `édité le ${new Date().toLocaleDateString('fr-FR')}`].filter(Boolean).join(' — ')));
   carteTete.append(el('div', { class: 'rang-btn no-print' }, btnImprimer, btnCSV));
   c.append(carteTete);
 
@@ -446,7 +450,7 @@ async function vueReleve(c, classeId) {
 
   const lignes = eleves.map((e) => ({ e, moyenne: moyenneEleve(e.id) }));
   // Vrai tableau (scope, en-tête de ligne, légende, région défilable nommée — B07).
-  const table = el('table', { class: 'table-apercu table-recap' },
+  const table = el('table', { class: 'table-apercu' },
     el('caption', {}, `Relevé de notes ${classe.nom}`), // court : la boîte du caption prend la largeur du tableau (revue du lot 3)
     el('thead', {}, el('tr', {},
       el('th', { scope: 'col' }, 'Élève'),

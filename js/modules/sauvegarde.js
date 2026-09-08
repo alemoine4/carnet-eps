@@ -3,26 +3,8 @@
 // avant toute opération destructrice (BIBLE règle 4).
 
 import { enregistrerVue, el, carte, confirmer, toast } from '../ui.js';
-import { exporterJSON, importerJSON, validerExport, telechargerJSON, compterTout, viderTout } from '../io.js';
+import { exporterJSON, importerJSON, validerExport, telechargerJSON, compterTout, viderTout, LIBELLES } from '../io.js';
 import { effacerPrefs } from '../state.js';
-
-// [singulier, pluriel] par store — tout store de données doit figurer ici (sinon il
-// disparaît du résumé affiché avant un import qui REMPLACE tout). `meta` exclu (réglages).
-const LIBELLES = {
-  classes: ['classe', 'classes'],
-  eleves: ['élève', 'élèves'],
-  edt: ['créneau EDT', 'créneaux EDT'],
-  sequences: ['séquence', 'séquences'],
-  seances: ['séance', 'séances'],
-  appels: ['appel', 'appels'],
-  inaptitudes: ['inaptitude', 'inaptitudes'],
-  certificats: ['certificat', 'certificats'],
-  fichiers: ['pièce jointe', 'pièces jointes'],
-  evaluations: ['évaluation', 'évaluations'],
-  notes: ['note', 'notes'],
-  documents: ['document', 'documents'],
-  observations: ['observation', 'observations'],
-};
 
 function resumeComptes(comptes) {
   const parties = Object.entries(LIBELLES)

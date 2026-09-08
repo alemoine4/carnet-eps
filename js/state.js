@@ -2,13 +2,12 @@
 // jamais de données élèves ici — elles vivent dans IndexedDB via io.js).
 
 // Version applicative : synchroniser avec VERSION du service-worker à chaque déploiement.
-export const VERSION_APP = '0.12.11';
+export const VERSION_APP = '0.12.12';
 
 const CLE_PREFS = 'carnet-eps:prefs';
 
 export const etat = {
-  route: 'accueil',
-  prefs: chargerPrefs(),
+  prefs: chargerPrefs(), // la route n'est pas un état : le hash fait foi (audit 2026-09-07, C54)
 };
 
 const abonnes = new Map(); // évènement -> Set<fonction>

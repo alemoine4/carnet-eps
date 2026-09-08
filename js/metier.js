@@ -1,18 +1,20 @@
 // metier.js — vocabulaire et règles métier partagés entre modules
-// (les modules métier ne s'importent jamais entre eux : ce qui est commun vit ici).
+// (les modules métier ne s'importent pas entre eux — sauf la brique observations.js importée par
+//  eleves.js, exception documentée dans docs/architecture.md : ce qui est commun vit ici).
 
 import { tous, parIndexLot, lireMeta } from './io.js';
 
 // ---- Statuts d'appel (docs/modele-donnees.md) ----
 // `pratiquant` : participe physiquement au cours. L'inapte/dispensé présent n'est pas pratiquant.
 export const STATUTS = {
-  present: { libelle: 'Présent', court: 'P', couleur: '#0f7a46', pratiquant: true },
-  absent: { libelle: 'Absent', court: 'A', couleur: '#d03a3a', pratiquant: false },
-  retard: { libelle: 'Retard', court: 'R', couleur: '#a35f00', pratiquant: true },
-  dispense: { libelle: 'Dispensé (mot)', court: 'D', couleur: '#7c3aed', pratiquant: false },
-  inapte: { libelle: 'Inapte (certificat)', court: 'I', couleur: '#0e7490', pratiquant: false },
-  oubli_tenue: { libelle: 'Oubli de tenue', court: 'T', couleur: '#be185d', pratiquant: false },
-  infirmerie: { libelle: 'Infirmerie', court: 'INF', couleur: '#5b6b85', pratiquant: false },
+  // Pas de couleur ici : la SEULE palette des statuts est en CSS (`--stb-*`, base.css, déclinée par thème — C48).
+  present: { libelle: 'Présent', court: 'P', pratiquant: true },
+  absent: { libelle: 'Absent', court: 'A', pratiquant: false },
+  retard: { libelle: 'Retard', court: 'R', pratiquant: true },
+  dispense: { libelle: 'Dispensé (mot)', court: 'D', pratiquant: false },
+  inapte: { libelle: 'Inapte (certificat)', court: 'I', pratiquant: false },
+  oubli_tenue: { libelle: 'Oubli de tenue', court: 'T', pratiquant: false },
+  infirmerie: { libelle: 'Infirmerie', court: 'INF', pratiquant: false },
 };
 
 // Statuts parcourus par un tap simple sur l'écran d'appel (le reste via appui long).
@@ -87,7 +89,8 @@ export const trimestreDe = (iso, b) => (iso <= b.finT1 ? 1 : iso <= b.finT2 ? 2 
 // retenues seulement si elles tombent dans cette année scolaire ; sinon 15/12 et 15/03.
 export async function bornesTrimestres(iso = isoAujourdhui()) {
   const y = anneeScolaireDe(iso);
-  const valide = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v) && anneeScolaireDe(v) === y ? v : '');
+  // (à partir du 1er septembre : une fin de T1 en août déjà en base — sauvegarde ancienne — est ignorée, D-10)
+  const valide = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v) && anneeScolaireDe(v) === y && v >= `${y}-09-01` ? v : '');
   let finT1 = valide(await lireMeta('finTrimestre1', '')) || `${y}-12-15`;
   let finT2 = valide(await lireMeta('finTrimestre2', '')) || `${y + 1}-03-15`;
   // Bornes inversées (T2 avant T1) : défauts pour les deux, sinon le T2 serait vide et le T3
@@ -118,8 +121,9 @@ export function compterStatutsParTrimestre(appels, seances, b) {
     if (!res.has(a.eleveId)) res.set(a.eleveId, { t: { 1: {}, 2: {}, 3: {} }, annee: {} });
     const c = res.get(a.eleveId);
     const tri = c.t[trimestreDe(date, b)];
-    tri[a.statut] = (tri[a.statut] || 0) + 1;
-    c.annee[a.statut] = (c.annee[a.statut] || 0) + 1;
+    const k = STATUTS[a.statut] ? a.statut : 'present'; // statut inconnu (sauvegarde tierce) rabattu comme à l'appel (audit 2026-09-07, A28)
+    tri[k] = (tri[k] || 0) + 1;
+    c.annee[k] = (c.annee[k] || 0) + 1;
   }
   return res;
 }

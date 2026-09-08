@@ -5,7 +5,7 @@
 //    évaluations notées non remontées vers Pronote.
 // 3. Reprendre : dernière classe ouverte, dernière évaluation.
 
-import { enregistrerVue, el, carte, toast } from '../ui.js';
+import { enregistrerVue, el, carte, toast, ligneAlerte } from '../ui.js';
 import { tous, lire, parIndex, enregistrer } from '../io.js';
 import { coursDuJour, semaineCourante, enMinutes, isoAujourdhui, collecterAlertes } from '../metier.js';
 import { etat } from '../state.js';
@@ -137,13 +137,7 @@ async function carteAlertes() {
   if (!alertes.length) {
     carteA.append(el('p', {}, 'Rien à signaler ✓'));
   } else {
-    for (const a of alertes.slice(0, 8)) {
-      carteA.append(el('a', { class: 'ligne-eleve', href: a.href },
-        el('span', { class: 'badge' + (a.grave ? ' badge-alerte' : '') }, el('span', { 'aria-hidden': 'true' }, a.grave ? '⚠' : 'ℹ'), el('span', { class: 'sr-only' }, a.grave ? 'Alerte' : 'Information')), // B43
-        el('span', { class: 'ligne-eleve-nom' }, a.texte),
-        el('span', { class: 'chevron pousse-droite', 'aria-hidden': 'true' }, '›'),
-      ));
-    }
+    for (const a of alertes.slice(0, 8)) carteA.append(ligneAlerte(a));
     if (alertes.length > 8) carteA.append(el('p', { class: 'note-discrete' }, `… et ${alertes.length - 8} autre(s)`));
   }
   return carteA;

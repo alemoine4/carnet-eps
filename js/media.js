@@ -4,6 +4,7 @@
 
 import { enregistrer, lire, supprimer } from './io.js';
 import { toast } from './ui.js';
+import { isoAujourdhui } from './metier.js';
 
 export async function compresserImage(fichier, { maxDim = 1600, cibleOctets = 300 * 1024 } = {}) {
   let bitmap;
@@ -52,7 +53,7 @@ export async function stockerFichier(fichier) {
     mime,
     nom,
     taille: blob.size,
-    dateAjout: new Date().toISOString().slice(0, 10),
+    dateAjout: isoAujourdhui(), // date LOCALE (audit 2026-09-07, C49)
   };
   await enregistrer('fichiers', rec);
   return rec;
@@ -79,9 +80,7 @@ export function revoquerURL(url, delai = 1000) {
 
 // Visionneuse plein écran : image en lightbox <dialog> natif (tap n'importe où ou Échap
 // pour fermer, fond inerte, focus rendu au déclencheur), PDF dans un onglet.
-// `conteneur` est conservé pour compatibilité d'appel mais inutile : le <dialog> vit
-// dans le top-layer du navigateur.
-export function ouvrirVisionneuse(conteneur, fichier) {
+export function ouvrirVisionneuse(fichier) {
   // Enregistrement sans blob (sauvegarde tierce ou allégée de ses pièces) : message, pas de TypeError
   // — le chemin Documents n'avait pas la garde d'urlDuFichier (revue du lot 4).
   if (!fichier?.blob) { toast('Pièce absente de cette sauvegarde.'); return; }
