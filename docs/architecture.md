@@ -24,7 +24,7 @@ PWA **vanilla** (HTML/CSS/JS ES modules), multi-fichiers, **sans étape de build
 |---|---|---|---|
 | Boot/Router | `main.js` | démarrage, table des routes, SW | logique métier |
 | Vues | `ui.js` + `modules/*.js` | rendu DOM, interactions | accès direct à IndexedDB (passer par `io.js`) |
-| État | `state.js` | état courant (route, contexte), pub/sub, préférences | persistance métier |
+| État | `state.js` | préférences UI en mémoire (`etat.prefs`), pub/sub (`abonner`/`emettre`), `VERSION_APP` | persistance métier, état de route (le hash fait foi) |
 | Données | `io.js` | IndexedDB (CRUD + index), **écritures groupées atomiques** (`supprimerLot`, `restaurer`, cascades, import : une transaction multi-stores — avis B29), export/import JSON, parse CSV | manipulation du DOM |
 
 Règle de croissance (détail et contrat d'un module : `docs/modules.md`) : **un module métier = un fichier** dans `modules/` (ex. `appel.js`) qui exporte `enregistrerVue()`. `main.js` importe les modules ; jamais l'inverse entre modules (passer par `state.js`/événements). Exception assumée : `modules/observations.js` est une **brique** (carte réutilisable) importée par `eleves.js` (v0.12.0).
@@ -40,7 +40,7 @@ Ce qui est commun à plusieurs modules vit dans **`metier.js`** (vocabulaire, da
 ## Stockage
 
 - **IndexedDB** `carnet-eps` (wrapper maison promisifié dans `io.js`, décision D003 — pas d'idb-keyval) : 14 stores (`DB_VERSION 2` depuis v0.12.0, migrations additives D009), schéma détaillé dans `modele-donnees.md`.
-- **localStorage** `carnet-eps:prefs` : préférences UI uniquement (thème, dernier onglet) — jamais de données élèves.
+- **localStorage** `carnet-eps:prefs` : préférences UI uniquement — `theme`, `derniereClasseId`, `derniereEvalId` (raccourcis « Reprendre » de l'accueil, effacés à la purge et à l'import, A25) — jamais de données élèves.
 - **Blobs** (photos certificats, documents) : store dédié `fichiers`, compression canvas→JPEG avant écriture.
 - `navigator.storage.persist()` demandé au premier lancement (évite l'éviction silencieuse sur Android).
 
@@ -67,5 +67,5 @@ Ce qui est commun à plusieurs modules vit dans **`metier.js`** (vocabulaire, da
 ## Vérification en dev
 
 - Serveur : `node server-carnet.mjs` (port 8160, no-cache) à la racine du dépôt, puis un navigateur sur `http://localhost:8160`.
-- **Playwright** (dépendance de dev, D010) : `npm test` = 8 smoke-tests des parcours critiques + tests de non-régression des correctifs d'audit (`tests/e2e/`). Le navigateur de test s'installe une fois par poste : `npx playwright install chromium`.
+- **Playwright** (dépendance de dev, D010) : `npm test` = 8 smoke-tests des parcours critiques + tests de non-régression des correctifs d'audit (`tests/e2e/`). Le navigateur de test s'installe une fois par poste, **depuis le terminal de l'utilisateur** (lancé par l'assistant, il n'irait que dans son cache virtualisé) : `npx playwright install chromium`.
 - Contrôles ponctuels (Lighthouse, axe, impression) via les DevTools du navigateur ; `tests/checklist.md` et `docs/test-terrain.md` pour le manuel.

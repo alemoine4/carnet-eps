@@ -5,7 +5,7 @@
 // Rappel D006 : l'appel réglementaire reste fait dans Pronote — ici on trace le suivi EPS.
 
 import { enregistrerVue, el, carte, champZone, ouvrirFeuille, toast } from '../ui.js';
-import { tous, lire, parIndex, parIndexLot, enregistrer, restaurer, telechargerTexte, champCSV } from '../io.js';
+import { tous, lire, lireMeta, parIndex, parIndexLot, enregistrer, restaurer, telechargerTexte, champCSV } from '../io.js';
 import {
   STATUTS, CYCLE_TAP, SEUIL_ALERTE, depasseSeuil,
   isoAujourdhui, dateFR, coursDuJour, inaptitudesActives, trierEleves, trierClasses,
@@ -73,8 +73,9 @@ async function vueSelecteur(c) {
   if (!cours.length) carteAuj.append(el('p', {}, 'Pas de cours EPS aujourd’hui (selon l’EDT).'));
   for (const cr of cours) {
     const classe = classeDe(cr.classeId);
-    const seq = sequences.find((s) =>
+    const seqsActives = sequences.filter((s) =>
       s.classeId === cr.classeId && (!s.dateDebut || s.dateDebut <= auj) && (!s.dateFin || auj <= s.dateFin));
+    const seq = seqsActives[0]; // même choix que l'ancien `find` (ordre du store) et que l'accueil
     const seance = seq ? seances.find((s) => s.sequenceId === seq.id && s.date === auj) : null;
     const eff = effectifs.get(cr.classeId) || 0;
     const libelle = el('span', {}, `${cr.heureDebut} · ${classe?.nom || '?'}${seq ? ' · ' + seq.apsa : ''}`);
@@ -108,6 +109,8 @@ async function vueSelecteur(c) {
       action = el('a', { class: 'btn', href: '#/sequences' }, 'Créer une séquence');
     }
     carteAuj.append(el('div', { class: 'info-ligne' }, libelle, action));
+    // Même avertissement que l'accueil (A15) : plusieurs séquences actives pour la classe (audit 2026-09-07, A29).
+    if (seqsActives.length > 1) carteAuj.append(el('p', { class: 'note-discrete' }, `⚠ ${seqsActives.length} séquences actives pour ${classe?.nom || '?'} (dates qui se chevauchent) — « ${seq.apsa} » est utilisée. À vérifier dans Plus → Séquences.`));
   }
   c.append(carteAuj);
 
@@ -465,8 +468,25 @@ async function vueAppel(c, seanceId) {
   btnTerminer.addEventListener('click', async () => {
     // Le reste = présents, SAUF les élèves sous inaptitude totale (séance passée : rien n'a été
     // pré-rempli et « Terminer » les marquait présents — audit 2026-09-07, B02).
-    for (const eleve of eleves) {
-      if (!enregs.has(eleve.id)) await definirStatut(eleve, statutInapte(eleve.id) || 'present');
+    // UNE transaction pour tous les restants (restaurer = ecrireLot) et bouton verrouillé pendant
+    // l'écriture : c'était une transaction par élève, attendue, sur un bouton libre (audit 2026-09-07, A27).
+    const aFaire = eleves.filter((eleve) => !enregs.has(eleve.id));
+    if (!aFaire.length) return;
+    const recs = aFaire.map((eleve) => ({
+      id: `${seanceId}_${eleve.id}`, seanceId, eleveId: eleve.id,
+      statut: statutInapte(eleve.id) || 'present', minutesRetard: null, commentaire: '',
+    }));
+    btnTerminer.disabled = true;
+    try {
+      await restaurer({ appels: recs });
+      // Un tap pendant l'écriture du lot a déjà posé son statut (et sa propre écriture, validée après la
+      // nôtre) : l'instantané ne le réécrase pas (revue du lot 5).
+      recs.forEach((rec, i) => { if (enregs.has(rec.eleveId)) return; enregs.set(rec.eleveId, rec); confirmes.set(rec.eleveId, rec); majBouton(aFaire[i]); });
+      majCompteurs();
+    } catch (e) {
+      toast(`Appel non terminé : ${e?.message || e}`);
+    } finally {
+      btnTerminer.disabled = false;
     }
   });
   majCompteurs();
@@ -506,6 +526,9 @@ async function vueRecap(c, classeId) {
   btnImprimer.addEventListener('click', () => window.print());
 
   const carteFiltres = carte(`Récapitulatif — ${classe.nom}`, 'Seuls les appels enregistrés sont comptés (pensez à « Terminer l’appel » à chaque séance).');
+  // Établissement (Réglages) et date d'édition sur le papier (audit 2026-09-07, B44) ; la période,
+  // elle, est dans le <caption> (B21).
+  carteFiltres.append(el('p', { class: 'note-discrete', id: 'rc-edition' }, [(await lireMeta('etablissement')) || '', `édité le ${new Date().toLocaleDateString('fr-FR')}`].filter(Boolean).join(' — ')));
   // Périodes rapides : trimestres de l'année scolaire en cours (bornes : Réglages) ou l'année (D012).
   const bornes = await bornesTrimestres();
   const presets = el('div', { class: 'rang-chips no-print', role: 'group', 'aria-label': 'Période rapide' });
@@ -554,7 +577,7 @@ async function vueRecap(c, classeId) {
     }
     const lignes = tousEleves.map((e) => {
       const cnt = Object.fromEntries(CLES.map((k) => [k, 0]));
-      for (const a of parEleve.get(e.id) || []) if (a.statut in cnt) cnt[a.statut]++;
+      for (const a of parEleve.get(e.id) || []) cnt[a.statut in cnt ? a.statut : 'present']++; // statut inconnu rabattu comme à l'appel (audit 2026-09-07, A28)
       return { e, cnt, alerte: depasseSeuil(cnt) };
     }).filter(({ e, cnt }) => e.actif !== false || Object.values(cnt).some((n) => n > 0));
 
@@ -569,7 +592,7 @@ async function vueRecap(c, classeId) {
     // Légende COURTE dans le <caption> (sa boîte prend la largeur du tableau, coupée dans le
     // conteneur défilant sur mobile) ; le décodage des colonnes vit dans un <p> hors défilement,
     // relié par aria-describedby (revue du lot 3).
-    const table = el('table', { class: 'table-apercu table-recap', 'aria-describedby': 'rc-legende' },
+    const table = el('table', { class: 'table-apercu', 'aria-describedby': 'rc-legende' },
       el('caption', {}, `${seancesPeriode.length} séance(s) — ${periode}`),
       el('thead', {}, el('tr', {},
         el('th', { scope: 'col' }, 'Élève'),

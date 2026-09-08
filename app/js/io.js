@@ -5,8 +5,10 @@
 const DB_NOM = 'carnet-eps';
 const DB_VERSION = 2;
 
-// store -> keyPath + index. Toute évolution = migration cumulative dans onupgradeneeded
-// (switch sur e.oldVersion, sans break) + export JSON automatique préalable (BIBLE).
+// store -> keyPath + index. Migration additive uniquement (D009) : `onupgradeneeded` crée les stores
+// manquants et les index manquants d'un store existant, jamais de suppression ni de transformation.
+// Une migration non additive imposerait un `switch (e.oldVersion)` et un export JSON préalable
+// (BIBLE) — voir docs/modele-donnees.md.
 const SCHEMA = {
   meta: { keyPath: 'cle' },
   classes: { keyPath: 'id' },
@@ -53,12 +55,18 @@ export function ouvrirDB() {
     const req = indexedDB.open(DB_NOM, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
-      // Création additive des stores manquants (v1 = tous ; v2 = ajout de « observations »).
-      // Migration purement additive → aucune donnée existante n'est touchée.
+      // Création additive des stores manquants (v1 = tous ; v2 = ajout de « observations »)
+      // et des index manquants d'un store existant. Migration purement additive → aucune
+      // donnée existante n'est touchée.
       for (const [nom, def] of Object.entries(SCHEMA)) {
         if (!db.objectStoreNames.contains(nom)) {
           const store = db.createObjectStore(nom, { keyPath: def.keyPath });
           for (const champ of def.index || []) store.createIndex(champ, champ);
+        } else {
+          // Un index ajouté à SCHEMA ne naissait jamais sur une base déjà ouverte (audit 2026-09-07, D-11) —
+          // à condition d'incrémenter DB_VERSION dans le même geste : sans montée de version, ce bloc ne s'exécute pas.
+          const store = req.transaction.objectStore(nom);
+          for (const champ of def.index || []) if (!store.indexNames.contains(champ)) store.createIndex(champ, champ);
         }
       }
     };
@@ -121,6 +129,12 @@ export async function parIndexLot(store, index, valeurs) {
     tx.onerror = (ev) => rejeter(ev.target?.error || tx.error || new Error('lecture refusée'));
     tx.onabort = () => rejeter(tx.error || new Error('lecture interrompue'));
   });
+}
+
+// Nombre d'enregistrements d'une valeur d'index, sans les charger (aperçus de suppression, C37).
+export async function compterIndex(store, index, valeur) {
+  const db = await ouvrirDB();
+  return attendre(db.transaction(store).objectStore(store).index(index).count(valeur));
 }
 
 // Les trois écritures unitaires passent par ecrireLot : elles ne résolvent qu'à la VALIDATION de
@@ -187,6 +201,12 @@ function blobVersDataURL(blob) {
   });
 }
 
+// Date LOCALE AAAA-MM-JJ, même formule que metier.isoAujourdhui (io.js n'importe pas metier.js,
+// qui l'importe) : toISOString donnait la veille entre minuit et 2 h (audit 2026-09-07, D-09).
+function dateLocaleISO(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export async function exporterJSON({ avecFichiers = true } = {}) {
   // Instantané cohérent : tous les stores lus dans UNE transaction (H02) ; les blobs sont
   // convertis HORS transaction (un Blob lu reste lisible après sa fin).
@@ -194,25 +214,28 @@ export async function exporterJSON({ avecFichiers = true } = {}) {
   const stores = {};
   for (const nom of STORES) {
     if (nom === 'fichiers') {
-      stores.fichiers = avecFichiers
-        ? await Promise.all(brut.fichiers.map(async ({ blob, ...reste }) => ({
-          ...reste,
-          donnees: blob ? await blobVersDataURL(blob) : null,
-        })))
-        : [];
+      stores.fichiers = [];
+      // Un blob à la fois : la conversion en parallèle tenait N dataURL et N lectures en vol (D-08).
+      if (avecFichiers) {
+        for (const { blob, ...reste } of brut.fichiers) {
+          stores.fichiers.push({ ...reste, donnees: blob ? await blobVersDataURL(blob) : null });
+        }
+      }
     } else {
       stores[nom] = brut[nom];
     }
   }
+  const maintenant = new Date(); // une seule lecture d'horloge : date et heure du même instant (revue du lot 5)
   return {
     app: 'carnet-eps',
     schemaVersion: DB_VERSION,
-    dateExport: new Date().toISOString(),
+    dateExport: `${dateLocaleISO(maintenant)}T${maintenant.toTimeString().slice(0, 8)}`,
     stores,
   };
 }
 
-// Vérifie qu'un objet est bien une sauvegarde Carnet EPS lisible. Retourne { date, comptes }.
+// Vérifie qu'un objet est bien une sauvegarde Carnet EPS lisible. Retourne { date, comptes, absents }
+// (absents = stores manquants dans le fichier, vidés par l'import — H04).
 export function validerExport(objet) {
   if (!objet || objet.app !== 'carnet-eps' || !objet.stores || typeof objet.stores !== 'object') {
     throw new Error('fichier non reconnu (ce n’est pas une sauvegarde Carnet EPS)');
@@ -259,17 +282,19 @@ export function validerExport(objet) {
 // entière (~10 000 appels) et tout-ou-rien, même si l'onglet est fermé en cours (avis B29).
 export async function importerJSON(objet) {
   validerExport(objet);
-  // schemaVersion < DB_VERSION : appliquer ici les migrations à l'import (aucune en v1).
+  // schemaVersion < DB_VERSION : aucune migration à l'import à ce jour (schéma 2) — un store absent est vidé (H04).
   const lots = {};
   for (const nom of STORES) {
     if (nom === 'fichiers') {
-      lots.fichiers = await Promise.all((objet.stores.fichiers || []).map(async (enreg) => {
+      // Un blob à la fois (D-08), voir exporterJSON.
+      lots.fichiers = [];
+      for (const enreg of objet.stores.fichiers || []) {
         const { donnees, ...reste } = enreg;
         // Sécurité : ne reconstruire un blob que depuis une dataURL locale. Un fichier piégé
         // avec une URL http n'émet ainsi aucune requête réseau (offline/RGPD garantis).
         const okDataURL = typeof donnees === 'string' && donnees.startsWith('data:');
-        return { ...reste, blob: okDataURL ? await (await fetch(donnees)).blob() : null };
-      }));
+        lots.fichiers.push({ ...reste, blob: okDataURL ? await (await fetch(donnees)).blob() : null });
+      }
     } else if (nom === 'eleves') {
       lots.eleves = (objet.stores.eleves || []).map((enreg) =>
         Object.fromEntries(CHAMPS_ELEVE.filter((k) => k in enreg).map((k) => [k, enreg[k]])));
@@ -286,7 +311,7 @@ export async function importerJSON(objet) {
 }
 
 export async function telechargerJSON(objet, suffixe = 'sauvegarde') {
-  const nom = `carnet-eps_${suffixe}_${new Date().toISOString().slice(0, 10)}.json`;
+  const nom = `carnet-eps_${suffixe}_${dateLocaleISO()}.json`;
   const blob = new Blob([JSON.stringify(objet)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -341,11 +366,15 @@ export function champCSV(valeur) {
 // ---------------------------------------------------------------------------
 
 export function decoderTexte(tampon) {
-  const utf8 = new TextDecoder('utf-8').decode(tampon);
-  // Caractère de remplacement � = le fichier n'était pas de l'UTF-8 valide
-  // → on retente en Windows-1252 (exports Pronote/Excel France).
-  if (utf8.includes('�')) return new TextDecoder('windows-1252').decode(tampon);
-  return utf8;
+  const o = new Uint8Array(tampon);
+  // BOM UTF-16 (Excel « Texte Unicode ») : décodé en 1252, chaque lettre arrivait suivie d'un NUL
+  // (audit 2026-09-07, C03/B37).
+  if (o[0] === 0xFF && o[1] === 0xFE) return new TextDecoder('utf-16le').decode(tampon);
+  if (o[0] === 0xFE && o[1] === 0xFF) return new TextDecoder('utf-16be').decode(tampon);
+  // UTF-8 STRICT, repli Windows-1252 (exports Pronote/Excel France) seulement sur UTF-8 invalide :
+  // un « � » légitime dans un fichier UTF-8 basculait tout le fichier en 1252.
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(tampon); }
+  catch { return new TextDecoder('windows-1252').decode(tampon); }
 }
 
 export async function lireTexteCSV(fichier) {
@@ -354,8 +383,18 @@ export async function lireTexteCSV(fichier) {
 
 export function parserCSV(texte) {
   const sansBom = String(texte).replace(/^\uFEFF/, '');
-  const lignesBrutes = sansBom.split(/\r\n|\r|\n/).filter((l) => l.trim() !== '');
+  // Caractères de contrôle (NUL d'un UTF-16 sans BOM…) : retirés des lignes (tabulation gardée, c'est un
+  // séparateur possible) puis des champs — trim() ne les touche pas, et une ligne « \0 » entre deux
+  // enregistrements comptait comme ligne incomplète (B37 ; revue du lot 5).
+  const sansControle = (s) => s.replace(/[^\P{Cc}\t]/gu, '');
+  const propre = (s) => s.replace(/\p{Cc}/gu, '').trim();
+  const lignesBrutes = sansBom.split(/\r\n|\r|\n/).map(sansControle).filter((l) => l.trim() !== '');
   if (lignesBrutes.length < 2) throw new Error('il faut au moins une ligne d’en-têtes et une ligne de données');
+  // Le découpage en lignes précède les guillemets : un champ sur plusieurs lignes scindait un élève
+  // en deux sans un mot → refus explicite (nombre impair de « " » sur une ligne) (audit 2026-09-07, C04).
+  if (lignesBrutes.some((l) => (l.match(/"/g) || []).length % 2)) {
+    throw new Error('champ sur plusieurs lignes non pris en charge — réenregistrez le CSV sans retour à la ligne dans les cellules');
+  }
   const premiere = lignesBrutes[0];
   const separateur = [';', '\t', ','].reduce((a, b) =>
     premiere.split(b).length > premiere.split(a).length ? b : a
@@ -370,13 +409,13 @@ export function parserCSV(texte) {
         if (entreGuillemets && ligne[i + 1] === '"') { courant += '"'; i++; }
         else entreGuillemets = !entreGuillemets;
       } else if (ch === separateur && !entreGuillemets) {
-        champs.push(courant.trim());
+        champs.push(propre(courant));
         courant = '';
       } else {
         courant += ch;
       }
     }
-    champs.push(courant.trim());
+    champs.push(propre(courant));
     return champs;
   };
   return {
@@ -394,6 +433,13 @@ export function parserCSV(texte) {
 // ---------------------------------------------------------------------------
 
 // operations = [{ store, op: 'put', valeur } | { store, op: 'delete', cle } | { store, op: 'clear' }]
+// Un refus d'écriture du navigateur arrive en anglais technique (« QuotaExceededError ») : on garde
+// le détail mais on dit quoi faire (audit 2026-09-07, B41). Le verrou multi-onglets (ouvrirDB) parle déjà.
+function motifEcriture(err) {
+  if (err?.name !== 'QuotaExceededError') return err;
+  return new Error(`${err.message || 'QuotaExceededError'} — mémoire de l’appareil pleine : exportez une sauvegarde (Plus → Sauvegarde), puis libérez de l’espace sur l’appareil`);
+}
+
 async function ecrireLot(operations) {
   if (!operations.length) return;
   const stores = [...new Set(operations.map((o) => o.store))];
@@ -405,8 +451,8 @@ async function ecrireLot(operations) {
     tx.oncomplete = resoudre;
     // Pendant la propagation d'une erreur de requête, tx.error est encore null : l'erreur vit sur
     // la requête (ev.target) — sinon `e.message` levait un TypeError (audit 2026-09-07, D-07).
-    tx.onerror = (ev) => rejeter(ev.target?.error || tx.error || new Error('écriture refusée'));
-    tx.onabort = () => rejeter(tx.error || new Error('écriture interrompue'));
+    tx.onerror = (ev) => rejeter(motifEcriture(ev.target?.error || tx.error || new Error('écriture refusée')));
+    tx.onabort = () => rejeter(motifEcriture(tx.error || new Error('écriture interrompue')));
     try {
       for (const o of operations) {
         const st = tx.objectStore(o.store);
@@ -416,7 +462,7 @@ async function ecrireLot(operations) {
       }
     } catch (e) {
       tx.abort(); // erreur synchrone (clé absente, valeur non clonable…) : rien n'est écrit
-      rejeter(e);
+      rejeter(motifEcriture(e));
     }
   });
 }
@@ -503,31 +549,51 @@ export async function supprimerEleveEnCascade(eleveId) {
 // Aperçu des suppressions en cascade (pour afficher l'impact dans la confirmation).
 // ---------------------------------------------------------------------------
 
+// Comptages par `count()` sur l'index : l'aperçu chargeait les mêmes enregistrements que la
+// cascade qui suit (audit 2026-09-07, C37).
 export async function apercuSuppressionEleve(eleveId) {
   return {
-    appels: (await parIndex('appels', 'eleveId', eleveId)).length,
-    inaptitudes: (await parIndex('inaptitudes', 'eleveId', eleveId)).length,
-    certificats: (await parIndex('certificats', 'eleveId', eleveId)).length,
-    notes: (await parIndex('notes', 'eleveId', eleveId)).length,
-    observations: (await parIndex('observations', 'eleveId', eleveId)).length,
+    appels: await compterIndex('appels', 'eleveId', eleveId),
+    inaptitudes: await compterIndex('inaptitudes', 'eleveId', eleveId),
+    certificats: await compterIndex('certificats', 'eleveId', eleveId),
+    notes: await compterIndex('notes', 'eleveId', eleveId),
+    observations: await compterIndex('observations', 'eleveId', eleveId),
   };
 }
 
 export async function apercuSuppressionSequence(sequenceId) {
   const seances = await parIndex('seances', 'sequenceId', sequenceId);
   let appels = 0;
-  for (const s of seances) appels += (await parIndex('appels', 'seanceId', s.id)).length;
+  for (const s of seances) appels += await compterIndex('appels', 'seanceId', s.id);
   const evaluations = await parIndex('evaluations', 'sequenceId', sequenceId);
   let notes = 0;
-  for (const ev of evaluations) notes += (await parIndex('notes', 'evaluationId', ev.id)).length;
+  for (const ev of evaluations) notes += await compterIndex('notes', 'evaluationId', ev.id);
   return { seances: seances.length, appels, evaluations: evaluations.length, notes };
 }
 
+// [singulier, pluriel] par store de données (`meta` exclu) — partagé par les aperçus de suppression
+// et le résumé de l'écran Sauvegarde (C38) : tout store de données doit y figurer, sinon il disparaît
+// du résumé affiché avant un import qui REMPLACE tout.
+export const LIBELLES = {
+  classes: ['classe', 'classes'],
+  eleves: ['élève', 'élèves'],
+  edt: ['créneau EDT', 'créneaux EDT'],
+  sequences: ['séquence', 'séquences'],
+  seances: ['séance', 'séances'],
+  appels: ['appel', 'appels'],
+  inaptitudes: ['inaptitude', 'inaptitudes'],
+  certificats: ['certificat', 'certificats'],
+  fichiers: ['pièce jointe', 'pièces jointes'],
+  evaluations: ['évaluation', 'évaluations'],
+  notes: ['note', 'notes'],
+  documents: ['document', 'documents'],
+  observations: ['observation', 'observations'],
+};
+
 // { appels: 12, notes: 4 } → « Seront aussi supprimés : 12 appels, 4 notes. » (ignore les zéros).
 export function detailSuppression(comptes) {
-  const noms = { seances: 'séance', appels: 'appel', notes: 'note', inaptitudes: 'inaptitude', certificats: 'certificat', evaluations: 'évaluation', observations: 'observation', fichiers: 'pièce jointe' };
   const parts = Object.entries(comptes)
     .filter(([, n]) => n > 0)
-    .map(([k, n]) => `${n} ${noms[k] || k}${n > 1 ? 's' : ''}`);
+    .map(([k, n]) => `${n} ${(LIBELLES[k] || [k, `${k}s`])[n > 1 ? 1 : 0]}`);
   return parts.length ? `Seront aussi supprimés : ${parts.join(', ')}.` : '';
 }

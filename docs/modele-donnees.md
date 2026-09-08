@@ -2,10 +2,10 @@
 
 ## Conventions
 
-- `id` : `crypto.randomUUID()` — keyPath de tous les stores (sauf `meta` : keyPath `cle`).
+- `id` : `crypto.randomUUID()` — keyPath de tous les stores (sauf `meta` : keyPath `cle`). Exceptions assumées : `appels.id = <seanceId>_<eleveId>` et `notes.id = <evaluationId>_<eleveId>` — clés composites garantissant un enregistrement unique par élève × séance / élève × évaluation (`appel.js`, `notes.js`).
 - Dates : chaînes ISO `YYYY-MM-DD` (tri lexicographique = tri chronologique) ; heures `HH:MM`.
 - Champs marqués `*` : indexés (requêtes fréquentes).
-- `DB_VERSION` (entier, **2** depuis v0.12.0) dans `io.js` ; `onupgradeneeded` crée les stores **manquants** (migration additive, décision D009 — jamais de suppression ni de transformation). Une future migration non additive imposerait un `switch (oldVersion)` et l'export JSON automatique préalable (BIBLE). ⚠ Ne jamais redéployer une version dont le `DB_VERSION` est inférieur à celui déjà ouvert sur les appareils (`indexedDB.open` échouerait en `VersionError`) — voir `deploiement.md`.
+- `DB_VERSION` (entier, **2** depuis v0.12.0) dans `io.js` ; `onupgradeneeded` crée les stores **manquants** et, sur un store existant, les **index manquants** de `SCHEMA` — **à condition d'incrémenter `DB_VERSION` dans le même geste** : sans montée de version, `onupgradeneeded` ne se déclenche pas et l'index n'existe sur aucune base déjà ouverte (migration additive, décision D009 — jamais de suppression ni de transformation ; v0.12.12, D-11). Une future migration non additive imposerait un `switch (oldVersion)` et l'export JSON automatique préalable (BIBLE). ⚠ Ne jamais redéployer une version dont le `DB_VERSION` est inférieur à celui déjà ouvert sur les appareils (`indexedDB.open` échouerait en `VersionError`) — voir `deploiement.md`.
 
 ## Stores (schéma v1)
 
@@ -22,7 +22,7 @@ eleves        { id, classeId*, nom, prenom, sexe?, dateNaissance?, notesPerso, p
               l'appel, aux notes et aux effectifs, historique conservé. Absent/undefined = actif.
 
 edt           { id, jour (1=lundi…7), heureDebut, heureFin, classeId*, semaine ("AB"|"A"|"B"),
-                installation, dateDebut?, dateFin? }
+                installation }
 
 sequences     { id, classeId*, apsa, ca (1-4), afl[], dateDebut, dateFin, nbSeancesPrevu, objectifs, bilan }
 
@@ -37,7 +37,7 @@ appels        { id, seanceId*, eleveId*, statut, minutesRetard?, commentaire }
 
 inaptitudes   { id, eleveId*, type ("totale"|"partielle"), dateDebut, dateFin, origine
                 ("certificat"|"mot"|"infirmerie"), restrictions[], certificatId?, commentaire }
-              restrictions ∈ course, sauts, lancers, appuis, natation, port_de_charge, autre
+              restrictions ∈ course, sauts, lancers, appuis, natation, port_de_charge
 
 certificats   { id, eleveId*, dateDepot, dateDebut?, dateFin?, fichierId, commentaire }
 
@@ -69,7 +69,7 @@ documents     { id, titre, type, tags[], classeIds[], fichierId?, url?, dateAjou
 ## Règles d'intégrité (appliquées dans le code, IndexedDB n'a pas de FK)
 
 - Supprimer un **élève** → supprimer ses appels, inaptitudes, certificats (+ fichiers liés), notes. Double confirmation + proposition d'export préalable.
-- Supprimer une **classe** → refus si élèves actifs (archiver d'abord).
+- Supprimer une **classe** → possible seulement si elle ne contient plus **aucun** élève (actifs ou partis : le bouton « Supprimer la classe » n'apparaît qu'alors) ; refus supplémentaire tant que des séquences, des créneaux EDT (B22, v0.12.4) ou des documents (D-12, v0.12.9) la référencent (message « Classe non supprimée : elle a encore … »). Sinon : archiver.
 - Supprimer une **évaluation/séquence/séance** → cascade sur notes/séances/appels avec récapitulatif avant confirmation.
 - Une **inaptitude active** à une date D = `dateDebut ≤ D ≤ dateFin` → pré-remplit le statut d'appel et affiche la pastille.
 - **Atomicité (v0.12.7, avis B29 ; complétée en v0.12.8, hypothèses Codex)** : toute cascade de suppression, toute annulation (`restaurer`), la **purge totale** (`viderTout`) et l'import JSON s'exécutent en **une seule transaction IndexedDB multi-stores** (`io.js` : `ecrireLot`). Les lectures ont lieu avant, les écritures sont émises d'un bloc : tout ou rien, même si l'onglet est fermé en cours de route. Un module ne doit plus enchaîner des `supprimer()` / `enregistrer()` pour une opération logiquement unique.
@@ -90,7 +90,7 @@ Store **`observations`** (schéma v2), index `eleveId`. Notes de suivi terrain.
 | `ton` | `positif \| neutre \| vigilance` | couleur du badge / sens (bulletins) |
 | `tags` | string[] | `tenue`, `sécurité`, `engagement`, `progrès`, `comportement`, `conseil`, `bulletin` |
 | `texte` | string | contenu (dictée via micro natif possible) |
-| `seanceId` | string \| null | séance liée (optionnel) |
+| `seanceId` | string \| null | séance liée — réservé : toujours `null` en v0.12 (la carte n'est branchée que sur la fiche élève ; brancher l'écran d'appel = avis, A31) |
 | `dateAjout` | ISO datetime | horodatage |
 
 - **Cascade** : suppression d'un élève → ses observations (incluses dans `supprimerEleveEnCascade`, l'aperçu, le détail et l'undo). Supprimer une séance **ne** supprime **pas** les observations.

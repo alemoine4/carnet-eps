@@ -14,6 +14,25 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-08 (33) — v0.12.12 : lot 5 (tests, qualité, documentation), 72 constats triés, 63 traités, 35 tests + avis des restes
+
+Demande : « fait au mieux » (GO discrétionnaire) — lot 5, le seul non bloqué par les deux avis en attente.
+
+**Fait** :
+- **Triage par workflow** (9 agents en lecture seule, un par thème, contre le code réel v0.12.11 : les numéros de ligne du rapport étaient périmés) : 51 constats présents, 15 partiels, 6 déjà corrigés par les lots 1/3/4 ; pour chacun un ancrage exact, un correctif minimal et un test **rouge aujourd'hui**. Coupé une fois par la limite de session (1 thème sur 9 rendu), repris par `resumeFromRunId` (le thème rendu a été rejoué depuis le cache).
+- **Quatre patchs à ancrage exact** (a : données io.js ; b : import + notes ; c : appel, métier, main, media ; d : sécurité, config des tests, couverture, D-10) = 119 remplacements sur ~30 fichiers, chaque groupe joué **rouge avant, vert après** ; deux scripts de docs (29 + 12 remplacements). Détail par constat : CHANGELOG.
+- **Tests** : `tests/e2e/audit5-lot5.spec.mjs` (34) + 6 tests et 4 renforts dans `regressions.spec.mjs`, smoke-tests 1 et 6 renforcés. Preuves notables : séquence d'événements R/L et F/D pour prouver la conversion **une à une** des blobs (un compteur « en vol » aurait été trompé par la file de microtâches) ; horloge de page fixée (`page.clock.setFixedTime`) sous `timezoneId: 'Europe/Paris'` pour D-09 et C49 ; base v1 recréée à la main sans l'index `classeId` pour D-11/C30 ; compteur de transactions pour A27 ; garde de cohérence **dérivée du code** (restrictions, champs EDT, préférences, compte des tests) pour C57/C59.
+- **Avis** `docs/avis/AVIS_LOT5_RESTES.md` : neuf points non appliqués (C15, A34, C45, A31 b, A33, C60, D-08 3, C44 1, C16 2), une recommandation par ligne.
+- **CLAUDE.md** modifié (deux lignes : Playwright à installer depuis le terminal de l'utilisateur ; identifiants composites `appels`/`notes`).
+
+- **Revue adversariale** (4 lentilles Opus, 34 constats, 2 réfutateurs par constat — première passe coupée par la limite de session après les lentilles, reprise) : 7 corrections de code/config (UTF-16 sans BOM : les NUL entre `\r` et `\n` faisaient une ligne fantôme par enregistrement ; A27 : l'instantané réappliqué après l'`await` écrasait un tap fait pendant l'écriture — la boucle séquentielle d'avant était immunisée ; import : `suite.replaceChildren()` avant toute analyse ; `ge-titre` au contrat ✗ ; une seule lecture d'horloge pour `dateExport` ; X-Racine = empreinte SHA-256 au lieu du chemin — le serveur écoute sur toutes les interfaces et le parcours Android passe par le LAN ; commentaire/doc D-11), 8 preuves renforcées, 12 écarts de docs (dont TODO/roadmap qui disaient le lot 5 livré ET à faire, C30 compté « déjà couvert » alors que son test naît ici, C36 absent du CHANGELOG, chiffrage C60 de l'avis faux, `package-lock.json` non régénéré).
+
+**Décidé** : A28 rabat un statut inconnu en « présent » (règle déjà appliquée par l'écran d'appel, B34) plutôt qu'une colonne « autre » ; C53 appliqué sans avis parce que la spécification (`fonctionnalites.md` §5) l'annonçait déjà ; B44 visible à l'écran aussi (le projet n'a pas de classe « impression seulement ») ; C16 message seulement, pas de confirmation avant copie (activation utilisateur).
+
+**Coincé / à vérifier** : sur l'appareil, l'écran Aide réécrit (B38 : formulations « ⋮ », bannière), la ligne « édité le » sur les impressions, la pastille 🩺 dans les listes ; `npm ci` chez toi (C20) ; la fiche terrain reste à faire une fois.
+
+**Prochaine étape** : tes décisions sur les trois avis (lot 2, A01, restes du lot 5) ; A39 et la CI (C64) restent à cadrer.
+
 ## 2026-09-08 (32) — v0.12.11 : lot 4 (service-worker et performance, 17 constats), 10 tests + avis lot 2 et A01
 
 Demande : « continue non? » → avis en attente rédigés, puis lot 4.
@@ -26,7 +45,7 @@ Demande : « continue non? » → avis en attente rédigés, puis lot 4.
 
 **Décidé** : A39 (index.html cache-first) reste un choix de stratégie à trancher par avis ; lot 2 et A01 attendent ton « go ».
 
-**Coincé / à vérifier** : sur l'appareil, ouverture d'un certificat PDF (onglet, 60 s) ; validations terrain (fiche 15 min). Leçons d'outillage : une sonde sur `IDBObjectStore.getAll` est aveugle aux lectures par `IDBIndex.getAll` ; une lecture « par index » n'est un gain que si le volume lu baisse ET si les transactions ne se multiplient pas ; un `resumeFromRunId` après édition du script relance les lentilles (résultats différents, non déterministes) — ne pas supposer que la cache a rejoué.
+**Coincé / à vérifier** : sur l'appareil, ouverture d'un certificat PDF (onglet, 60 s) ; validations terrain (fiche 15 min). Leçons de ce lot : un test qui normalise la propriété qu'il annonce (CRLF → LF) ne la teste pas ; une liste de fichiers écrite à la main dans un lint épouse le correctif, pas la règle ; un compteur « en vol » est trompé par les microtâches (séquence d'événements R/L à la place) ; un instantané pris avant un `await` ne doit pas être réappliqué sans vérifier l'état courant ; les docs de pilotage (TODO, roadmap, CLAUDE.md) se recalent en DERNIER, sinon elles disent une chose et son contraire. Leçons d'outillage : une sonde sur `IDBObjectStore.getAll` est aveugle aux lectures par `IDBIndex.getAll` ; une lecture « par index » n'est un gain que si le volume lu baisse ET si les transactions ne se multiplient pas ; un `resumeFromRunId` après édition du script relance les lentilles (résultats différents, non déterministes) — ne pas supposer que la cache a rejoué.
 
 **Déployé** : main `82939d6`, gh-pages `86dae78`, tag `v0.12.11` (2026-09-08).
 

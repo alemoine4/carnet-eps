@@ -3,11 +3,19 @@
 // (même instance que l'app) puis on pilote l'UI réelle.
 
 import { test, expect } from '@playwright/test';
+import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
 const STORES = ['meta', 'classes', 'eleves', 'edt', 'sequences', 'seances', 'appels',
   'inaptitudes', 'certificats', 'fichiers', 'evaluations', 'notes', 'documents', 'observations'];
 
+// Erreurs console et exceptions non rattrapées, écoutées AVANT la première navigation : le test 1
+// ne branchait ses écouteurs qu'après le chargement de l'app (audit 2026-09-07, C34).
+let erreurs = [];
 test.beforeEach(async ({ page }) => {
+  erreurs = [];
+  page.on('console', (m) => { if (m.type() === 'error') erreurs.push(m.text()); });
+  page.on('pageerror', (e) => erreurs.push(String(e)));
   await page.goto('/');
   await page.evaluate(async (stores) => {
     const io = await import('/js/io.js');
@@ -17,14 +25,15 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('1. chargement sans erreur console + navigation complète', async ({ page }) => {
-  const erreurs = [];
-  page.on('console', (m) => { if (m.type() === 'error') erreurs.push(m.text()); });
+  await page.reload(); // second chargement observé lui aussi (écouteurs posés dans beforeEach)
   for (const r of ['accueil', 'appel', 'eleves', 'notes', 'edt', 'plus', 'suivi', 'aide',
     'reglages', 'sauvegarde', 'sequences', 'inaptitudes', 'documents']) {
     await page.goto('/#/' + r);
     await expect(page.locator('#vue')).not.toBeEmpty();
   }
   expect(erreurs).toEqual([]);
+  // C21 : le serveur réutilisé sur 8160 sert app/ de CE dépôt, pas une autre copie.
+  expect((await page.request.get('/')).headers()['x-racine']).toBe(createHash('sha256').update(fileURLToPath(new URL('../../app', import.meta.url))).digest('hex').slice(0, 16));
 });
 
 test('2. créer une classe + persistance après rechargement', async ({ page }) => {
@@ -120,11 +129,13 @@ test('6. export / import JSON sans perte (round-trip)', async ({ page }) => {
     const io = await import('/js/io.js');
     await io.enregistrer('classes', { id: 'c1', nom: '6A', archivee: false });
     await io.enregistrer('eleves', { id: 'e1', classeId: 'c1', nom: 'M', prenom: 'I', actif: true });
+    await io.enregistrer('fichiers', { id: 'f1', blob: new Blob(['x'], { type: 'image/jpeg' }), mime: 'image/jpeg', nom: 'c.jpg', taille: 1 }); // pièce jointe : sérialisation des blobs (C35)
     const dump = await io.exporterJSON({ avecFichiers: true });
     const { comptes } = io.validerExport(dump);
     for (const s of ['classes', 'eleves']) await io.vider(s);
     await io.importerJSON(dump);
-    return { exportEleves: comptes.eleves, apresImport: (await io.tous('eleves')).length };
+    const f1 = await io.lire('fichiers', 'f1');
+    return { exportEleves: comptes.eleves, apresImport: (await io.tous('eleves')).length, piece: [comptes.fichiers, f1?.blob?.size, f1?.blob?.type] };
   });
-  expect(res).toEqual({ exportEleves: 1, apresImport: 1 });
+  expect(res).toEqual({ exportEleves: 1, apresImport: 1, piece: [1, 1, 'image/jpeg'] }); // le blob revient intact (taille, type)
 });

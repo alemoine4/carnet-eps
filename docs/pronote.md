@@ -9,10 +9,10 @@
 
 **Côté Carnet EPS** — l'import doit être tolérant :
 - Séparateur `;` ou tabulation (collage direct accepté en plus du fichier).
-- Encodage UTF-8 **ou** Windows-1252 (détection : si `é` devient `Ã©` ou `�`, re-décoder en 1252).
+- Encodage UTF-8, Windows-1252 **ou** UTF-16 avec BOM (« Texte Unicode » d'Excel). Détection (`decoderTexte`, v0.12.12) : BOM UTF-16 → décodage UTF-16 ; sinon UTF-8 **strict**, et Windows-1252 seulement si le fichier n'est pas de l'UTF-8 valide (un `�` légitime dans un fichier UTF-8 ne fait plus basculer tout le fichier). Les caractères de contrôle (NUL…) sont retirés des champs ; un champ entre guillemets sur plusieurs lignes est refusé avec message.
 - Colonnes reconnues automatiquement : `Nom`, `Prénom`, `Né(e) le`, `Sexe`, `Classe` — écran de **mapping manuel** si en-têtes différents ; colonnes inconnues ignorées (on n'importe jamais l'INE ni l'adresse).
-- Dates `JJ/MM/AAAA` → ISO.
-- Doublons (même nom+prénom+classe) : proposer fusion/ignorer.
+- Dates `JJ/MM/AAAA` → ISO (séparateurs `/`, `.` ou `-` acceptés, `AAAA-MM-JJ` aussi) ; une date impossible (31/02) ou non reconnue est laissée vide et comptée dans le résumé d'import (« n dates de naissance non reconnues », B46/C51, v0.12.12).
+- Doublons (même nom+prénom+classe) : ignorés et comptés dans le résumé d'import (« n doublons ignorés ») ; un élève « parti » qui revient est réactivé (D-13, v0.12.9) ; un homonyme présent dans une **autre** classe est signalé (« changement de classe ? à vérifier », C14, v0.12.12). Pas d'écran de fusion.
 
 Jeu d'essai fictif : `app/data/exemple_eleves_pronote.csv`.
 
@@ -26,7 +26,7 @@ Côté app, bouton **« Copier pour Pronote »** sur une évaluation :
 1. Trie les élèves comme Pronote (NOM puis Prénom, sensible aux espaces/tirets — à vérifier sur les cas réels : homonymes, noms composés).
 2. Génère une valeur par ligne, virgule décimale (`12,5`).
 3. Codes spéciaux : `ABS`, `DISP`, `NN` — selon la version Pronote ils ne se collent pas toujours → l'app affiche après copie la liste « à saisir à la main : ligne X = ABS ».
-4. Garde-fou : l'app affiche l'effectif copié ; **vérifier qu'il correspond à l'effectif Pronote avant de coller** (élève arrivé/parti en cours d'année = décalage de lignes).
+4. Garde-fou : l'app affiche l'effectif copié et le nombre de lignes vides (non saisies + codes ABS/DISP/NN — C16, v0.12.12) ; **vérifier qu'il correspond à l'effectif Pronote avant de coller** (élève arrivé/parti en cours d'année = décalage de lignes).
 
 ### Voie B — CSV (si l'établissement utilise l'import de notes)
 

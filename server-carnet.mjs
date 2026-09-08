@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { createHash } from 'node:crypto';
 const RACINE = join(fileURLToPath(new URL('.', import.meta.url)), 'app');
 const PORT = Number(process.argv[2]) || 8160;
 
@@ -37,6 +38,7 @@ createServer(async (req, res) => {
     res.writeHead(200, {
       'Content-Type': MIME[extname(fichier).toLowerCase()] || 'application/octet-stream',
       'Cache-Control': 'no-store',
+      'X-Racine': createHash('sha256').update(RACINE).digest('hex').slice(0, 16), // empreinte du dossier servi, pas le chemin (tests/e2e/smoke.spec.mjs, C21 ; revue du lot 5)
     });
     res.end(corps);
   } catch {

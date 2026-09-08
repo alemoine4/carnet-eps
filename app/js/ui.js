@@ -50,7 +50,7 @@ export async function afficherVue(id, params = []) {
 // select ou une date relançait le rendu et renvoyait le focus au <body> (audit 2026-09-07, B20).
 export async function rerendre(c, rendu) {
   const idFocus = document.activeElement?.id;
-  c.innerHTML = '';
+  c.replaceChildren();
   const r = await rendu();
   if (idFocus) document.getElementById(idFocus)?.focus({ preventScroll: true });
   return r;
@@ -75,6 +75,15 @@ export function carte(titre, texte = '', badge = '') {
   c.append(h);
   if (texte) c.append(el('p', {}, texte));
   return c;
+}
+
+// Ligne d'alerte (accueil et Suivi) : un seul rendu — audit 2026-09-07, C41.
+export function ligneAlerte(a) {
+  return el('a', { class: 'ligne-eleve', href: a.href },
+    el('span', { class: 'badge' + (a.grave ? ' badge-alerte' : '') }, el('span', { 'aria-hidden': 'true' }, a.grave ? '⚠' : 'ℹ'), el('span', { class: 'sr-only' }, a.grave ? 'Alerte' : 'Information')), // B43
+    el('span', { class: 'ligne-eleve-nom' }, a.texte),
+    el('span', { class: 'chevron pousse-droite', 'aria-hidden': 'true' }, '›'),
+  );
 }
 
 // ---- Champs de formulaire (sauvegarde sur `change` + retour visuel « ✓ ») ----

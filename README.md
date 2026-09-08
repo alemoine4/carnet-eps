@@ -10,7 +10,7 @@
 | Module | En bref |
 |---|---|
 | 🏠 Aujourd'hui | Cours du jour, alertes (certificats qui expirent, inaptitudes en cours, oublis de tenue répétés) |
-| 📅 EDT | Emploi du temps EPS : créneaux, semaines A/B, périodes, installations (gymnase, piscine…) |
+| 📅 EDT | Emploi du temps EPS : créneaux, semaines A/B, installations (gymnase, piscine…) |
 | ✋ Appel | Appel tactile rapide : présent / absent / retard / dispensé / inapte / oubli de tenue / infirmerie |
 | 👥 Élèves | Classes et élèves importés depuis Pronote (CSV), fiche élève avec historique complet et **observations** (notes terrain en 2 taps) |
 | 📈 Suivi | Alertes élèves agrégées : inaptitudes qui expirent, seuils d'oublis de tenue/dispenses, notes non remontées |
@@ -79,7 +79,7 @@ carnet-eps/
 
 ## État du projet
 
-**v0.12.11 — en ligne (2026-09-08 : lot 4 ; 2026-09-07 : lots 1 et 3 du 5e audit ; 2026-09-06 : v0.12.4 = 4e audit, v0.12.5 = dédoublonnage, v0.12.6 = vision par trimestre, v0.12.7 = cascades atomiques, v0.12.8 = écritures durables et caches d'origine)** : phases 0→9 livrées (🎒 jalon rentrée 2026), tous les modules du tableau ci-dessus sont fonctionnels, vérifiés et **publiés** sur https://alemoine4.github.io/carnet-eps/. QA : Lighthouse Perf 97 / A11y 100 / BP 100, année complète simulée fluide (< 50 ms par écran), **8 smoke-tests + 104 tests de non-régression** Playwright (`npm test`), audit complet du 2026-07-10 soldé (v0.12.1 → v0.12.2), **4e audit du 2026-09-05** (34 constats, 30 traités en v0.12.4 — rapport `docs/audit-2026-09-05.md`) et **5e audit du 2026-09-07** (179 constats, lot 1 = 44 constats livrés en v0.12.9 : exactitude de l'appel et des alertes, validations, erreurs visibles, import plus strict ; lot 3 = 35 constats livrés en v0.12.10 : clavier, lecteur d'écran, vrais tableaux, 320 px, contraste, impression ; lot 4 = 17 constats livrés en v0.12.11 : service-worker durci, lectures par index, plafond des pièces — rapport `docs/audit-2026-09-07.md`). Historique des versions et retour arrière : `docs/deploiement.md`.
+**v0.12.12 — en ligne (2026-09-08 : lots 4 et 5 ; 2026-09-07 : lots 1 et 3 du 5e audit ; 2026-09-06 : v0.12.4 = 4e audit, v0.12.5 = dédoublonnage, v0.12.6 = vision par trimestre, v0.12.7 = cascades atomiques, v0.12.8 = écritures durables et caches d'origine)** : phases 0→9 livrées (🎒 jalon rentrée 2026), tous les modules du tableau ci-dessus sont fonctionnels, vérifiés et **publiés** sur https://alemoine4.github.io/carnet-eps/. QA : Lighthouse Perf 97 / A11y 100 / BP 100, année complète simulée fluide (< 50 ms par écran), **8 smoke-tests + 145 tests de non-régression** Playwright (`npm test`), audit complet du 2026-07-10 soldé (v0.12.1 → v0.12.2), **4e audit du 2026-09-05** (34 constats, 30 traités en v0.12.4 — rapport `docs/audit-2026-09-05.md`) et **5e audit du 2026-09-07** (179 constats, lot 1 = 44 constats livrés en v0.12.9 : exactitude de l'appel et des alertes, validations, erreurs visibles, import plus strict ; lot 3 = 35 constats livrés en v0.12.10 : clavier, lecteur d'écran, vrais tableaux, 320 px, contraste, impression ; lot 4 = 17 constats livrés en v0.12.11 : service-worker durci, lectures par index, plafond des pièces ; lot 5 = 62 constats livrés en v0.12.12 : CSV robuste, import plus parlant, une transaction pour « Terminer l’appel », preuves des tests renforcées, docs alignées — rapport `docs/audit-2026-09-07.md`). Historique des versions et retour arrière : `docs/deploiement.md`.
 
 Restent : les **validations terrain** (Pronote réel, Android réel, impression) listées en tête de `TODO.md`.
 

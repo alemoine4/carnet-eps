@@ -25,7 +25,7 @@ async function hoteSW(page) {
   return null;
 }
 
-const attendreSW = (page) => expect.poll(() => page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.active?.state || null), { timeout: 20000 }).toBe('activated');
+const attendreSW = (page) => expect.poll(() => page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.active?.state || null), { timeout: 10000 }).toBe('activated'); // < timeout du test : c'est le poll qui parle (C62)
 
 // ---------------------------------------------------------------------------
 // Service-worker (réel)
@@ -87,6 +87,7 @@ test('A40 — hors ligne : une navigation inconnue reçoit index.html, un fichie
     expect(manifest.type).toContain('text/plain');
     await page.goto(`${base}/?hors-ligne`);
     await expect(page.locator('.nav')).toBeVisible(); // index.html servi en repli de navigation
+    await expect(page.locator('#vue')).not.toBeEmpty(); // et l'app démarre : main.js et les modules viennent du cache (C24)
   } finally {
     await context.setOffline(false);
   }
@@ -97,6 +98,8 @@ test('A17 / A19 / A41 — précache hors du cache HTTP, réponses redirigées ou
   // et les requêtes du service-worker échappent au routage) : c'est le code qui porte la preuve, et
   // on vérifie l'EMPLOI des gardes aux deux points de mise en cache, pas seulement leur définition.
   const src = await (await page.request.get('/service-worker.js')).text();
+  const versionApp = await page.evaluate(async () => (await import('/js/state.js')).VERSION_APP);
+  expect(src).toContain(`const VERSION = '${versionApp}'`); // C62 : numéros synchronisés, vérifié même quand les tests SW se sautent
   expect(src).toContain("c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' })))"); // A17
   expect(src).toContain("const cachable = (rep) => rep.ok && rep.type === 'basic' && !rep.redirected;"); // A19
   expect(src.match(/if \(cachable\(rep\)\) mettreEnCache\(e, req, rep\);/g)?.length).toBe(2); // employé sur les deux branches
@@ -278,7 +281,7 @@ test('C07 / B14 — ouverture d’un PDF : pas de recopie du blob, URL révoqué
     URL.createObjectURL = (b) => { journal.crees.push(b === blob); return oC.call(URL, b); };
     URL.revokeObjectURL = (u) => { journal.revoques.push(u); oR.call(URL, u); };
     window.open = (u, cible, options) => { journal.ouverts.push([cible, options]); return null; };
-    ouvrirVisionneuse(null, { blob, mime: 'application/pdf', nom: 'x.pdf' });
+    ouvrirVisionneuse({ blob, mime: 'application/pdf', nom: 'x.pdf' });
     await new Promise((r) => setTimeout(r, 1500));
     URL.createObjectURL = oC; URL.revokeObjectURL = oR; window.open = oO;
     return journal;

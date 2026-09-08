@@ -10,7 +10,7 @@ import {
   apercuSuppressionEleve, detailSuppression, restaurer,
 } from '../io.js';
 import {
-  STATUTS, SEUIL_ALERTE, depasseSeuil, dateFR, isoAujourdhui, trierEleves, trierClasses, cleTexte, baremeDe, formatFR,
+  STATUTS, SEUIL_ALERTE, depasseSeuil, dateFR, isoAujourdhui, trierEleves, trierClasses, cleTexte, baremeDe, formatFR, inaptitudesActives,
   bornesTrimestres, compterStatutsParTrimestre,
 } from '../metier.js';
 import { stockerFichier, supprimerFichier, urlDuFichier } from '../media.js';
@@ -26,10 +26,13 @@ function devinerNiveau(nomClasse) {
 
 function dateFRversISO(v) {
   const t = String(v || '').trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
-  const m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  // JJ/MM/AAAA (Pronote), séparateurs « / . - » acceptés, ou AAAA-MM-JJ ; une date impossible (31/02)
+  // est refusée : stockée, elle s'affichait VIDE sur la fiche (audit 2026-09-07, B46 / C51).
+  const m = t.match(/^(\d{4})-(\d{2})-(\d{2})$/)?.slice(1).reverse() || t.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})/)?.slice(1);
   if (!m) return '';
-  return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  const iso = `${m[2]}-${m[1].padStart(2, '0')}-${m[0].padStart(2, '0')}`;
+  const d = new Date(`${iso}T12:00:00`);
+  return d.getMonth() + 1 === Number(m[1]) && d.getDate() === Number(m[0]) ? iso : '';
 }
 
 function normaliserSexe(v) {
@@ -169,7 +172,7 @@ async function vueClasse(c, id) {
   inpCouleur.addEventListener('change', async () => { classe.couleur = inpCouleur.value; await enregistrer('classes', classe); });
   carteCl.append(
     champTexte({ id: 'cl-nom', libelle: 'Nom', valeur: classe.nom, onChange: async (v) => {
-      if (!v) return;
+      if (!v) throw new Error('le nom de la classe ne peut pas être vide'); // « ✓ » sans écriture sinon (audit 2026-09-07, A36)
       // Même contrôle de doublon qu'à la création (vueListeClasses).
       if ((await tous('classes')).some((cl) => cl.id !== classe.id && cleTexte(cl.nom) === cleTexte(v))) {
         toast(`Une classe « ${v} » existe déjà — nom non modifié.`);
@@ -265,11 +268,13 @@ async function vueClasse(c, id) {
     const recherche = el('input', { type: 'search', class: 'recherche', placeholder: 'Rechercher…', 'aria-label': 'Rechercher un élève' });
     carteEl.append(recherche);
     const conteneurListe = el('div', { class: 'liste-eleves' });
+    const inaptes = new Set((await inaptitudesActives()).map((i) => i.eleveId)); // pastille « partout » (fonctionnalites.md §5 ; audit 2026-09-07, C53)
     const lignes = eleves.map((e) => {
       const ligne = el('a', { class: 'ligne-eleve', href: `#/eleves/fiche/${e.id}` },
         avatar(e, classe.couleur),
         el('span', { class: 'ligne-eleve-nom' }, `${e.nom} ${e.prenom}`),
         e.actif === false ? el('span', { class: 'badge' }, 'parti') : '',
+        inaptes.has(e.id) ? el('span', { class: 'pastille-info', title: 'Inaptitude en cours' }, el('span', { 'aria-hidden': 'true' }, '🩺'), el('span', { class: 'sr-only' }, 'Inaptitude en cours')) : '',
         e.notesPerso ? el('span', { class: 'badge', title: 'À savoir renseigné' }, el('span', { 'aria-hidden': 'true' }, 'ℹ'), el('span', { class: 'sr-only' }, 'à savoir renseigné')) : '',
         el('span', { class: 'chevron', 'aria-hidden': 'true' }, '›'),
       );
@@ -328,6 +333,7 @@ async function vueFiche(c, id) {
     const f = inpPhoto.files[0];
     if (!f) return;
     try {
+      statutPhoto.textContent = 'Compression de la photo…'; statutPhoto.className = 'statut'; // retour pendant l'attente (audit 2026-09-07, C44)
       const rec = await stockerFichier(f);
       if (eleve.photoFichierId) await supprimerFichier(eleve.photoFichierId);
       eleve.photoFichierId = rec.id;
@@ -355,8 +361,8 @@ async function vueFiche(c, id) {
   }
   carteId.append(rangPhoto, statutPhoto);
   carteId.append(
-    champTexte({ id: 'f-nom', libelle: 'Nom', valeur: eleve.nom, onChange: async (v) => { if (v) { eleve.nom = v; await sauver(); } } }),
-    champTexte({ id: 'f-prenom', libelle: 'Prénom', valeur: eleve.prenom, onChange: async (v) => { if (v) { eleve.prenom = v; await sauver(); } } }),
+    champTexte({ id: 'f-nom', libelle: 'Nom', valeur: eleve.nom, onChange: async (v) => { if (!v) throw new Error('le nom ne peut pas être vide'); eleve.nom = v; await sauver(); } }), // A36
+    champTexte({ id: 'f-prenom', libelle: 'Prénom', valeur: eleve.prenom, onChange: async (v) => { if (!v) throw new Error('le prénom ne peut pas être vide'); eleve.prenom = v; await sauver(); } }),
     champSelect({
       id: 'f-sexe', libelle: 'Sexe', valeur: eleve.sexe || '',
       options: [{ value: '', label: '—' }, { value: 'F', label: 'Fille' }, { value: 'M', label: 'Garçon' }],
@@ -582,7 +588,7 @@ async function executerImport(lignes, dest) {
 
   const existants = await tous('eleves');
   const dejaLa = new Map(existants.map((e) => [`${cleTexte(e.nom)}|${cleTexte(e.prenom)}@${e.classeId}`, e]));
-  const resultat = { importes: 0, doublons: 0, reactives: 0, ignores: 0, classesCreees, classesTouchees: new Set() };
+  const resultat = { importes: 0, doublons: 0, reactives: 0, ignores: 0, homonymes: [], datesRejetees: 0, classesCreees, classesTouchees: new Set() };
 
   for (const l of lignes) {
     if (!l.nom || !l.prenom) { resultat.ignores++; continue; }
@@ -602,12 +608,18 @@ async function executerImport(lignes, dest) {
       continue;
     }
     dejaLa.set(cle, { actif: true });
+    const naissance = dateFRversISO(l.dateNaissance);
+    if (String(l.dateNaissance || '').trim() && !naissance) resultat.datesRejetees++; // renseignée mais non reconnue ou impossible (B46, C51)
     await enregistrer('eleves', {
       id: crypto.randomUUID(), classeId: classe.id, nom: l.nom, prenom: l.prenom,
-      sexe: normaliserSexe(l.sexe), dateNaissance: dateFRversISO(l.dateNaissance),
+      sexe: normaliserSexe(l.sexe), dateNaissance: naissance,
       notesPerso: '', actif: true,
     });
     resultat.importes++;
+    // Même nom dans une AUTRE classe (partis compris) : changement de classe probable, l'historique
+    // serait scindé en deux fiches sans un mot (audit 2026-09-07, C14) — signalé, pas bloqué.
+    const ailleurs = existants.find((x) => x.classeId !== classe.id && cleTexte(x.nom) === cleTexte(l.nom) && cleTexte(x.prenom) === cleTexte(l.prenom));
+    if (ailleurs) resultat.homonymes.push(classes.find((cl) => cl.id === ailleurs.classeId)?.nom || '?');
     resultat.classesTouchees.add(classe.nom);
   }
   return resultat;
@@ -617,7 +629,7 @@ async function vueImport(c) {
   c.append(el('a', { class: 'retour', href: '#/eleves' }, '← Classes'));
 
   // --- Étape 1 : source ---
-  const carteSource = carte('1 · Source', 'Collez la liste copiée depuis Pronote, ou choisissez le fichier CSV exporté. Séparateur (; ou tabulation) et encodage (UTF-8 / Windows) détectés automatiquement.');
+  const carteSource = carte('1 · Source', 'Collez la liste copiée depuis Pronote, ou choisissez le fichier CSV exporté. Séparateur (; ou tabulation) et encodage (UTF-8 / Windows / UTF-16) détectés automatiquement.');
   const zone = el('textarea', { rows: 6, 'aria-label': 'Données CSV collées', placeholder: 'Nom;Prénom;Né(e) le;Sexe;Classe\nDUPONT;Léa;12/03/2014;F;6A\n…' });
   const inputFichier = el('input', { type: 'file', accept: '.csv,.txt,text/csv,text/plain', class: 'champ-fichier', 'aria-label': 'Fichier CSV Pronote' });
   const btnAnalyser = el('button', { class: 'btn btn-principal' }, 'Analyser');
@@ -641,6 +653,7 @@ async function vueImport(c) {
   });
 
   btnAnalyser.addEventListener('click', async () => {
+    suite.replaceChildren(); // une analyse refusée laissait le mapping et le bouton du collage PRÉCÉDENT actifs (revue du lot 5)
     try {
       const texte = inputFichier.files[0] ? await lireTexteCSV(inputFichier.files[0]) : zone.value;
       if (!texte.trim()) throw new Error('aucune donnée : collez du texte ou choisissez un fichier');
@@ -656,8 +669,12 @@ async function vueImport(c) {
 }
 
 async function afficherMapping(c, analyse) {
-  c.innerHTML = '';
+  c.replaceChildren();
   const { entetes, lignes } = analyse;
+  // Colonnes présentes dans les données mais absentes de l'en-tête : proposées au mapping et à
+  // l'aperçu au lieu de rester invisibles (audit 2026-09-07, C13).
+  const nbCol = lignes.reduce((m, l) => Math.max(m, l.length), entetes.length);
+  const colonnes = Array.from({ length: nbCol }, (_, i) => entetes[i] || `Colonne ${i + 1}`);
   const auto = detecterColonnes(entetes);
 
   // --- Étape 2 : correspondance des colonnes ---
@@ -670,7 +687,7 @@ async function afficherMapping(c, analyse) {
   for (const [cle, libelle] of cibles) {
     const sel = el('select', { id: `map-${cle}` },
       el('option', { value: '-1' }, '— ignorer —'),
-      ...entetes.map((e, i) => el('option', { value: String(i) }, e || `Colonne ${i + 1}`)),
+      ...colonnes.map((e, i) => el('option', { value: String(i) }, e)),
     );
     sel.value = String(auto[cle] ?? -1);
     selects[cle] = sel;
@@ -679,8 +696,8 @@ async function afficherMapping(c, analyse) {
   // aperçu brut des 3 premières lignes
   const table = el('table', { class: 'table-apercu' },
     el('caption', {}, 'Aperçu des 3 premières lignes du fichier'),
-    el('thead', {}, el('tr', {}, ...entetes.map((e) => el('th', { scope: 'col' }, e)))),
-    el('tbody', {}, ...lignes.slice(0, 3).map((l) => el('tr', {}, ...entetes.map((_, i) => el('td', {}, l[i] || ''))))),
+    el('thead', {}, el('tr', {}, ...colonnes.map((e) => el('th', { scope: 'col' }, e)))),
+    el('tbody', {}, ...lignes.slice(0, 3).map((l) => el('tr', {}, ...colonnes.map((_, i) => el('td', {}, l[i] || ''))))),
   );
   carteMap.append(el('div', { class: 'table-scroll', tabindex: '0', role: 'region', 'aria-label': 'Aperçu du fichier' }, table));
   c.append(carteMap);
@@ -702,6 +719,12 @@ async function afficherMapping(c, analyse) {
   if (auto.classe < 0) rColonne.r.disabled = true;
   if (!classes.length) rExistante.r.disabled = true;
   (auto.classe >= 0 ? rColonne : classes.length ? rExistante : rNouvelle).r.checked = true;
+  // Mapping manuel de « Classe » : le mode « Utiliser la colonne » suit (il restait inerte,
+  // ou coché alors que la colonne venait d'être ignorée — audit 2026-09-07, C12).
+  selects.classe.addEventListener('change', () => {
+    rColonne.r.disabled = Number(selects.classe.value) < 0;
+    if (rColonne.r.disabled && rColonne.r.checked) (classes.length ? rExistante : rNouvelle).r.checked = true;
+  });
   carteDest.append(el('fieldset', { class: 'groupe' }, el('legend', { class: 'sr-only' }, 'Classe de destination'), rColonne.ligne, rExistante.ligne, rNouvelle.ligne));
   c.append(carteDest);
 
@@ -739,6 +762,8 @@ async function afficherMapping(c, analyse) {
       if (r.reactives) morceaux.push(`· ${r.reactives} élève${r.reactives > 1 ? 's' : ''} parti${r.reactives > 1 ? 's' : ''} réactivé${r.reactives > 1 ? 's' : ''}`);
       if (r.doublons) morceaux.push(`· ${r.doublons} doublon${r.doublons > 1 ? 's' : ''} ignoré${r.doublons > 1 ? 's' : ''}`);
       if (r.ignores) morceaux.push(`· ${r.ignores} ligne${r.ignores > 1 ? 's' : ''} incomplète${r.ignores > 1 ? 's' : ''}`);
+      if (r.datesRejetees) morceaux.push(`· ${r.datesRejetees} date${r.datesRejetees > 1 ? 's' : ''} de naissance non reconnue${r.datesRejetees > 1 ? 's' : ''} (laissée${r.datesRejetees > 1 ? 's' : ''} vide${r.datesRejetees > 1 ? 's' : ''})`);
+      if (r.homonymes.length) morceaux.push(`· ${r.homonymes.length} élève${r.homonymes.length > 1 ? 's' : ''} porte${r.homonymes.length > 1 ? 'nt' : ''} le même nom qu’un élève d’une autre classe (${[...new Set(r.homonymes)].join(', ')}) — changement de classe ? à vérifier`);
       statutImport.textContent = morceaux.join(' ') + '.';
       statutImport.className = 'statut statut-ok';
       carteGo.append(el('div', { class: 'rang-btn' }, el('a', { class: 'btn btn-principal', href: '#/eleves' }, 'Voir les classes')));

@@ -27,7 +27,7 @@ async function seedClasse(page, n) {
     for (let i = 0; i < n; i++) {
       await io.enregistrer('eleves', { id: 'e' + String(i).padStart(2, '0'), classeId: 'c1', nom: 'NOM' + String(i).padStart(2, '0'), prenom: 'Prenom' + i, actif: true });
     }
-    await io.enregistrer('sequences', { id: 'sq', classeId: 'c1', apsa: 'Bad', nbSeancesPrevu: 5, dateDebut: '2026-01-01', dateFin: '2026-12-31' });
+    await io.enregistrer('sequences', { id: 'sq', classeId: 'c1', apsa: 'Bad', nbSeancesPrevu: 5, dateDebut: '', dateFin: '' }); // sans dates = active en permanence, quel que soit le calendrier (C26)
     await io.enregistrer('seances', { id: 'se', sequenceId: 'sq', date: today, edtId: null, numero: 1, annulee: false });
   }, { n, today: today() });
 }
@@ -39,7 +39,7 @@ async function seedEdtSansSeance(page) {
     const jour = ((new Date().getDay() + 6) % 7) + 1;
     await io.enregistrer('classes', { id: 'c1', nom: '6A', archivee: false });
     await io.enregistrer('eleves', { id: 'e1', classeId: 'c1', nom: 'A', prenom: 'B', actif: true });
-    await io.enregistrer('sequences', { id: 'sq', classeId: 'c1', apsa: 'Bad', nbSeancesPrevu: 5, dateDebut: '2026-01-01', dateFin: '2026-12-31' });
+    await io.enregistrer('sequences', { id: 'sq', classeId: 'c1', apsa: 'Bad', nbSeancesPrevu: 5, dateDebut: '', dateFin: '' }); // sans dates = active en permanence (C26)
     await io.enregistrer('edt', { id: 'cr1', jour, heureDebut: '00:00', heureFin: '23:59', classeId: 'c1', semaine: 'AB', installation: '' });
   });
 }
@@ -82,6 +82,10 @@ test('B03 — un défilement (pointercancel) n’ouvre pas le menu de statut', a
   await cible.dispatchEvent('pointercancel', { pointerType: 'touch', isPrimary: true });
   await page.waitForTimeout(600);
   await expect(page.locator('dialog.feuille[open]')).toHaveCount(0);
+  // Assertion positive (C28) : le même appui tenu 600 ms SANS pointercancel ouvre bien le menu (délai 450 ms, appel.js).
+  await cible.dispatchEvent('pointerdown', { pointerType: 'touch', isPrimary: true });
+  await page.waitForTimeout(600);
+  await expect(page.locator('dialog.feuille[open]')).toHaveCount(1);
 });
 
 test('B04 — double tap rapide : présent → absent → oubli de tenue (pas de tap perdu)', async ({ page }) => {
@@ -114,6 +118,13 @@ test('B05 — double clic « Créer la séance » (accueil) : une seule séance'
   expect(await nbSeances(page)).toBe(1);
 });
 
+test('C26 — sous une horloge au 5 janvier 2027, « Créer la séance » reste proposée (seeds sans dates)', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2027-01-05T10:00:00')); // mardi : le helper calcule `jour` avec la Date de la page
+  await seedEdtSansSeance(page);
+  await page.goto('/#/appel');
+  await expect(page.getByRole('button', { name: 'Créer la séance + appel' })).toBeVisible(); // avant : séquence bornée à 2026 → aucun bouton
+});
+
 test('B06 — compteur « saisis » ignore l’élève parti dans une autre classe, voit le nouveau', async ({ page }) => {
   await seedClasse(page, 3);
   await page.evaluate(async () => {
@@ -136,20 +147,32 @@ test('B07/B08 — contrastes : rouge d’alerte thématisé, texte des badges as
   });
   expect(badgeClair).toBe('rgb(70, 86, 114)'); // #465672 → 5,7:1 sur --c-bordure
 
-  const ctx = await browser.newContext({ colorScheme: 'dark', baseURL: 'http://localhost:8160' });
-  const sombre = await ctx.newPage();
-  await sombre.goto('/#/eleves');
-  const couleurs = await sombre.evaluate(() => {
-    const p = document.createElement('p'); p.className = 'statut statut-erreur'; document.body.append(p);
-    const btn = document.createElement('button'); btn.className = 'btn btn-danger'; document.body.append(btn);
-    const r = { erreur: getComputedStyle(p).color, btnFond: getComputedStyle(btn).backgroundColor, btnTexte: getComputedStyle(btn).color, schema: getComputedStyle(document.documentElement).colorScheme };
-    p.remove(); btn.remove(); return r;
-  });
-  await ctx.close();
+  const ctx = await browser.newContext({ colorScheme: 'dark' }); // baseURL hérité de la config (use) ; fermé dans finally (C63)
+  let couleurs;
+  try {
+    const sombre = await ctx.newPage();
+    await sombre.goto('/#/eleves');
+    couleurs = await sombre.evaluate(() => {
+      const p = document.createElement('p'); p.className = 'statut statut-erreur'; document.body.append(p);
+      const btn = document.createElement('button'); btn.className = 'btn btn-danger'; document.body.append(btn);
+      const r = { erreur: getComputedStyle(p).color, btnFond: getComputedStyle(btn).backgroundColor, btnTexte: getComputedStyle(btn).color, schema: getComputedStyle(document.documentElement).colorScheme };
+      p.remove(); btn.remove(); return r;
+    });
+  } finally { await ctx.close(); }
   expect(couleurs.erreur).toBe('rgb(240, 99, 99)');   // #f06363 → 5,0:1 sur surface sombre
   expect(couleurs.btnFond).toBe('rgb(240, 99, 99)');
   expect(couleurs.btnTexte).toBe('rgb(15, 22, 38)');  // encre sombre sur rouge clair → 5,7:1
   expect(couleurs.schema).toBe('dark');
+  // Thème « Sombre » choisi dans Réglages : bloc `:root[data-theme="sombre"]` de base.css, dupliqué du bloc @media → mêmes valeurs (C29).
+  await page.evaluate(() => { document.documentElement.dataset.theme = 'sombre'; });
+  const choisi = await page.evaluate(() => {
+    const p = document.createElement('p'); p.className = 'statut statut-erreur'; document.body.append(p);
+    const btn = document.createElement('button'); btn.className = 'btn btn-danger'; document.body.append(btn);
+    const b = document.createElement('span'); b.className = 'badge'; document.body.append(b);
+    const r = { erreur: getComputedStyle(p).color, btnFond: getComputedStyle(btn).backgroundColor, btnTexte: getComputedStyle(btn).color, badge: getComputedStyle(b).color, schema: getComputedStyle(document.documentElement).colorScheme };
+    p.remove(); btn.remove(); b.remove(); return r;
+  });
+  expect(choisi).toEqual({ erreur: 'rgb(240, 99, 99)', btnFond: 'rgb(240, 99, 99)', btnTexte: 'rgb(15, 22, 38)', badge: 'rgb(151, 164, 189)', schema: 'dark' });
 });
 
 test('B10 — élève « parti » : masqué à l’appel, badge dans la classe, effectif ajusté', async ({ page }) => {
@@ -356,8 +379,7 @@ test('H01 — la purge totale tient en une seule transaction sur les 14 stores',
     const original = IDBDatabase.prototype.transaction;
     const appels = [];
     IDBDatabase.prototype.transaction = function (stores, ...rest) { appels.push([].concat(stores).length); return original.call(this, stores, ...rest); };
-    await io.viderTout();
-    IDBDatabase.prototype.transaction = original;
+    try { await io.viderTout(); } finally { IDBDatabase.prototype.transaction = original; } // prototype restauré même en échec (C63)
     const comptes = await io.compterTout();
     return { appels, total: Object.values(comptes).reduce((a, b) => a + b, 0) };
   });
@@ -399,6 +421,48 @@ test('H04 — import : identifiant en double refusé avant écriture, store abse
   expect(res.absents).toContain('observations');
 });
 
+test('C31 — EDT : fin ≤ début refusée avec message, aucun créneau écrit', async ({ page }) => {
+  await page.evaluate(async () => { await (await import('/js/io.js')).enregistrer('classes', { id: 'c1', nom: '6A', archivee: false }); });
+  await page.goto('/#/edt');
+  await page.getByRole('button', { name: /Ajouter un créneau/ }).click();
+  await page.locator('#cr-debut').fill('10:00');
+  await page.locator('#cr-fin').fill('09:00');
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(page.locator('#vue .statut-erreur')).toContainText('la fin doit être après le début');
+  expect(await page.evaluate(async () => (await (await import('/js/io.js')).tous('edt')).length)).toBe(0);
+});
+
+test('C31 — Documents : un lien non http(s) venu d’une sauvegarde n’est pas ouvert', async ({ page }) => {
+  await page.evaluate(async () => { await (await import('/js/io.js')).enregistrer('documents', { id: 'd1', titre: 'Piégé', type: 'fiche', classeIds: [], tags: [], url: 'javascript:alert(1)', fichierId: '', dateAjout: '2026-09-01' }); });
+  await page.goto('/#/documents');
+  await page.locator('.ligne-doc').first().click();
+  await expect(page.locator('.toast').last()).toContainText('Lien non ouvert : adresse non http/https.');
+});
+
+test('C31 — Sauvegarde : import complet (2 confirmations, « avant-import » proposée, données remplacées)', async ({ page }) => {
+  await page.evaluate(async () => { await (await import('/js/io.js')).enregistrer('classes', { id: 'c1', nom: 'ANCIENNE', archivee: false }); });
+  await page.goto('/#/sauvegarde');
+  const dump = { app: 'carnet-eps', schemaVersion: 2, dateExport: '2026-09-01', stores: { classes: [{ id: 'c9', nom: 'NOUVELLE' }] } };
+  await page.locator('input[type=file][accept*="json"]').setInputFiles({ name: 'sauvegarde.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(dump)) });
+  const dlg = page.locator('dialog.feuille-confirm');
+  await expect(dlg).toContainText('Sauvegarde du 2026-09-01');
+  const telechargement = page.waitForEvent('download');
+  await dlg.getByRole('button', { name: 'Importer' }).click();
+  expect((await telechargement).suggestedFilename()).toMatch(/^carnet-eps_avant-import_\d{4}-\d{2}-\d{2}\.json$/);
+  await expect(dlg).toContainText('vérifiez sa présence dans vos téléchargements');
+  await dlg.getByRole('button', { name: 'Remplacer' }).click();
+  await expect(page.locator('.toast').last()).toContainText('Import terminé');
+  await expect.poll(() => page.evaluate(async () => (await (await import('/js/io.js')).tous('classes')).map((c) => c.nom))).toEqual(['NOUVELLE']);
+});
+
+test('C31 — utilitaires CSV : formule neutralisée, champ cité, séparateur tabulation détecté', async ({ page }) => {
+  const res = await page.evaluate(async () => {
+    const io = await import('/js/io.js');
+    return { formule: io.champCSV('=SUM(A1)'), cite: io.champCSV('a;b'), tab: io.parserCSV('Nom\tPrénom\nA\tB').separateur };
+  });
+  expect(res).toEqual({ formule: "'=SUM(A1)", cite: '"a;b"', tab: '\t' });
+});
+
 test('H05 — le service-worker ne nettoie que ses propres caches (origine partagée)', async ({ page }) => {
   // Hôte de bouclage ≠ « localhost »/« 127.0.0.1 » pour estLocalhost() → le SW s'enregistre.
   // `app.localhost` : Chromium le résout lui-même en boucle locale (sans DNS) et le traite comme
@@ -416,7 +480,7 @@ test('H05 — le service-worker ne nettoie que ses propres caches (origine parta
   await expect.poll(() => page.evaluate(async () => {
     const reg = await navigator.serviceWorker.getRegistration();
     return reg?.active?.state || null;
-  }), { timeout: 20000 }).toBe('activated');
+  }), { timeout: 10000 }).toBe('activated'); // < timeout du test (20 s) : c'est le poll qui parle, pas le test qui meurt (C62)
   const etat = await page.evaluate(async () => ({
     version: (await import('/js/state.js')).VERSION_APP,
     cles: await caches.keys(),
@@ -426,6 +490,21 @@ test('H05 — le service-worker ne nettoie que ses propres caches (origine parta
   expect(etat.autre).toBe(true);    // le cache du voisin survit
   expect(etat.ancien).toBe(false);  // notre ancien cache est bien nettoyé
   expect(etat.cles).toContain(`carnet-eps-${etat.version}`);
+});
+
+test('C33 — règle n°1 de la BIBLE : aucune requête hors de l’origine sur les 13 routes, CSP en place', async ({ page }) => {
+  const origine = new URL(page.url()).origin; // http://localhost:8160 (beforeEach a déjà navigué)
+  const externes = [];
+  page.on('request', (r) => { const u = new URL(r.url()); if (u.protocol !== 'data:' && u.origin !== origine) externes.push(r.url()); });
+  await page.reload(); // le chargement complet (index.html, CSS, modules) est observé lui aussi
+  for (const r of ['accueil', 'appel', 'eleves', 'notes', 'edt', 'plus', 'suivi', 'aide', 'reglages', 'sauvegarde', 'sequences', 'inaptitudes', 'documents']) {
+    await page.goto('/#/' + r);
+    await expect(page.locator('#vue')).not.toBeEmpty();
+  }
+  expect(externes).toEqual([]);
+  const csp = await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content');
+  expect(csp).toContain("default-src 'self'");
+  expect(csp).toContain("script-src 'self'");
 });
 
 test('B23 — coefficient 0 : l’évaluation ne pèse pas dans la moyenne du relevé', async ({ page }) => {
@@ -442,4 +521,12 @@ test('B23 — coefficient 0 : l’évaluation ne pèse pas dans la moyenne du re
   await page.goto('/#/notes/releve/c1');
   const cellules = await page.locator('tbody tr').first().locator('td').allTextContents();
   expect(cellules.at(-1)).toBe('10'); // et non 15 (moyenne avec coef 0 compté comme 1)
+  // La ligne corrigée (notes.js, `|| 1`) n'était protégée que par un seed direct : création par l'UI avec coef 0 (C27).
+  await page.goto('/#/notes');
+  await page.getByRole('button', { name: /Nouvelle évaluation/ }).click();
+  await page.locator('#ev-titre').fill('Blanche UI');
+  await page.locator('#ev-coef').fill('0');
+  await page.getByRole('button', { name: 'Créer et saisir les notes' }).click();
+  await expect(page).toHaveURL(/#\/notes\/eval\//);
+  expect(await page.evaluate(async () => (await (await import('/js/io.js')).tous('evaluations')).find((ev) => ev.titre === 'Blanche UI').coef)).toBe(0); // et non 1
 });

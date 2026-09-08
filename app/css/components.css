@@ -946,8 +946,7 @@ dialog.visionneuse::backdrop {
     overflow: visible;
   }
 
-  .table-apercu,
-  .table-recap {
+  .table-apercu {
     display: table;
     width: 100%;
     font-size: 11px;

@@ -4,7 +4,7 @@
 // alerte J-7 avant expiration ; inaptitude > 3 mois → rappel médecin scolaire (réglementation).
 
 import { enregistrerVue, el, carte, champ, groupe, champTexte, champSelect, champZone, confirmer, toast, rerendre } from '../ui.js';
-import { tous, lire, parIndex, enregistrer, supprimer, supprimerLot, restaurer } from '../io.js';
+import { tous, lire, enregistrer, supprimer, supprimerLot, restaurer } from '../io.js';
 import { stockerFichier, supprimerFichier, urlDuFichier, ouvrirVisionneuse, mimeSur, revoquerURL } from '../media.js';
 import { isoAujourdhui, dateFR, jours, trierEleves, trierClasses, SEUIL_MEDECIN_JOURS } from '../metier.js';
 
@@ -201,6 +201,7 @@ async function vueNouvelle(c, eleveIdInitial) {
       let certificatId = null;
       const f = inpFichier.files[0];
       if (f) {
+        statutForm.textContent = f.type.startsWith('image/') ? 'Compression de l’image…' : 'Enregistrement de la pièce…'; statutForm.className = 'statut'; // retour pendant l'attente (C44)
         const rec = await stockerFichier(f);
         certificatId = crypto.randomUUID();
         await enregistrer('certificats', {
@@ -303,6 +304,7 @@ async function vueDetail(c, id) {
     const f = inpRemplace.files[0];
     if (!f) return;
     try {
+      statutPiece.textContent = f.type.startsWith('image/') ? 'Compression de l’image…' : 'Enregistrement de la pièce…'; statutPiece.className = 'statut'; // retour pendant l'attente (C44)
       const rec = await stockerFichier(f); // d'abord stocker la nouvelle pièce : si ça échoue, l'ancienne reste en place
       if (inapt.certificatId) {
         const ancien = await lire('certificats', inapt.certificatId);
@@ -332,12 +334,12 @@ async function vueDetail(c, id) {
         vignette.addEventListener('load', () => URL.revokeObjectURL(url), { once: true }); // plus de fuite d'URL (B19)
         vignette.addEventListener('error', () => URL.revokeObjectURL(url), { once: true }); // blob illisible : idem (revue du lot 1)
         const btnVignette = el('button', { class: 'btn-vignette', type: 'button', 'aria-label': `Agrandir le certificat${eleve ? ` de ${eleve.prenom}` : ''}` }, vignette);
-        btnVignette.addEventListener('click', () => ouvrirVisionneuse(c, fichier));
+        btnVignette.addEventListener('click', () => ouvrirVisionneuse(fichier));
         carteC.append(btnVignette);
       } else {
         revoquerURL(url); // la visionneuse crée sa propre URL : celle-ci ne sert pas (fuite, revue du lot 1)
         const btnPdf = el('button', { class: 'btn' }, `Ouvrir ${fichier.nom || 'la pièce'}`);
-        btnPdf.addEventListener('click', () => ouvrirVisionneuse(c, fichier));
+        btnPdf.addEventListener('click', () => ouvrirVisionneuse(fichier));
         carteC.append(el('div', { class: 'rang-btn' }, btnPdf));
       }
       carteC.append(el('p', { class: 'note-inline' }, `Déposé le ${dateFR(cert.dateDepot)} · ${Math.round((fichier.taille ?? fichier.blob?.size ?? 0) / 1024)} Ko`));

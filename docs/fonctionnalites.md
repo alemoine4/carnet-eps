@@ -16,7 +16,7 @@ Chaque module = une vue + un fichier `app/js/modules/<module>.js` (à partir de 
 ## 2. EDT (P1, phase 3)
 
 - Créneaux hebdomadaires : jour, heure début/fin, classe, **semaine A/B ou toutes**, installation (gymnase, plateau, piscine…).
-- Périodes (cycles calendaires) : vacances de zone gérées simplement par dates de début/fin de période.
+- Périodes (cycles calendaires) : vacances de zone gérées simplement par dates de début/fin de période — **non implémenté en v1** (backlog : l'alternance A/B suit la parité calendaire, aucun champ de date sur les créneaux).
 - Vues : semaine (PC), jour (mobile), et « **maintenant** » : à l'ouverture, l'app propose le cours en cours ou à venir.
 - Règle : un créneau peut être ponctuellement annulé/déplacé (sortie, stage) sans casser la récurrence.
 - S'inspirer d'EDT_EPS_BUILDER (projet existant) pour l'UX de saisie, sans en dépendre.
@@ -50,15 +50,15 @@ Chaque module = une vue + un fichier `app/js/modules/<module>.js` (à partir de 
 
 - Capture photo (caméra Android) ou fichier (PDF/image) → **compression canvas → JPEG ≤ ~300 Ko** avant stockage IndexedDB (store `fichiers`).
 - Métadonnées : élève, date de dépôt, période couverte, commentaire.
-- Visionneuse plein écran + zoom basique.
+- Visionneuse plein écran (`<dialog>` natif, Échap ou clic pour fermer) ; **pas de zoom dans l'image en v1** (backlog).
 - Suppression en cascade documentée (purge fin d'année).
 
 ## 7. Évaluations & notes (P1, phase 6)
 
 - Évaluation = séquence + titre + date + type : **note /20**, barème personnalisé, ou **AFL** (positionnement par degrés).
-- Saisie en **grille** (lignes = élèves triés alphabétiquement comme Pronote, colonnes = critères), clavier numérique optimisé mobile, navigation touche suivante.
+- Saisie en **grille** (lignes = élèves triés alphabétiquement comme Pronote, une note par élève — pas de colonnes par critère en v1), clavier numérique (`inputmode=decimal`), Entrée = élève suivant.
 - Codes spéciaux : `ABS`, `DISP`, `NN` (non noté).
-- Calculs : moyenne pondérée par coefficients, stats classe (moyenne, min/max, répartition).
+- Calculs : moyenne pondérée par coefficients (relevé), stats classe (moyenne, min/max) ; répartition **non implémentée en v1** (backlog).
 - **Export Pronote** (voir `docs/pronote.md`) : copie presse-papiers de la colonne triée + export CSV. Mention « publiée le … » sur l'évaluation.
 - Impression : relevé par classe et par élève (`@media print`).
 
@@ -77,5 +77,5 @@ Chaque module = une vue + un fichier `app/js/modules/<module>.js` (à partir de 
 
 - **Export JSON complet** (toutes données + fichiers en base64 ; option « sans pièces jointes » pour un fichier léger).
 - Import = restauration complète avec double confirmation (+ export automatique de sécurité avant).
-- Purge : par année scolaire ou totale (double confirmation + export auto préalable).
+- Purge **totale** (double confirmation + export auto préalable). La purge par année scolaire prévue au cadrage n'est pas implémentée en v1 (rituel de rentrée = export d'archive puis purge totale, cf. `guide-rentree.md` et `modele-donnees.md`).
 - Réglages : établissement, année scolaire, thème clair/sombre/auto, gestion du stockage (`navigator.storage.estimate`), bouton « Vérifier les mises à jour » (SW, BIBLE règle 5).

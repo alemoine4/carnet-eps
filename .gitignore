@@ -9,6 +9,7 @@ test-results/
 playwright-report/
 blob-report/
 .playwright/
+tests/e2e/_*.spec.mjs
 
 # Backups locaux avant corrections (convention audit) — pas dans le dépôt
 archives/

@@ -35,7 +35,7 @@ export function initialiser() {
     // que la voisine stockée, inversée, faisait retomber les deux aux défauts (revue du lot 1).
     const voisineStockee = async (cle) => {
       const v = await lireMeta(cle === 'finTrimestre1' ? 'finTrimestre2' : 'finTrimestre1', '');
-      const dansAnnee = /^\d{4}-\d{2}-\d{2}$/.test(v) && v >= bornes.debut && v <= bornes.fin;
+      const dansAnnee = /^\d{4}-\d{2}-\d{2}$/.test(v) && v >= `${bornes.annee}-09-01` && v <= bornes.fin; // même plancher que metier.js (D-10)
       return dansAnnee ? v : (cle === 'finTrimestre1' ? bornes.finT2 : bornes.finT1);
     };
     const verifier = async (cle, v) => {
@@ -93,6 +93,8 @@ export function initialiser() {
     if (navigator.storage?.estimate) {
       const { usage, quota } = await navigator.storage.estimate();
       lignes.append(el('div', { class: 'info-ligne' }, el('span', {}, 'Espace utilisé'), el('strong', {}, `${octetsLisibles(usage)} / ${octetsLisibles(quota)}`)));
+      // Chiffre par origine, pas par app : la même adresse héberge d'autres PWA (audit 2026-09-07, A32).
+      lignes.append(el('p', { class: 'note-discrete' }, 'Chiffre fourni par le navigateur pour tout le site — il inclut les autres applications publiées à la même adresse.'));
     }
     if (navigator.storage?.persisted) {
       const persiste = await navigator.storage.persisted();

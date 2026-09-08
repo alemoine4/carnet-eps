@@ -1,7 +1,7 @@
 // modules/sequences.js — séquences (classe × APSA × CA × dates) et séances
 // numérotées automatiquement (phase 3). Spécification : docs/fonctionnalites.md §3.
 // Le numéro d'une séance est calculé par ordre de date (pas de renumérotation à gérer).
-// Le bilan de séance se saisira depuis l'écran d'appel (phase 4).
+// Le bilan de séance se saisit depuis l'écran d'appel (appel.js, carte « Bilan de séance »).
 
 import { enregistrerVue, el, carte, champ, champTexte, champSelect, champZone, confirmer, toast } from '../ui.js';
 import {
@@ -35,7 +35,7 @@ function estActive(s, jour = isoAujourdhui()) {
 // ---------------------------------------------------------------------------
 
 async function vueListe(c) {
-  const rafraichir = () => { c.innerHTML = ''; return vueListe(c); };
+  const rafraichir = () => { c.replaceChildren(); return vueListe(c); };
   c.append(el('a', { class: 'retour', href: '#/plus' }, '← Retour'));
   const classes = (await tous('classes')).filter((cl) => !cl.archivee).sort(trierClasses);
   const sequences = await tous('sequences');
@@ -130,7 +130,7 @@ async function vueListe(c) {
 // ---------------------------------------------------------------------------
 
 async function vueDetail(c, id) {
-  const rafraichir = () => { c.innerHTML = ''; return vueDetail(c, id); };
+  const rafraichir = () => { c.replaceChildren(); return vueDetail(c, id); };
   const sequence = await lire('sequences', id);
   c.append(el('a', { class: 'retour', href: '#/sequences' }, '← Séquences'));
   if (!sequence) { c.append(carte('Séquence introuvable', 'Elle a peut-être été supprimée.')); return; }
@@ -142,7 +142,7 @@ async function vueDetail(c, id) {
   // --- Infos éditables ---
   const carteSeq = carte(`${classe?.nom || '?'} — ${sequence.apsa}`, '', estActive(sequence) ? 'en cours' : '');
   carteSeq.append(
-    champTexte({ id: 'sd-apsa', libelle: 'APSA', valeur: sequence.apsa, onChange: async (v) => { if (v) { sequence.apsa = v; await sauver(); } } }),
+    champTexte({ id: 'sd-apsa', libelle: 'APSA', valeur: sequence.apsa, onChange: async (v) => { if (!v) throw new Error('l’APSA ne peut pas être vide'); sequence.apsa = v; await sauver(); } }), // A36
     champSelect({
       id: 'sd-classe', libelle: 'Classe', valeur: sequence.classeId,
       options: classes.map((cl) => ({ value: cl.id, label: cl.nom })),

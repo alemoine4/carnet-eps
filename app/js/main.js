@@ -1,7 +1,7 @@
 // main.js — démarrage, routes, thème, enregistrement du service-worker.
 // Toutes les vues sont fournies par les modules (js/modules/*.js).
 
-import { enregistrerVue, afficherVue, carte, el, toast } from './ui.js';
+import { enregistrerVue, afficherVue, carte, el, toast, ligneAlerte } from './ui.js';
 import { etat, abonner, estLocalhost } from './state.js';
 import { ouvrirDB } from './io.js';
 import { collecterAlertes } from './metier.js';
@@ -16,13 +16,13 @@ import { initialiser as initInaptitudes } from './modules/inaptitudes.js';
 import { initialiser as initNotes } from './modules/notes.js';
 import { initialiser as initDocuments } from './modules/documents.js';
 
-// Routes principales (onglets) + routes enfants (accessibles depuis « Plus »).
-const ROUTES = ['accueil', 'appel', 'eleves', 'notes', 'edt', 'plus', 'suivi', 'sauvegarde', 'reglages', 'sequences', 'inaptitudes', 'documents', 'aide'];
+// Nom accessible de la zone de contenu par route → annoncé au lecteur d'écran à chaque navigation
+// (la zone #vue reçoit le focus dans afficherVue). Routes principales (onglets) + routes enfants
+// (accessibles depuis « Plus ») : UNE seule liste, dérivée des titres (audit 2026-09-07, C42).
+const TITRES = { accueil: 'Aujourd’hui', appel: 'Appel', eleves: 'Élèves', notes: 'Notes', edt: 'Emploi du temps', plus: 'Plus', suivi: 'Suivi', sauvegarde: 'Sauvegarde', reglages: 'Réglages', sequences: 'Séquences', inaptitudes: 'Inaptitudes', documents: 'Documents', aide: 'Aide' };
+const ROUTES = Object.keys(TITRES);
 // EDT déplacé sous « Plus » ; les inaptitudes sont désormais frontées par l'onglet « Suivi ».
 const PARENT = { sauvegarde: 'plus', reglages: 'plus', sequences: 'plus', inaptitudes: 'suivi', documents: 'plus', aide: 'plus', edt: 'plus' };
-// Nom accessible de la zone de contenu par route → annoncé au lecteur d'écran à chaque navigation
-// (la zone #vue reçoit le focus dans afficherVue).
-const TITRES = { accueil: 'Aujourd’hui', appel: 'Appel', eleves: 'Élèves', notes: 'Notes', edt: 'Emploi du temps', plus: 'Plus', suivi: 'Suivi', sauvegarde: 'Sauvegarde', reglages: 'Réglages', sequences: 'Séquences', inaptitudes: 'Inaptitudes', documents: 'Documents', aide: 'Aide' };
 
 // ---- Vue « Plus » (menu des modules secondaires) ----
 
@@ -48,13 +48,7 @@ enregistrerVue('suivi', async (c) => {
   if (!alertes.length) {
     carteA.append(el('p', {}, 'Rien à signaler ✓'));
   } else {
-    for (const a of alertes) {
-      carteA.append(el('a', { class: 'ligne-eleve', href: a.href },
-        el('span', { class: 'badge' + (a.grave ? ' badge-alerte' : '') }, el('span', { 'aria-hidden': 'true' }, a.grave ? '⚠' : 'ℹ'), el('span', { class: 'sr-only' }, a.grave ? 'Alerte' : 'Information')), // B43
-        el('span', { class: 'ligne-eleve-nom' }, a.texte),
-        el('span', { class: 'chevron pousse-droite', 'aria-hidden': 'true' }, '›'),
-      ));
-    }
+    for (const a of alertes) carteA.append(ligneAlerte(a));
   }
   c.append(carteA);
 
@@ -106,7 +100,16 @@ enregistrerVue('aide', (c) => {
   reflexes.append(ul);
   c.append(reflexes);
 
-  c.append(el('p', { class: 'note-discrete' }, 'Installation sur le téléphone et transfert PC ↔ Android : voir le guide d’installation fourni avec l’app.'));
+  // Le guide long (docs/guide-installation.md) n'est pas publié avec l'app : l'essentiel vit ici (audit 2026-09-07, B38).
+  const install = carte('Installer sur le téléphone · transférer PC ↔ Android');
+  const ulI = el('ul', { class: 'liste-aide' });
+  for (const r of [
+    'Android : ouvrir l’adresse de l’app dans Chrome → menu ⋮ → « Installer l’application » (ou la bannière en bas de l’écran). PC : icône « Installer » à droite de la barre d’adresse (Chrome, Edge).',
+    'Transfert : sur l’appareil source, Plus → Sauvegarde → « Télécharger la sauvegarde » ; sur l’autre appareil, Plus → Sauvegarde → Importer → choisir le fichier .json.',
+    'Après l’installation : Plus → Réglages → vérifier « Protection contre l’effacement auto : active ✓ ».',
+  ]) ulI.append(el('li', {}, r));
+  install.append(ulI);
+  c.append(install);
 });
 
 // ---- Repli hors contexte sécurisé ----
@@ -145,8 +148,7 @@ function segmentsDepuisHash() {
 async function naviguer() {
   const seg = segmentsDepuisHash();
   const r = ROUTES.includes(seg[0]) ? seg[0] : 'accueil';
-  etat.route = r;
-  document.getElementById('vue').setAttribute('aria-label', TITRES[r] || 'Carnet EPS');
+  document.getElementById('vue').setAttribute('aria-label', TITRES[r]);
   const onglet = PARENT[r] || r; // les routes enfants laissent leur onglet parent actif
   for (const a of document.querySelectorAll('.nav a')) {
     const actif = a.dataset.route === onglet;
@@ -186,6 +188,12 @@ appliquerTheme(etat.prefs.theme);
 
 // Ouverture anticipée (création des stores avant la première vue) ; en cas d'échec la première
 // vue réessaiera (le rejet n'est plus mis en cache, A04) — sans promesse flottante (C06).
+// Cadrage refusé : frame-ancestors est ignorée en <meta> et GitHub Pages n'envoie aucun en-tête
+// (audit 2026-09-07, A21) — une page tierce ne peut pas superposer ses boutons aux nôtres.
+if (window.top !== window.self) {
+  document.body.textContent = 'Carnet EPS ne peut pas être affiché dans un cadre.';
+  throw new Error('Carnet EPS cadré par une autre page');
+}
 ouvrirDB().catch((e) => console.warn('Ouverture anticipée de la base :', e));
 
 // Filet global : un rejet de promesse non géré (écriture refusée hors des try/catch locaux)

@@ -46,12 +46,12 @@ Cadrage : `docs/brief.md` + `docs/fonctionnalites.md`. Avancement : `docs/roadma
 |---|---|
 | Code actif | `app/` (entrée : `app/index.html`) |
 | Serveur local | `server-carnet.mjs` — port **8160** — `node server-carnet.mjs` à la racine du dépôt |
-| Vérification rendu | `node server-carnet.mjs` puis navigateur sur `http://localhost:8160` ; **`npm test`** (Playwright : smoke + non-régression ; navigateur à installer une fois : `npx playwright install chromium`) |
+| Vérification rendu | `node server-carnet.mjs` puis navigateur sur `http://localhost:8160` ; **`npm test`** (Playwright : smoke + non-régression ; navigateur à installer une fois : `npx playwright install chromium` — **depuis le terminal de l'utilisateur** : lancé par Claude, l'install ne remplit que le cache MSIX virtualisé `Packages\Claude_…\LocalCache` ; l'erreur `Executable doesn't exist` signifie cela) |
 | Modèle de données | `docs/modele-donnees.md` — IndexedDB `carnet-eps`, wrapper maison dans `app/js/io.js` |
 | Service worker | enregistré **uniquement hors localhost** → jamais de cache pendant le dev |
 | Échanges Pronote | `docs/pronote.md` |
 | Décisions actées | `docs/decisions.md` (D001 à D013) |
-| Audits | `docs/audit-2026-07-10.md` (soldé), `docs/audit-2026-09-05.md` (4e passe, suites v0.12.5→v0.12.8, reste B31), `docs/audit-2026-09-07.md` + `.json` (**5e passe sur v0.12.8 : 179 constats, plan en 5 lots — lots 1, 3 et 4 livrés en v0.12.9 / v0.12.10 / v0.12.11 ; avis lot 2 (`docs/avis/AVIS_CREATIONS_ATOMIQUES.md`) et A01 (`docs/avis/AVIS_ORIGINE_DEDIEE.md`) en attente de décision ; lot 5 « au mieux »**), `audit codex/` (audits d'une autre IA, dossier hors git) |
+| Audits | `docs/audit-2026-07-10.md` (soldé), `docs/audit-2026-09-05.md` (4e passe, suites v0.12.5→v0.12.8, reste B31), `docs/audit-2026-09-07.md` + `.json` (**5e passe sur v0.12.8 : 179 constats, plan en 5 lots — lots 1, 3, 4 et 5 livrés en v0.12.9 / v0.12.10 / v0.12.11 / v0.12.12 ; trois avis en attente de décision : lot 2 (`docs/avis/AVIS_CREATIONS_ATOMIQUES.md`), A01 (`docs/avis/AVIS_ORIGINE_DEDIEE.md`), restes du lot 5 (`docs/avis/AVIS_LOT5_RESTES.md`) ; restent A39 et la CI (C64) ; lot 5 « au mieux »**), `audit codex/` (audits d'une autre IA, dossier hors git) |
 
 ---
 
@@ -72,7 +72,7 @@ Cadrage : `docs/brief.md` + `docs/fonctionnalites.md`. Avancement : `docs/roadma
 - Séparation logique : `main.js`, `state.js`, `ui.js`, `io.js` ; à partir de la phase 2, un fichier par module métier dans `app/js/modules/` (ex. `appel.js`, `inaptitudes.js`, `notes.js`).
 - CSS regroupé : `base.css`, `components.css`, `responsive.css`.
 - UI entièrement en français ; dates stockées en ISO (`YYYY-MM-DD`), affichées en `JJ/MM/AAAA`.
-- Identifiants : `crypto.randomUUID()`.
+- Identifiants : `crypto.randomUUID()` (sauf `appels` et `notes` : clé composite `<parentId>_<eleveId>`, voir `docs/modele-donnees.md`).
 - Ne jamais casser une fonctionnalité existante sans le signaler explicitement.
 - Toute modification importante = test manuel ou Playwright associé.
 - Toujours vérifier : console, stockage, responsive, impression si concerné.
