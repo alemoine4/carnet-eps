@@ -31,6 +31,8 @@ Demande : « fait au mieux » (GO discrétionnaire) — lot 5, le seul non bloqu
 
 **Coincé / à vérifier** : sur l'appareil, l'écran Aide réécrit (B38 : formulations « ⋮ », bannière), la ligne « édité le » sur les impressions, la pastille 🩺 dans les listes ; `npm ci` chez toi (C20) ; la fiche terrain reste à faire une fois.
 
+**Déployé** : main `fb23028`, gh-pages `d739ead`, tag `v0.12.12` (2026-09-08).
+
 **Prochaine étape** : tes décisions sur les trois avis (lot 2, A01, restes du lot 5) ; A39 et la CI (C64) restent à cadrer.
 
 ## 2026-09-08 (32) — v0.12.11 : lot 4 (service-worker et performance, 17 constats), 10 tests + avis lot 2 et A01

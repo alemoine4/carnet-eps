@@ -29,6 +29,7 @@
 
 | Version | Tag | Commit main | Résumé |
 |---|---|---|---|
+| v0.12.12 | `v0.12.12` | `fb23028` | Lot 5 du 5e audit (63 constats : CSV robuste — UTF-16, UTF-8 strict, champ multi-ligne refusé —, import plus parlant, « Terminer l’appel » en une transaction, pastille 🩺 partout, impressions datées, CSP durcie, refus du cadrage, preuves des tests renforcées, docs alignées) + revue adversariale (7 corrections, 8 preuves) ; 35 tests, suite 153/153 — déployée le 2026-09-08 (gh-pages `d739ead`) |
 | v0.12.11 | `v0.12.11` | `82939d6` | Lot 4 du 5e audit (17 constats : service-worker durci à stratégie constante, lectures d’appels par index en une transaction, plafond 8 Mo des pièces, PDF sans recopie, PWA) + revue adversariale en deux passes (6 corrections, 5 tests réécrits) ; 11 tests, suite 112/112 — déployée le 2026-09-08 (gh-pages `86dae78`) |
 | v0.12.10 | `v0.12.10` | `5bfdf3f` | Lot 3 du 5e audit (35 constats : focus et lecteur d’écran, vrais tableaux, notifications, 320 px, contraste, impression, clavier virtuel Android) + 12 défauts de la revue adversariale ; 25 tests, suite 101/101 — déployée le 2026-09-07 |
 | v0.12.9 | `v0.12.9` | `769528e` | Lot 1 du 5e audit (44 constats : exactitude de l’appel et du pré-remplissage — D013 —, seuil ⚠ borné à l’année scolaire partout, validations, erreurs visibles, import plus strict) + 19 constats de la revue adversariale du diff ; 43 tests de non-régression, suite 76/76 — déployée le 2026-09-07 |
