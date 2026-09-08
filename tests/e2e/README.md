@@ -46,11 +46,11 @@ horloge fixée au 5 janvier 2027 (C26), appui long qui ouvre bien le menu (C28),
 évaluation à coefficient 0 par l'interface (C27), et quatre écrans jamais testés : EDT, Documents, import complet de
 Sauvegarde, utilitaires CSV (C31).
 
-**`audit5-lot1.spec.mjs` (43), `audit5-lot3.spec.mjs` (25), `audit5-lot4.spec.mjs` (11), `audit5-lot5.spec.mjs` (35)** — un test de non-régression par
+**`audit5-lot1.spec.mjs` (43), `audit5-lot2.spec.mjs` (5), `audit5-lot3.spec.mjs` (25), `audit5-lot4.spec.mjs` (11), `audit5-lot5.spec.mjs` (35)** — un test de non-régression par
 constat *démontrable par le comportement* du 5e audit (`docs/audit-2026-09-07.md`, lots 1, 3, 4 et 5), chacun rouge avec le code
 d'avant son lot ; les gestes de commentaire, de configuration et de documentation (C05, C39, C18, C20, C22, C23, C25, C58, C61…)
 sont couverts par relecture ou par les gardes de cohérence de `audit5-lot5.spec.mjs` ;
-les tests de `audit5-lot4` marqués « service-worker réel » se jouent sur `app.localhost`. Total de la suite : **153 tests**.
+les tests de `audit5-lot4` marqués « service-worker réel » se jouent sur `app.localhost`. Total de la suite : **158 tests**.
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse

@@ -467,6 +467,14 @@ async function ecrireLot(operations) {
   });
 }
 
+// Façade publique de ecrireLot : mélange put et delete de stores DIFFÉRENTS dans une seule
+// transaction (créations qui touchent un fichier + un enregistrement métier — avis créations
+// atomiques, fix 2, v0.12.13). operations = [{ store, op:'put', valeur } | { store, op:'delete', cle }].
+// Cas homogènes : restaurer (put) et supprimerLot (delete) ci-dessous.
+export async function enregistrerLot(operations) {
+  return ecrireLot(operations);
+}
+
 // { store: [records] } → supprime tous ces enregistrements en une transaction (tout ou rien).
 export async function supprimerLot(objets) {
   const operations = [];

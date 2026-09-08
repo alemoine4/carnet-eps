@@ -1,0 +1,48 @@
+# Intégration continue — suite Playwright (audit 2026-09-07, C64).
+# Dépôt public : les minutes GitHub Actions sont gratuites et illimitées (BIBLE règle 1, gratuité).
+# Ne touche PAS l'application : `app/` reste sans dépendance et la branche `gh-pages` n'est pas concernée.
+
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: # relance à la main depuis l'onglet Actions
+
+# Une seule exécution à la fois par branche : un push qui suit annule le précédent.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` (et pas `npm install`) : versions exactes du package-lock.json (C20).
+      - run: npm ci
+
+      # Le navigateur de test, à la révision épinglée par la version de Playwright installée.
+      - run: npx playwright install --with-deps chromium
+
+      # Le serveur de dev (server-carnet.mjs, port 8160) est lancé par playwright.config.mjs.
+      - run: npx playwright test
+
+      # Rapport HTML et traces des tests rouges (C22) : téléchargeables depuis l'exécution.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: rapport-playwright
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

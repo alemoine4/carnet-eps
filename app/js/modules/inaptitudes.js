@@ -4,8 +4,8 @@
 // alerte J-7 avant expiration ; inaptitude > 3 mois → rappel médecin scolaire (réglementation).
 
 import { enregistrerVue, el, carte, champ, groupe, champTexte, champSelect, champZone, confirmer, toast, rerendre } from '../ui.js';
-import { tous, lire, enregistrer, supprimer, supprimerLot, restaurer } from '../io.js';
-import { stockerFichier, supprimerFichier, urlDuFichier, ouvrirVisionneuse, mimeSur, revoquerURL } from '../media.js';
+import { tous, lire, enregistrer, enregistrerLot, supprimer, supprimerLot, restaurer } from '../io.js';
+import { preparerFichier, urlDuFichier, ouvrirVisionneuse, mimeSur, revoquerURL } from '../media.js';
 import { isoAujourdhui, dateFR, jours, trierEleves, trierClasses, SEUIL_MEDECIN_JOURS } from '../metier.js';
 
 const RESTRICTIONS = [
@@ -200,22 +200,27 @@ async function vueNouvelle(c, eleveIdInitial) {
       const id = crypto.randomUUID();
       let certificatId = null;
       const f = inpFichier.files[0];
+      // Pièce, certificat et inaptitude écrits d'un bloc : une coupure après la pièce laissait un
+      // fichier et un certificat SANS inaptitude, invisibles dans l'app (avis lot 2, V2-06).
+      const operations = [];
       if (f) {
         statutForm.textContent = f.type.startsWith('image/') ? 'Compression de l’image…' : 'Enregistrement de la pièce…'; statutForm.className = 'statut'; // retour pendant l'attente (C44)
-        const rec = await stockerFichier(f);
+        const rec = await preparerFichier(f); // compression HORS transaction (asynchrone)
         certificatId = crypto.randomUUID();
-        await enregistrer('certificats', {
+        operations.push({ store: 'fichiers', op: 'put', valeur: rec });
+        operations.push({ store: 'certificats', op: 'put', valeur: {
           id: certificatId, eleveId: selEleve.value, dateDepot: isoAujourdhui(),
           dateDebut: inpDebut.value, dateFin: inpFin.value || '', fichierId: rec.id, commentaire: '',
-        });
+        } });
       }
-      await enregistrer('inaptitudes', {
+      operations.push({ store: 'inaptitudes', op: 'put', valeur: {
         id, eleveId: selEleve.value, type: selType.value,
         dateDebut: inpDebut.value, dateFin: inpFin.value || '',
         origine: selOrigine.value,
         restrictions: selType.value === 'totale' ? [] : [...coches],
         certificatId, commentaire: inpComm.value.trim(),
-      });
+      } });
+      await enregistrerLot(operations);
       location.hash = `#/inaptitudes/${id}`;
     } catch (e) {
       statutForm.textContent = `Enregistrement impossible : ${e?.message || e}`;
@@ -305,18 +310,28 @@ async function vueDetail(c, id) {
     if (!f) return;
     try {
       statutPiece.textContent = f.type.startsWith('image/') ? 'Compression de l’image…' : 'Enregistrement de la pièce…'; statutPiece.className = 'statut'; // retour pendant l'attente (C44)
-      const rec = await stockerFichier(f); // d'abord stocker la nouvelle pièce : si ça échoue, l'ancienne reste en place
+      const rec = await preparerFichier(f); // compression HORS transaction (asynchrone)
+      const certificatId = crypto.randomUUID();
+      // Nouvelle pièce, nouveau certificat, référence et suppression de l'ancienne pièce d'un SEUL
+      // bloc : l'ancienne était supprimée AVANT que la nouvelle référence soit écrite, une coupure
+      // entre les deux perdait la pièce (avis lot 2, D-04).
+      const operations = [
+        { store: 'fichiers', op: 'put', valeur: rec },
+        { store: 'certificats', op: 'put', valeur: {
+          id: certificatId, eleveId: inapt.eleveId, dateDepot: isoAujourdhui(),
+          dateDebut: inapt.dateDebut, dateFin: inapt.dateFin, fichierId: rec.id, commentaire: '',
+        } },
+      ];
       if (inapt.certificatId) {
         const ancien = await lire('certificats', inapt.certificatId);
-        if (ancien) { await supprimerFichier(ancien.fichierId); await supprimer('certificats', ancien.id); }
+        if (ancien) {
+          if (ancien.fichierId) operations.push({ store: 'fichiers', op: 'delete', cle: ancien.fichierId });
+          operations.push({ store: 'certificats', op: 'delete', cle: ancien.id });
+        }
       }
-      const certificatId = crypto.randomUUID();
-      await enregistrer('certificats', {
-        id: certificatId, eleveId: inapt.eleveId, dateDepot: isoAujourdhui(),
-        dateDebut: inapt.dateDebut, dateFin: inapt.dateFin, fichierId: rec.id, commentaire: '',
-      });
-      inapt.certificatId = certificatId;
-      await sauver();
+      operations.push({ store: 'inaptitudes', op: 'put', valeur: { ...inapt, certificatId } });
+      await enregistrerLot(operations);
+      inapt.certificatId = certificatId; // mémoire alignée seulement après l'écriture
       rafraichir();
     } catch (e) {
       statutPiece.textContent = `Pièce non enregistrée : ${e?.message || e}`;

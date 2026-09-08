@@ -4,8 +4,8 @@
 // Pas d'édition en v1 : supprimer puis recréer.
 
 import { enregistrerVue, el, carte, champ, groupe, confirmer, toast } from '../ui.js';
-import { tous, lire, enregistrer, supprimerLot, restaurer } from '../io.js';
-import { stockerFichier, ouvrirVisionneuse } from '../media.js';
+import { tous, lire, enregistrer, enregistrerLot, supprimerLot, restaurer } from '../io.js';
+import { preparerFichier, ouvrirVisionneuse } from '../media.js';
 import { dateFR, isoAujourdhui, normaliser, trierClasses } from '../metier.js';
 
 const TYPES_DOC = [
@@ -69,14 +69,23 @@ async function vueDocuments(c) {
     btnCreer.disabled = true;
     try {
       let fichierId = null;
-      if (f) { statutForm.textContent = f.type.startsWith('image/') ? 'Compression de l’image…' : 'Enregistrement de la pièce…'; statutForm.className = 'statut'; fichierId = (await stockerFichier(f)).id; } // retour pendant l'attente (C44)
-      await enregistrer('documents', {
+      // Pièce et document écrits d'un bloc : une coupure entre les deux laissait un blob orphelin
+      // (avis lot 2, D-04).
+      const operations = [];
+      if (f) {
+        statutForm.textContent = f.type.startsWith('image/') ? 'Compression de l’image…' : 'Enregistrement de la pièce…'; statutForm.className = 'statut'; // retour pendant l'attente (C44)
+        const rec = await preparerFichier(f); // compression HORS transaction (asynchrone)
+        fichierId = rec.id;
+        operations.push({ store: 'fichiers', op: 'put', valeur: rec });
+      }
+      operations.push({ store: 'documents', op: 'put', valeur: {
         id: crypto.randomUUID(), titre, type: selType.value,
         tags: inpTags.value.split(',').map((t) => t.trim()).filter(Boolean),
         classeIds: [...cochesClasses],
         fichierId, url: f ? '' : url,
         dateAjout: isoAujourdhui(), // date LOCALE, comme partout (audit 2026-09-07, C49)
-      });
+      } });
+      await enregistrerLot(operations);
       rafraichir();
     } catch (e) {
       statutForm.textContent = `Enregistrement impossible : ${e?.message || e}`;

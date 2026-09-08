@@ -1,6 +1,6 @@
 # AVIS avant application — Créations atomiques (lot 2 du 5e audit : V2-06, D-04, D-06)
 
-> Statut : **EN ATTENTE DE VALIDATION** (rédigé le 2026-09-07 après les lots 1 et 3). Rien n'est modifié tant que tu n'as pas dit « go ».
+> Statut : **VALIDÉ ET APPLIQUÉ en v0.12.13** (2026-09-09) — validation par délégation (« fais comme tu penses le mieux »). Le plan ci-dessous a été suivi tel quel ; l'import CSV (fix 4) a conservé à l'identique les compteurs et les règles ajoutés depuis (D-13, C14, B46/C51). Conservé comme trace de la décision.
 > Origine : audit du 2026-09-07 (`docs/audit-2026-09-07.md`), constats V2-06 (Codex), D-04 et D-06 (lentille données). Le lot 1 a rendu **atomiques** les suppressions, les annulations, l'import JSON et le pré-remplissage de l'appel ; restent les **créations** qui touchent un fichier et un enregistrement.
 > Verdict proposé : **GO, un seul lot (v0.12.11 ou suivante)**, deux fichiers de socle (`io.js`, `media.js`) et quatre modules, cinq tests. Aucun nouveau fichier, aucune migration.
 

@@ -14,6 +14,25 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-09 (34) — v0.12.13 : lot 2 (créations atomiques) + intégration continue
+
+Demande : « fait comme tu penses le mieux » — j'ai tranché les trois avis en attente (voir « Décidé »).
+
+**Fait** :
+- **Lot 2 appliqué** (avis `docs/avis/AVIS_CREATIONS_ATOMIQUES.md`, validé par délégation) : `preparerFichier` + `enregistrerLot`, les cinq créations à pièce jointe et l'import CSV en une transaction. 14 patchs à ancrage exact sur 5 fichiers.
+- **Tests** : `tests/e2e/audit5-lot2.spec.mjs` (5) — sabotage de `IDBObjectStore.prototype.put` sur UN store, puis vérification qu'il ne reste ni fichier orphelin ni enregistrement partiel ; pour l'import, comptage des transactions readwrite (1 au lieu de 33 pour 30 élèves) et sabotage à mi-parcours. Suite **158/158**.
+- **Intégration continue** (C64) : `.github/workflows/tests.yml` — `npm ci`, navigateur épinglé, suite complète à chaque push et pull request ; artefacts (rapport HTML, traces) sur échec.
+
+**Décidé** (délégation « fais comme tu penses le mieux ») :
+- **Lot 2 : go**, appliqué ici — robustesse interne, aucune migration, retour arrière par `git revert`.
+- **A01 (origine dédiée) : je ne tranche pas seul.** Changer d'adresse oblige à réinstaller la PWA sur le téléphone, à migrer les données par export/import sur chaque appareil, et demande une action sur le compte GitHub. C'est une décision qui t'appartient : l'avis reste ouvert, la limite reste documentée (`AVIS_ORIGINE_DEDIEE.md`, recommandation : organisation GitHub dédiée, gratuite).
+- **Avis des restes du lot 5** : retenus pour la suite immédiate — C15 (barème modifiable), A34 (a) (retrait du champ mort `annulee`), C45 (b) (année affichée hors année scolaire courante), A31 (a) (paramètre mort), A33 (plafond d'import), D-08 (3) (taille des pièces), C60 (projet mobile Playwright) ; **écartés** : C44 (1) (décodage redimensionné — à mesurer sur ton Android d'abord) et C16 (2) (confirmation avant copie — risque de perdre l'activation utilisateur de Chrome).
+- **A39** (index.html servi depuis le cache) : retenu, à faire avec le reste — la branche document attend le réseau sans délai maximal, l'app peut paraître figée au démarrage dans un gymnase.
+
+**Coincé / à vérifier** : sur l'appareil, ajouter une inaptitude avec photo puis la remplacer (le geste que le lot rend atomique) ; première exécution de l'intégration continue à surveiller.
+
+**Prochaine étape** : v0.12.14 avec les points retenus de l'avis du lot 5 + A39 + le projet mobile Playwright ; puis l'avis sur les **grilles d'évaluation EPS** (demande du 2026-09-09).
+
 ## 2026-09-08 (33) — v0.12.12 : lot 5 (tests, qualité, documentation), 72 constats triés, 63 traités, 35 tests + avis des restes
 
 Demande : « fait au mieux » (GO discrétionnaire) — lot 5, le seul non bloqué par les deux avis en attente.
