@@ -639,7 +639,7 @@ test('C57 / C59 — la documentation suit le code : restrictions, champs EDT, pr
   expect(readme).toContain('app.localhost'); // avant : « [::1] » alors que le code essaie app.localhost en premier
   // Comptes dérivés des SIX specs (tests imbriqués dans un describe compris), par fichier et au total (revue du lot 5).
   const specs = readdirSync(new URL('./', import.meta.url)).filter((f) => f.endsWith('.spec.mjs'));
-  expect(specs.length).toBe(7);
+  expect(specs.length).toBe(8);
   let total = 0;
   for (const f of specs) {
     const n = (lire('./' + f).match(/^\s*test\(/gm) || []).length;

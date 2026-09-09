@@ -50,7 +50,11 @@ Sauvegarde, utilitaires CSV (C31).
 constat *démontrable par le comportement* du 5e audit (`docs/audit-2026-09-07.md`, lots 1, 3, 4 et 5), chacun rouge avec le code
 d'avant son lot ; les gestes de commentaire, de configuration et de documentation (C05, C39, C18, C20, C22, C23, C25, C58, C61…)
 sont couverts par relecture ou par les gardes de cohérence de `audit5-lot5.spec.mjs` ;
-les tests de `audit5-lot4` marqués « service-worker réel » se jouent sur `app.localhost`. Total de la suite : **165 tests** (+ 24 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs`, sauf le test de position des toasts, propre au PC).
+les tests de `audit5-lot4` marqués « service-worker réel » se jouent sur `app.localhost`. **`audit-v3.spec.mjs` (9)** — audit Codex V3 du 2026-09-09 (`audit codex/AUDIT_V3.md`, hors dépôt), lot V3-A : la CLASSE
+de défauts V3-01 — un champ dont l’écriture est refusée ne doit jamais être persisté ensuite par la modification
+d’un champ voisin du même objet (évaluation, séquence, fiche élève, inaptitude, classe).
+
+Total de la suite : **174 tests** (+ 24 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs`, sauf le test de position des toasts, propre au PC).
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse

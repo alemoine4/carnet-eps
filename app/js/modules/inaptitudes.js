@@ -256,7 +256,19 @@ async function vueDetail(c, id) {
   if (!inapt) { c.append(carte('Inaptitude introuvable', 'Elle a peut-être été supprimée.')); return; }
   const eleve = await lire('eleves', inapt.eleveId);
   const classe = eleve ? await lire('classes', eleve.classeId) : null;
-  const sauver = () => enregistrer('inaptitudes', inapt);
+  // Mutation seulement après écriture validée (audit Codex V3, V3-01).
+  // …et sérialisées (revue du lot V3-A) : sans file d'attente, le second changement repartait de
+  // l'objet d'avant et écrasait le premier.
+  let file = Promise.resolve();
+  const sauver = (modifs = {}) => {
+    const suite = file.catch(() => {}).then(async () => {
+      const candidat = { ...inapt, ...modifs };
+      await enregistrer('inaptitudes', candidat);
+      Object.assign(inapt, modifs);
+    });
+    file = suite;
+    return suite;
+  };
 
   const carteI = carte(eleve ? `${eleve.nom} ${eleve.prenom}` : 'Élève supprimé', '', classe?.nom || '');
   const h2 = carteI.querySelector('h2');
@@ -268,18 +280,18 @@ async function vueDetail(c, id) {
     champSelect({
       id: 'di-type', libelle: 'Type', valeur: inapt.type,
       options: [{ value: 'partielle', label: 'Partielle (restrictions)' }, { value: 'totale', label: 'Totale (aucune pratique)' }],
-      onChange: async (v) => { inapt.type = v; await sauver(); rafraichir(); },
+      onChange: async (v) => { await sauver({ type: v }); rafraichir(); },
     }),
-    champSelect({ id: 'di-origine', libelle: 'Origine', valeur: inapt.origine || 'certificat', options: ORIGINES, onChange: async (v) => { inapt.origine = v; await sauver(); } }),
+    champSelect({ id: 'di-origine', libelle: 'Origine', valeur: inapt.origine || 'certificat', options: ORIGINES, onChange: async (v) => { await sauver({ origine: v }); } }),
     el('div', { class: 'rang-2' },
       // Fin avant début refusée à l'édition comme à la création (audit 2026-09-07, A16).
       champTexte({ id: 'di-debut', libelle: 'Début', type: 'date', valeur: inapt.dateDebut || '', onChange: async (v) => {
         if (v && inapt.dateFin && v > inapt.dateFin) throw new Error('le début est après la fin');
-        inapt.dateDebut = v; await sauver(); rafraichir();
+        await sauver({ dateDebut: v }); rafraichir();
       } }),
       champTexte({ id: 'di-fin', libelle: 'Fin', type: 'date', valeur: inapt.dateFin || '', onChange: async (v) => {
         if (v && inapt.dateDebut && v < inapt.dateDebut) throw new Error('la fin est avant le début');
-        inapt.dateFin = v; await sauver(); rafraichir();
+        await sauver({ dateFin: v }); rafraichir();
       } }),
     ),
   );
@@ -289,16 +301,22 @@ async function vueDetail(c, id) {
       const chk = el('input', { type: 'checkbox', id: `di-r-${cle}` });
       chk.checked = (inapt.restrictions || []).includes(cle);
       chk.addEventListener('change', async () => {
+        // Écriture d'abord, mutation ensuite, et un message si elle est refusée : ces cases
+        // n'avaient AUCUN filet (rejet silencieux au niveau du champ) — audit Codex V3, V3-01.
         const set = new Set(inapt.restrictions || []);
         chk.checked ? set.add(cle) : set.delete(cle);
-        inapt.restrictions = [...set];
-        await sauver();
+        try {
+          await sauver({ restrictions: [...set] });
+        } catch (e) {
+          chk.checked = !chk.checked;
+          toast(`Restriction non enregistrée : ${e?.message || e}`);
+        }
       });
       grilleR.append(el('label', { class: 'ligne-option', for: `di-r-${cle}` }, chk, ` ${lib}`));
     }
     carteI.append(groupe('Restrictions', grilleR)); // fieldset nommé (B47)
   }
-  carteI.append(champZone({ id: 'di-comm', libelle: 'Commentaire', valeur: inapt.commentaire || '', onChange: async (v) => { inapt.commentaire = v; await sauver(); } }));
+  carteI.append(champZone({ id: 'di-comm', libelle: 'Commentaire', valeur: inapt.commentaire || '', onChange: async (v) => { await sauver({ commentaire: v }); } }));
   c.append(carteI);
 
   // --- Certificat ---

@@ -137,38 +137,50 @@ async function vueDetail(c, id) {
   const classes = (await tous('classes')).sort(trierClasses);
   const classe = classes.find((cl) => cl.id === sequence.classeId);
   const seances = (await parIndex('seances', 'sequenceId', id)).sort((a, b) => a.date.localeCompare(b.date));
-  const sauver = () => enregistrer('sequences', sequence);
+  // Mutation seulement après écriture validée (audit Codex V3, V3-01).
+  // …et sérialisées (revue du lot V3-A) : sans file d'attente, le second changement repartait de
+  // l'objet d'avant et écrasait le premier.
+  let file = Promise.resolve();
+  const sauver = (modifs = {}) => {
+    const suite = file.catch(() => {}).then(async () => {
+      const candidat = { ...sequence, ...modifs };
+      await enregistrer('sequences', candidat);
+      Object.assign(sequence, modifs);
+    });
+    file = suite;
+    return suite;
+  };
 
   // --- Infos éditables ---
   const carteSeq = carte(`${classe?.nom || '?'} — ${sequence.apsa}`, '', estActive(sequence) ? 'en cours' : '');
   carteSeq.append(
-    champTexte({ id: 'sd-apsa', libelle: 'APSA', valeur: sequence.apsa, onChange: async (v) => { if (!v) throw new Error('l’APSA ne peut pas être vide'); sequence.apsa = v; await sauver(); } }), // A36
+    champTexte({ id: 'sd-apsa', libelle: 'APSA', valeur: sequence.apsa, onChange: async (v) => { if (!v) throw new Error('l’APSA ne peut pas être vide'); await sauver({ apsa: v }); } }), // A36
     champSelect({
       id: 'sd-classe', libelle: 'Classe', valeur: sequence.classeId,
       options: classes.map((cl) => ({ value: cl.id, label: cl.nom })),
-      onChange: async (v) => { sequence.classeId = v; await sauver(); },
+      onChange: async (v) => { await sauver({ classeId: v }); },
     }),
     champSelect({
       id: 'sd-ca', libelle: 'Champ d’apprentissage', valeur: sequence.ca ? String(sequence.ca) : '',
       options: CA_OPTIONS,
-      onChange: async (v) => { sequence.ca = v ? Number(v) : null; await sauver(); },
+      onChange: async (v) => { await sauver({ ca: v ? Number(v) : null }); },
     }),
     el('div', { class: 'rang-2' },
       // Fin avant début refusée à l'édition comme à la création (audit 2026-09-07, A16).
       champTexte({ id: 'sd-debut', libelle: 'Début', type: 'date', valeur: sequence.dateDebut || '', onChange: async (v) => {
         if (v && sequence.dateFin && v > sequence.dateFin) throw new Error('le début est après la fin');
-        sequence.dateDebut = v; await sauver();
+        await sauver({ dateDebut: v });
       } }),
       champTexte({ id: 'sd-fin', libelle: 'Fin', type: 'date', valeur: sequence.dateFin || '', onChange: async (v) => {
         if (v && sequence.dateDebut && v < sequence.dateDebut) throw new Error('la fin est avant le début');
-        sequence.dateFin = v; await sauver();
+        await sauver({ dateFin: v });
       } }),
     ),
     champTexte({ id: 'sd-nb', libelle: 'Séances prévues', type: 'number', valeur: String(sequence.nbSeancesPrevu || ''), onChange: async (v) => {
       if (v !== '' && !(Number.isInteger(Number(v)) && Number(v) >= 1)) throw new Error('entier ≥ 1 attendu (ou vide)');
-      sequence.nbSeancesPrevu = v === '' ? null : Number(v); await sauver();
+      await sauver({ nbSeancesPrevu: v === '' ? null : Number(v) });
     } }),
-    champZone({ id: 'sd-obj', libelle: 'Objectifs / AFL', valeur: sequence.objectifs || '', placeholder: 'AFL visés, attendus de fin de séquence…', onChange: async (v) => { sequence.objectifs = v; await sauver(); } }),
+    champZone({ id: 'sd-obj', libelle: 'Objectifs / AFL', valeur: sequence.objectifs || '', placeholder: 'AFL visés, attendus de fin de séquence…', onChange: async (v) => { await sauver({ objectifs: v }); } }),
   );
   c.append(carteSeq);
 

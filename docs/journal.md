@@ -14,6 +14,24 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-09 (37) — v0.12.15 : lot V3-A (mutation après écriture validée)
+
+Demande : « go » sur la stratégie de l'audit V3 (V3-A d'abord, seul).
+
+**Fait** :
+- **Correction de classe** : `sauver(modifs)` construit un candidat, écrit, et ne modifie l'objet partagé qu'au succès — 5 modules, une vingtaine de champs. Deux champs sans `try/catch` (couleur de classe, cases restrictions) reçoivent message + retour à l'état enregistré. Deux sites de marquage « publiée » convertis (ils échappaient à l'audit).
+- **Tests** : `tests/e2e/audit-v3.spec.mjs` (9, dont une **garde de classe** qui interdit le motif fautif dans tout `app/js/modules/`), rouges avant. Suite 174 (+ 24 mobile).
+- **Piège de test rencontré et corrigé** : mon premier test « séquence » passait déjà avant le correctif. Cause : `fill()` émet DÉJÀ `change` sur un champ date, et mon `dispatchEvent('change')` supplémentaire relisait la valeur **restaurée** par le contrat V2-04, ce qui **réparait l'objet par accident**. Un test qui passe pour une mauvaise raison ne prouve rien : le second événement retiré, le test devient rouge comme il le doit.
+
+- **Revue adversariale** (3 lentilles, 2 réfutateurs par constat) : un **P1 par lentille utile**. (1) « Archiver »/« Restaurer » d’une classe gardait le motif fautif : deux sites de plus convertis, et j’ai ajouté une **garde de classe** (test qui interdit le motif dans tout `app/js/modules/`) plutôt que de tester 17 sites un par un — elle a rougi sur ces deux boutons, ce qui la valide. (2) Ma correction **réintroduisait une course** : le second changement construisait son candidat depuis l’objet d’avant et écrasait le premier (nom perdu, reproduit sans ralentissement artificiel). Les écritures d’une vue sont maintenant **sérialisées** par une file d’attente qui laisse remonter l’échec à son propre appelant.
+- **Second piège de test** : mon test symétrique visait un champ TEXTE, dont la valeur reste à l’écran après un refus — la réécrire ensuite est légitime, pas un bug. Recentré sur un champ **restauré** (date), où la base ne doit jamais voir la valeur refusée.
+
+**Décidé** : les deux champs sans filet reçoivent un toast (cohérent avec tout le reste de l'app) ; le contrat de `brancherRetour` (ui.js) n'est pas touché, son rôle est de restaurer le CONTRÔLE, pas l'objet.
+
+**Coincé / à vérifier** : la fiche terrain, toujours pas faite — deux des cinq constats de l'audit portent sur des conditions (mémoire pleine, réseau très lent) que seul le téléphone produit vraiment.
+
+**Prochaine étape** : famille B (V3-B1 export pendant écriture, V3-B2 « à remettre à jour », V3-B3 conversion au changement de barème), après tes réponses aux décisions 1 et 2 de la stratégie.
+
 ## 2026-09-09 (36) — audit Codex V3 reçu, vérifié, et stratégie d'amélioration
 
 Demande : « regarde audit v3 proposé par codex et développe la stratégie d'amélioration ».
