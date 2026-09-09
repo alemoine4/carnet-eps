@@ -26,6 +26,8 @@ Modèle d'entrée :
 
 **Coincé / à vérifier** : sur l'appareil, l'ouverture de l'app en mode avion (elle doit être immédiate) et le champ barème sur une évaluation existante.
 
+**Déployé** : main `97c4278`, gh-pages `21679d5`, tag `v0.12.14` (2026-09-09).
+
 **Prochaine étape** : l'avis sur les **grilles d'évaluation EPS** (critères, niveaux, pondérations, note ramenée sur 20), demandé le 2026-09-09 — à rédiger avant tout code, en s'inspirant des grilles d'iDoceo.
 
 ## 2026-09-09 (34) — v0.12.13 : lot 2 (créations atomiques) + intégration continue
