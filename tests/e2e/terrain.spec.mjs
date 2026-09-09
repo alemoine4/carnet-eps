@@ -269,3 +269,29 @@ test('terrain (revue) — un message d’erreur passe DEVANT la barre collante, 
   });
   expect(empilement.toasts).toBeGreaterThan(empilement.barre);
 });
+
+test('terrain (revue) — un découpage DEVINÉ est montré en priorité et compté dans le bilan', async ({ page }) => {
+  // Un nom à particule ne donne aucune majuscule pour trancher : « de La Fontaine Apolline » devient
+  // nom « de » / prénom « La Fontaine Apolline ». C'est inevitable, mais ça ne doit pas être muet :
+  // l'écran d'appel affiche la paire inversée et l'export Pronote sort deux colonnes fausses.
+  await page.goto('/#/eleves/import');
+  await page.getByLabel('Données CSV collées').fill([
+    'Nom complet;Classe',
+    'MARTIN Louise;6A',
+    'DURAND Paul;6A',
+    'de La Fontaine Apolline;6A',
+  ].join('\n'));
+  await page.getByRole('button', { name: 'Analyser' }).click();
+  const apercu = page.locator('#apercu-scission');
+  // Le cas douteux passe devant : l'aperçu ne montrait que les deux PREMIÈRES lignes, donc jamais lui.
+  await expect(apercu).toContainText('de La Fontaine Apolline');
+  await expect(apercu).toContainText('1 nom sans majuscule distinctive');
+  await page.getByRole('button', { name: /^Importer 3 élèves$/ }).click();
+  const bilan = page.locator('#vue .statut').last();
+  await expect(bilan).toContainText('3 élèves importés dans 6A');
+  // Compté dans le bilan, comme les homonymes et les dates rejetées.
+  await expect(bilan).toContainText('1 nom découpé au jugé');
+  // Les deux noms tranchés par la casse ne déclenchent rien.
+  const eleves = await page.evaluate(async () => (await (await import('/js/io.js')).tous('eleves')).map((e) => `${e.nom}|${e.prenom}`).sort());
+  expect(eleves).toEqual(['DURAND|Paul', 'MARTIN|Louise', 'de|La Fontaine Apolline']);
+});

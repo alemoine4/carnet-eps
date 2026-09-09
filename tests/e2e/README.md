@@ -54,7 +54,7 @@ les tests de `audit5-lot4` marqués « service-worker réel » se jouent sur `ap
 de défauts V3-01 — un champ dont l’écriture est refusée ne doit jamais être persisté ensuite par la modification
 d’un champ voisin du même objet (évaluation, séquence, fiche élève, inaptitude, classe).
 
-**`terrain.spec.mjs` (12)** — les trois constats du **test de terrain du 2026-09-09** (première séance sur un Android réel) :
+**`terrain.spec.mjs` (13)** — les trois constats du **test de terrain du 2026-09-09** (première séance sur un Android réel) :
 l'export « Élèves » de Pronote met le nom et le prénom dans une seule colonne et laisse « Classe de rattachement » vide
 quand on exporte une seule classe ; et « Terminer l'appel », placé sous la grille, sortait de l'écran dès une vingtaine
 d'élèves. Les **six autres viennent de la revue adversariale** de ce correctif, chacun rouge avant sa
@@ -64,12 +64,13 @@ disparaîtrait du papier où elle figurait) ; une colonne « Nom et prénom »
 la première de la liste (le deuxième export Pronote y versait la classe entière) ; une colonne parasite contenant
 « nom » (« Nom du responsable ») ne désarme plus la scission, qui importait l'identité du **tuteur** ; la note
 « colonne Classe vide » suit le remappage manuel au lieu de mentir ; et le découpage de la colonne unique est
-**montré avant l'import**. Un test appelle directement `scinderNomPrenom` pour couvrir son repli, que le parcours
+**montré avant l'import**, les cas devinés en tête et comptés dans le bilan comme les homonymes (un nom à
+particule ne donne aucune majuscule pour trancher : « de La Fontaine Apolline » devient nom « de »). Un test appelle directement `scinderNomPrenom` pour couvrir son repli, que le parcours
 d'écran n'atteint pas.
 ⚠ Les jeux d'essai reprennent la **structure** de cet export réel avec des **noms inventés** : aucune donnée
 nominative dans le dépôt.
 
-Total de la suite : **186 tests** (+ 24 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs`, sauf le test de position des toasts, propre au PC).
+Total de la suite : **187 tests** (+ 24 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs`, sauf le test de position des toasts, propre au PC).
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse

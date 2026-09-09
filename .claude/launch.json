@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "carnet-eps",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server-carnet.mjs"],
+      "port": 8160
+    }
+  ]
+}

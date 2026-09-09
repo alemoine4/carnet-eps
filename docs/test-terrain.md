@@ -1,6 +1,6 @@
-# Fiche de test terrain — Carnet EPS (v0.12.16 — deuxième passage, ~10 min)
+# Fiche de test terrain — Carnet EPS (v0.12.17 — deuxième passage, ~10 min)
 
-> Deuxième passage sur ton téléphone Android, après la mise à jour en v0.12.16. Les **trois constats de la première séance sont corrigés** (§ 0, à reverifier en priorité) ; le reste est à finir de dérouler. Coche au fur et à mesure, note ce qui coince.
+> Deuxième passage sur ton téléphone Android, après la mise à jour en v0.12.17. Les **trois constats de la première séance sont corrigés** (§ 0, à reverifier en priorité) ; le reste est à finir de dérouler. Coche au fur et à mesure, note ce qui coince.
 > App : **https://alemoine4.github.io/carnet-eps/** · Guide détaillé : Plus → Aide.
 > Reporte les ❌ ici ou dis-les-moi : je corrige.
 
@@ -12,7 +12,7 @@ Trois constats de ta première séance. Si l'un des trois recoince, tout le rest
 
 - [ ] **« Terminer l'appel » toujours visible.** Ouvrir l'appel d'une classe de ~28 **sans rien faire défiler** : le bouton doit être là, en bas, au-dessus de la barre de navigation. Il y reste pendant qu'on déroule la grille.
 - [ ] **Le tap n'est plus obligatoire.** La consigne au-dessus de la grille dit maintenant : tapez **seulement les absents**, puis « Terminer l'appel » ; les élèves non tapés passent présents. Le vérifier pour de vrai : taper 2 absents, terminer, contrôler que les 26 autres sont présents.
-- [ ] **Import Pronote réel.** Onglet Élèves de Pronote → Export CSV → coller dans l'app → Analyser. La ligne « **Découpage de la colonne unique** » doit montrer le résultat sur deux élèves (« NOM Prénom » → nom …, prénom …) **avant** d'importer. Regarder les noms composés : un nom de famille en deux mots doit rester entier.
+- [ ] **Import Pronote réel.** Onglet Élèves de Pronote → Export CSV → coller dans l'app → Analyser. La ligne « **Découpage de la colonne unique** » doit montrer le résultat sur deux élèves (« NOM Prénom » → nom …, prénom …) **avant** d'importer. Regarder les noms composés : un nom de famille en deux mots doit rester entier. Si un nom n'a **aucune majuscule** pour trancher (une particule, par exemple), l'app le met en tête de l'aperçu et le compte dans le bilan (« N noms découpés au jugé ») : ce sont ceux-là qu'il faut relire dans les fiches.
 - [ ] **Classe absente du fichier.** Quand tu exportes **une seule classe**, Pronote laisse « Classe de rattachement » vide : l'app doit le dire (« la colonne Classe du fichier est vide ») et **ne rien choisir à ta place** — c'est « Créer la classe » qui est coché, à toi de taper le nom. Vérifie surtout à partir du **deuxième** import : rien ne doit atterrir dans la classe d'hier.
 
 > À savoir, ce n'est pas un défaut : une inaptitude **partielle** ne met **pas** l'élève en « Inapte ». Elle le laisse « Présent » avec la pastille 🩺, parce qu'il pratique avec des restrictions. Seule une inaptitude **totale** fixe un statut d'office : « Inapte » sur certificat, « Dispensé (mot) » sur un mot des parents — et seulement sur la séance **du jour**.
@@ -22,7 +22,7 @@ Trois constats de ta première séance. Si l'un des trois recoince, tout le rest
 ## 1. Installation et mise à jour (~2 min)
 
 - [ ] Ouvrir l'URL → « Installer » (sinon menu ⋮ → « Installer l'application ») ; l'icône **EPS** apparaît, l'app s'ouvre plein écran
-- [ ] Plus → Réglages → **Version : v0.12.16** (sinon : Vérifier les mises à jour, puis « Recharger ») et protection contre l'effacement **active ✓**
+- [ ] Plus → Réglages → **Version : v0.12.17** (sinon : Vérifier les mises à jour, puis « Recharger ») et protection contre l'effacement **active ✓**
 - [ ] Réglages → **Trimestres** : saisir une fin de T2 **avant** la fin de T1 → refusée avec « ✗ » et un message (v0.12.9)
 - [ ] Plus → **Aide** : la carte « Installer sur le téléphone · transférer » est claire sur ton téléphone (v0.12.15 — dis-moi si un mot ne colle pas à ce que tu vois dans Chrome)
 
