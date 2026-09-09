@@ -208,6 +208,44 @@ fieldset.groupe legend {
   font-weight: 600;
 }
 
+/* Action principale de l'écran d'appel, toujours atteignable : elle vivait sous la grille, donc
+   hors de l'écran dès une vingtaine d'élèves (test de terrain du 2026-09-09). */
+.barre-appel {
+  position: sticky;
+  bottom: calc(var(--h-nav) + env(safe-area-inset-bottom) + 8px);
+  z-index: 5;
+  margin-top: 12px;
+  padding: 8px 10px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-bordure);
+  border-radius: var(--r-carte);
+  box-shadow: 0 2px 12px rgb(15 22 38 / 12%);
+}
+
+.barre-appel .rang-btn {
+  margin-top: 0;
+}
+
+.barre-appel .btn-principal {
+  flex: 1; /* pleine largeur au pouce */
+}
+
+/* z-index délibérément BAS (5) : la pile de toasts (60) doit passer DEVANT cette barre. Un message
+   « Non enregistré : … » prime sur un bouton, et il s'efface au bout de quelques secondes ; l'inverse
+   cacherait une erreur d'écriture derrière un bouton (revue du correctif de terrain). */
+
+/* À l'impression, la barre redevient un bloc ordinaire : masquer le bloc entier ferait
+   disparaître la ligne d'état « Appel complet ✓ (n/n) », qui s'imprimait avant ce correctif. */
+@media print {
+  .barre-appel {
+    position: static;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+}
+
 .rang-btn {
   display: flex;
   gap: 10px;

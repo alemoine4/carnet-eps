@@ -597,16 +597,42 @@ async function vueFiche(c, id) {
 // Vue : import CSV Pronote
 // ---------------------------------------------------------------------------
 
+// « MARTIN Louise » → { nom: 'MARTIN', prenom: 'Louise' }. L'export Pronote met le nom et le prénom
+// dans UNE seule colonne, nom de famille en MAJUSCULES : les mots capitalisés de tête forment le nom,
+// le reste le prénom — ce qui tient pour un nom en deux mots comme pour un prénom composé
+// (test de terrain du 2026-09-09).
+export function scinderNomPrenom(texte) {
+  const mots = String(texte || '').trim().split(/\s+/).filter(Boolean);
+  if (!mots.length) return { nom: '', prenom: '' };
+  const majuscule = (m) => m === m.toLocaleUpperCase('fr') && m !== m.toLocaleLowerCase('fr');
+  let i = 0;
+  while (i < mots.length && majuscule(mots[i])) i++;
+  if (i === 0 || i === mots.length) i = 1; // pas de majuscules distinctives : le 1er mot fait le nom
+  return { nom: mots.slice(0, i).join(' '), prenom: mots.slice(i).join(' ') };
+}
+
 function detecterColonnes(entetes) {
   const n = entetes.map((e) => cleTexte(e));
   const trouver = (test) => n.findIndex(test);
-  return {
+  const cols = {
     prenom: trouver((h) => h.includes('prenom')),
     nom: trouver((h) => h === 'nom' || h === 'nomdefamille' || (h.includes('nom') && !h.includes('prenom'))),
+    // Colonne unique « Élèves » (export Pronote) : nom et prénom ensemble. « Nom complet » et
+    // « Nom de l'élève » satisfont aussi la règle « nom » : le garde-fou ci-dessous les lui retire.
+    nomComplet: trouver((h) => h === 'eleve' || h === 'eleves' || h === 'nomcomplet' || h === 'nomdeleleve'
+      || h.includes('nometprenom') || h.includes('nomprenom')),
     dateNaissance: trouver((h) => h.includes('naissance') || h === 'neele' || h === 'nele' || h === 'nee'),
     sexe: trouver((h) => h.includes('sexe') || h === 'genre'),
     classe: trouver((h) => h.includes('classe') || h === 'division'),
   };
+  // Un en-tête « Nom et prénom » satisfait AUSSI la règle « prénom » : sans ce garde-fou, la même
+  // colonne était proposée deux fois, et désigner une colonne « Nom » à la main donnait un prénom
+  // « MARTIN Louise » entier (revue du correctif de terrain).
+  if (cols.nomComplet >= 0) {
+    if (cols.prenom === cols.nomComplet) cols.prenom = -1;
+    if (cols.nom === cols.nomComplet) cols.nom = -1;
+  }
+  return cols;
 }
 
 async function executerImport(lignes, dest) {
@@ -742,6 +768,7 @@ async function afficherMapping(c, analyse) {
   const carteMap = carte('2 · Colonnes', 'Vérifiez la correspondance détectée automatiquement.');
   const selects = {};
   const cibles = [
+    ['nomComplet', 'Nom et prénom (une seule colonne)'],
     ['nom', 'Nom *'], ['prenom', 'Prénom *'], ['dateNaissance', 'Date de naissance'],
     ['sexe', 'Sexe'], ['classe', 'Classe'],
   ];
@@ -754,6 +781,30 @@ async function afficherMapping(c, analyse) {
     selects[cle] = sel;
     carteMap.append(el('div', { class: 'champ' }, el('label', { for: `map-${cle}` }, libelle), sel));
   }
+  // La colonne unique « Nom et prénom » est découpée par une heuristique (majuscules de tête) qui peut
+  // se tromper sur une casse inhabituelle : l'enseignant doit VOIR le résultat avant d'importer,
+  // l'aperçu brut ne montrant que la cellule d'origine (revue du correctif de terrain).
+  const apercuScission = el('p', { class: 'note-discrete', id: 'apercu-scission', hidden: true }, '');
+  carteMap.append(apercuScission);
+  const modeCombine = () => Number(selects.nomComplet.value) >= 0
+    && (Number(selects.nom.value) < 0 || Number(selects.prenom.value) < 0);
+  const majApercuScission = () => {
+    const actif = modeCombine();
+    apercuScission.hidden = !actif;
+    if (!actif) return;
+    const col = Number(selects.nomComplet.value);
+    const exemples = lignes.map((l) => String(l[col] || '').trim()).filter(Boolean).slice(0, 2)
+      .map((v) => {
+        const s = scinderNomPrenom(v);
+        return `« ${v} » → nom ${s.nom || '(vide)'}, prénom ${s.prenom || '(vide)'}`;
+      });
+    apercuScission.textContent = exemples.length
+      ? `Découpage de la colonne unique : ${exemples.join(' · ')}. Si c'est faux, désignez les colonnes « Nom » et « Prénom » séparément.`
+      : '';
+  };
+  for (const cle of ['nomComplet', 'nom', 'prenom']) selects[cle].addEventListener('change', majApercuScission);
+  majApercuScission();
+
   // aperçu brut des 3 premières lignes
   const table = el('table', { class: 'table-apercu' },
     el('caption', {}, 'Aperçu des 3 premières lignes du fichier'),
@@ -777,15 +828,33 @@ async function afficherMapping(c, analyse) {
   const rColonne = radio('colonne', 'Utiliser la colonne « Classe » (création automatique)');
   const rExistante = radio('existante', 'Tout mettre dans :', selExistante);
   const rNouvelle = radio('nouvelle', 'Créer la classe :', inpNouvelle);
-  if (auto.classe < 0) rColonne.r.disabled = true;
+  const noteClasse = el('p', { class: 'note-discrete', id: 'note-classe', hidden: true },
+    'La colonne « Classe » du fichier est vide : indiquez la classe ci-dessous.');
+  carteDest.append(noteClasse);
   if (!classes.length) rExistante.r.disabled = true;
-  (auto.classe >= 0 ? rColonne : classes.length ? rExistante : rNouvelle).r.checked = true;
+  const colonneRemplie = (col) => col >= 0 && lignes.some((l) => String(l[col] || '').trim());
+  // UNE seule source de vérité pour l'état de la destination, appelée au premier rendu ET à chaque
+  // remappage manuel de la colonne « Classe ». Auparavant la note était calculée une fois pour
+  // toutes pendant que la radio, elle, se recalculait : les deux divergeaient dès le premier
+  // changement (revue du correctif de terrain).
+  // Une colonne « Classe » DÉTECTÉE mais entièrement VIDE (export Pronote d'une seule classe) ne
+  // doit pas piloter la destination : toutes les lignes seraient déclarées incomplètes, et surtout
+  // rien ne doit choisir une classe à la place de l'enseignant — « Tout mettre dans : » se cochait
+  // sur la PREMIÈRE classe de la liste, et le deuxième export Pronote y versait 28 élèves
+  // (terrain 2026-09-09, puis revue).
+  const majDestination = (premierRendu) => {
+    const col = Number(selects.classe.value);
+    const utilisable = colonneRemplie(col);
+    const vide = col >= 0 && !utilisable;
+    rColonne.r.disabled = !utilisable;
+    noteClasse.hidden = !vide;
+    const defaut = utilisable ? rColonne : vide ? rNouvelle : classes.length ? rExistante : rNouvelle;
+    if (premierRendu || (rColonne.r.disabled && rColonne.r.checked)) defaut.r.checked = true;
+  };
+  majDestination(true);
   // Mapping manuel de « Classe » : le mode « Utiliser la colonne » suit (il restait inerte,
   // ou coché alors que la colonne venait d'être ignorée — audit 2026-09-07, C12).
-  selects.classe.addEventListener('change', () => {
-    rColonne.r.disabled = Number(selects.classe.value) < 0;
-    if (rColonne.r.disabled && rColonne.r.checked) (classes.length ? rExistante : rNouvelle).r.checked = true;
-  });
+  selects.classe.addEventListener('change', () => majDestination(false));
   carteDest.append(el('fieldset', { class: 'groupe' }, el('legend', { class: 'sr-only' }, 'Classe de destination'), rColonne.ligne, rExistante.ligne, rNouvelle.ligne));
   c.append(carteDest);
 
@@ -799,15 +868,27 @@ async function afficherMapping(c, analyse) {
   btnImporter.addEventListener('click', async () => {
     try {
       const colonne = (cle) => Number(selects[cle].value);
-      if (colonne('nom') < 0 || colonne('prenom') < 0) throw new Error('les colonnes Nom et Prénom sont obligatoires');
+      // Deux façons de nommer un élève : deux colonnes séparées, ou une seule « Nom et prénom »
+      // (export Pronote). Les colonnes séparées l'emportent si elles sont renseignées.
+      // Il suffit que la paire Nom + Prénom soit INCOMPLÈTE : « Nom du responsable » ou « Nom de
+      // naissance » satisfait la règle « nom » et désarmait la scission, au point d'importer
+      // l'identité du TUTEUR dans la fiche de l'élève (revue du correctif de terrain).
+      // Même règle que l'aperçu affiché à l'étape 2 : l'écran ne doit pas promettre autre chose.
+      const combine = modeCombine();
+      if (!combine && (colonne('nom') < 0 || colonne('prenom') < 0)) {
+        throw new Error('indiquez soit une colonne « Nom » et une colonne « Prénom », soit une colonne « Nom et prénom »');
+      }
       const valeur = (l, cle) => (colonne(cle) >= 0 ? l[colonne(cle)] || '' : '');
-      const prep = lignes.map((l) => ({
-        nom: valeur(l, 'nom').trim(),
-        prenom: valeur(l, 'prenom').trim(),
-        dateNaissance: valeur(l, 'dateNaissance'),
-        sexe: valeur(l, 'sexe'),
-        classe: valeur(l, 'classe').trim(),
-      }));
+      const prep = lignes.map((l) => {
+        const scinde = combine ? scinderNomPrenom(valeur(l, 'nomComplet')) : null;
+        return {
+          nom: scinde ? scinde.nom : valeur(l, 'nom').trim(),
+          prenom: scinde ? scinde.prenom : valeur(l, 'prenom').trim(),
+          dateNaissance: valeur(l, 'dateNaissance'),
+          sexe: valeur(l, 'sexe'),
+          classe: valeur(l, 'classe').trim(),
+        };
+      });
       const mode = document.querySelector('input[name="dest-mode"]:checked')?.value;
       const dest = { mode };
       if (mode === 'existante') dest.classeId = selExistante.value;
