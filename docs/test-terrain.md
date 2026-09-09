@@ -1,15 +1,28 @@
-# Fiche de test terrain — Carnet EPS (v0.12.15 — une seule session, ~15 min)
+# Fiche de test terrain — Carnet EPS (v0.12.16 — deuxième passage, ~10 min)
 
-> À faire sur ton téléphone Android **une fois**, après la mise à jour en v0.12.15 (les points des v0.12.4 à v0.12.15 sont regroupés). Coche au fur et à mesure, note ce qui coince.
+> Deuxième passage sur ton téléphone Android, après la mise à jour en v0.12.16. Les **trois constats de la première séance sont corrigés** (§ 0, à reverifier en priorité) ; le reste est à finir de dérouler. Coche au fur et à mesure, note ce qui coince.
 > App : **https://alemoine4.github.io/carnet-eps/** · Guide détaillé : Plus → Aide.
 > Reporte les ❌ ici ou dis-les-moi : je corrige.
+
+---
+
+## 0. Ce que la v0.12.16 corrige — à reverifier en premier (~4 min)
+
+Trois constats de ta première séance. Si l'un des trois recoince, tout le reste peut attendre.
+
+- [ ] **« Terminer l'appel » toujours visible.** Ouvrir l'appel d'une classe de ~28 **sans rien faire défiler** : le bouton doit être là, en bas, au-dessus de la barre de navigation. Il y reste pendant qu'on déroule la grille.
+- [ ] **Le tap n'est plus obligatoire.** La consigne au-dessus de la grille dit maintenant : tapez **seulement les absents**, puis « Terminer l'appel » ; les élèves non tapés passent présents. Le vérifier pour de vrai : taper 2 absents, terminer, contrôler que les 26 autres sont présents.
+- [ ] **Import Pronote réel.** Onglet Élèves de Pronote → Export CSV → coller dans l'app → Analyser. La ligne « **Découpage de la colonne unique** » doit montrer le résultat sur deux élèves (« NOM Prénom » → nom …, prénom …) **avant** d'importer. Regarder les noms composés : un nom de famille en deux mots doit rester entier.
+- [ ] **Classe absente du fichier.** Quand tu exportes **une seule classe**, Pronote laisse « Classe de rattachement » vide : l'app doit le dire (« la colonne Classe du fichier est vide ») et **ne rien choisir à ta place** — c'est « Créer la classe » qui est coché, à toi de taper le nom. Vérifie surtout à partir du **deuxième** import : rien ne doit atterrir dans la classe d'hier.
+
+> À savoir, ce n'est pas un défaut : une inaptitude **partielle** ne met **pas** l'élève en « Inapte ». Elle le laisse « Présent » avec la pastille 🩺, parce qu'il pratique avec des restrictions. Seule une inaptitude **totale** fixe un statut d'office : « Inapte » sur certificat, « Dispensé (mot) » sur un mot des parents — et seulement sur la séance **du jour**.
 
 ---
 
 ## 1. Installation et mise à jour (~2 min)
 
 - [ ] Ouvrir l'URL → « Installer » (sinon menu ⋮ → « Installer l'application ») ; l'icône **EPS** apparaît, l'app s'ouvre plein écran
-- [ ] Plus → Réglages → **Version : v0.12.15** (sinon : Vérifier les mises à jour, puis « Recharger ») et protection contre l'effacement **active ✓**
+- [ ] Plus → Réglages → **Version : v0.12.16** (sinon : Vérifier les mises à jour, puis « Recharger ») et protection contre l'effacement **active ✓**
 - [ ] Réglages → **Trimestres** : saisir une fin de T2 **avant** la fin de T1 → refusée avec « ✗ » et un message (v0.12.9)
 - [ ] Plus → **Aide** : la carte « Installer sur le téléphone · transférer » est claire sur ton téléphone (v0.12.15 — dis-moi si un mot ne colle pas à ce que tu vois dans Chrome)
 
@@ -40,7 +53,8 @@ Gêne éventuelle : ________________________________________________
 
 ## 5. Pronote réel (~4 min) — le critère qui valide la passerelle
 
-- [ ] Pronote : copier la liste d'une vraie classe (ou export CSV) → Élèves → Importer depuis Pronote → coller → Analyser → vérifier les colonnes → Importer : effectif complet, **accents corrects**, doublons ignorés si on relance
+- [ ] Pronote, onglet **Élèves** → Export CSV → Élèves → Importer depuis Pronote → coller → Analyser → vérifier les colonnes et le **découpage affiché** → Importer : effectif complet, **accents corrects**, doublons ignorés si on relance
+- [ ] Relancer le **même** import : « N doublons ignorés », aucun élève en double
 - [ ] Saisir quelques notes → « Copier pour Pronote » → dans Pronote, 1re case de la colonne → **coller** : même ordre, même barème
   > En cas d'échec à l'analyse : m'envoyer **seulement** la ligne d'en-tête et une ligne avec des noms inventés.
 
@@ -54,7 +68,7 @@ Gêne éventuelle : ________________________________________________
 
 ## Bilan
 
-- Tests OK : ______ / 6
+- Tests OK : ______ / 7
 - Bloquants rencontrés : ________________________________________________
 - À améliorer : ________________________________________________
 
