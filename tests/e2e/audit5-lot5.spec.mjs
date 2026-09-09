@@ -639,7 +639,7 @@ test('C57 / C59 — la documentation suit le code : restrictions, champs EDT, pr
   expect(readme).toContain('app.localhost'); // avant : « [::1] » alors que le code essaie app.localhost en premier
   // Comptes dérivés des SIX specs (tests imbriqués dans un describe compris), par fichier et au total (revue du lot 5).
   const specs = readdirSync(new URL('./', import.meta.url)).filter((f) => f.endsWith('.spec.mjs'));
-  expect(specs.length).toBe(8);
+  expect(specs.length).toBe(9);
   let total = 0;
   for (const f of specs) {
     const n = (lire('./' + f).match(/^\s*test\(/gm) || []).length;
@@ -647,6 +647,17 @@ test('C57 / C59 — la documentation suit le code : restrictions, champs EDT, pr
     expect(readme, f).toMatch(new RegExp(f.replace(/\./g, '\\.') + '\\S*\\s*(—\\s*)?\\(?' + n + '\\b'));
   }
   expect(readme).toContain(`Total de la suite : **${total} tests**`);
+  // Le second projet (« mobile ») échappait à la garde : son compte était écrit à la main dans le
+  // README et personne ne le rejouait (revue du correctif de terrain). Il est désormais DÉRIVÉ de
+  // playwright.config.mjs : fichiers retenus par `testMatch`, moins ceux qu'exclut `grepInvert`.
+  const conf = lire('../../playwright.config.mjs');
+  const ligneMobile = conf.match(/^.*name: 'mobile'.*$/m)[0];
+  const cible = new RegExp(ligneMobile.match(/testMatch: \/(.+?)\//)[1]);
+  const exclus = new RegExp(ligneMobile.match(/grepInvert: \/(.+?)\//)[1]);
+  const titres = specs.filter((f) => cible.test(f))
+    .flatMap((f) => [...lire('./' + f).matchAll(/^\s*test\('([^']*)'/gm)].map((m) => m[1]));
+  expect(titres.length).toBeGreaterThan(0);
+  expect(readme).toContain(`+ ${titres.filter((x) => !exclus.test(x)).length} rejoués sur le projet **mobile**`);
   expect(lire('../../README.md')).toContain(`**8 smoke-tests + ${total - 8} tests de non-régression**`);
 });
 

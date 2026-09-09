@@ -458,12 +458,13 @@ async function vueAppel(c, seanceId) {
   }
   c.append(
     el('p', { class: 'note-discrete' },
-      'Tap : présent → absent → tenue · Appui long (ou ⋯) : tous les statuts',
+      'Tapez les absents (tap : présent → absent → tenue · appui long ou ⋯ : tous les statuts), puis « Terminer l’appel » : les élèves non tapés passent présents.',
       el('span', { class: 'aide-clavier' }, ' · Clavier : P A R D I T, F = infirmerie'),
     ),
     grille,
-    el('div', { class: 'rang-btn' }, btnTerminer),
-    statutFin,
+    // Barre collante : avec 28 élèves, le bouton se retrouvait sous la grille, donc invisible — au
+    // point qu'on croyait devoir taper chaque élève pour le mettre présent (terrain 2026-09-09).
+    el('div', { class: 'barre-appel' }, el('div', { class: 'rang-btn' }, btnTerminer), statutFin),
   );
   btnTerminer.addEventListener('click', async () => {
     // Le reste = présents, SAUF les élèves sous inaptitude totale (séance passée : rien n'a été
