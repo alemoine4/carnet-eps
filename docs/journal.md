@@ -14,6 +14,25 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-09 (36) — audit Codex V3 reçu, vérifié, et stratégie d'amélioration
+
+Demande : « regarde audit v3 proposé par codex et développe la stratégie d'amélioration ».
+
+**Fait** :
+- Lecture de `audit codex/AUDIT_V3.md` (hors dépôt, daté du 2026-09-09 sur v0.12.14, commit `ab8cb24`) et de ses preuves (`V3_SUITE`, `V3_CIBLES`, `V3_SW`, `V3_VOLUME`, `v3-cibles.spec.mjs`). Verdict de l'audit : suite verte (189 exécutions), **5 constats P2/P3 reproduits**, aucun P0/P1.
+- **Vérification indépendante** par workflow (6 agents en lecture seule, `git status` propre après) + mes propres relectures.
+- **Stratégie écrite** : `docs/strategie-audit-v3.md` — les 5 constats regroupés en **3 familles** (état accepté qui diverge de l'état écrit ; export Pronote qui promet plus qu'il ne sait ; sauvegarde qui sort du domaine restaurable), un plan en **6 lots** sur **3 versions**, les critères de sortie, et **4 décisions** à te soumettre.
+
+**Ce que je retiens, sans le maquiller** :
+- **V3-01 est une régression de la veille** : le champ « barème modifiable » (C15, v0.12.14) mute l'objet AVANT l'écriture, donc une valeur refusée est persistée plus tard par une modification sans rapport. Ce n'est pas un cas isolé : le motif existe sur **18 sites** dans 5 modules. La saisie d'une note, elle, fait déjà l'inverse (écrire puis mettre à jour la mémoire) : c'est le modèle à généraliser.
+- **V3-05 est une incohérence que j'ai créée** : le plafond d'import de 200 Mio (A33, v0.12.14) rend non restaurable une sauvegarde que l'app accepte de produire (8 Mio par pièce, +33 % en base64, aucun plafond cumulé → domaine restaurable ≈ 150 Mio de pièces, soit ~18 pièces au plafond).
+- **V3-02** touche AUSSI l'export CSV (vérifié : les deux boutons lisent la même table en mémoire), ce que l'audit soupçonnait sans l'avoir reproduit.
+- **Le piège du barème** (contrôle positif V3-C2 de l'audit) : passer /10 à /20 conserve les points, donc divise par deux la moyenne de la classe en silence. Le geste que j'ai ouvert hier doit être rendu sûr avant de servir.
+
+**Décidé** : rien n'est corrigé par cette passe. Le plan attend ta réponse sur 4 points (sens de « publiée », conversion des notes au changement de barème, conduite à tenir sur une sauvegarde trop lourde, ampleur immédiate).
+
+**Prochaine étape** : ton arbitrage, puis le lot **V3-A** seul (correction de classe, 5 modules, ~5 tests) dans sa propre version.
+
 ## 2026-09-09 (35) — v0.12.14 : avis du lot 5 (points retenus), A39, projet de tests mobile
 
 **Fait** :
