@@ -29,6 +29,7 @@
 
 | Version | Tag | Commit main | Résumé |
 |---|---|---|---|
+| v0.12.15 | `v0.12.15` | `92f6fa4` | Lot V3-A de l’audit Codex V3 : un champ dont l’écriture est refusée n’est plus persisté ensuite par un champ voisin (5 modules, ~20 champs, écritures sérialisées) ; couleur de classe, cases de restriction et boutons d’archivage équipés d’un message ; 9 tests dont une garde de classe, suite 174 — déployée le 2026-09-09 (gh-pages `ddf77ae`) |
 | v0.12.14 | `v0.12.14` | `97c4278` | Démarrage hors ligne instantané (A39 : navigation servie depuis le cache + revalidation), barème modifiable (C15), année sur les dates hors année scolaire (C45), plafond d’import 200 Mo (A33), poids des pièces (D-08), ménages (A34, A31), projet de tests mobile (C60) ; 165 tests + 24 rejoués sur profil tactile — déployée le 2026-09-09 (gh-pages `21679d5`) |
 | v0.12.13 | `v0.12.13` | `4b698a8` | Lot 2 du 5e audit : créations atomiques (inaptitude avec pièce, remplacement de pièce, document, photo, import CSV — chacune en UNE transaction) + intégration continue GitHub Actions ; 5 tests, suite 158/158 — déployée le 2026-09-09 (gh-pages `3e04344`) |
 | v0.12.12 | `v0.12.12` | `fb23028` | Lot 5 du 5e audit (63 constats : CSV robuste — UTF-16, UTF-8 strict, champ multi-ligne refusé —, import plus parlant, « Terminer l’appel » en une transaction, pastille 🩺 partout, impressions datées, CSP durcie, refus du cadrage, preuves des tests renforcées, docs alignées) + revue adversariale (7 corrections, 8 preuves) ; 35 tests, suite 153/153 — déployée le 2026-09-08 (gh-pages `d739ead`) |

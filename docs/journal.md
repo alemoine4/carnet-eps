@@ -30,6 +30,8 @@ Demande : « go » sur la stratégie de l'audit V3 (V3-A d'abord, seul).
 
 **Coincé / à vérifier** : la fiche terrain, toujours pas faite — deux des cinq constats de l'audit portent sur des conditions (mémoire pleine, réseau très lent) que seul le téléphone produit vraiment.
 
+**Déployé** : main `92f6fa4`, gh-pages `ddf77ae`, tag `v0.12.15` (2026-09-09).
+
 **Prochaine étape** : famille B (V3-B1 export pendant écriture, V3-B2 « à remettre à jour », V3-B3 conversion au changement de barème), après tes réponses aux décisions 1 et 2 de la stratégie.
 
 ## 2026-09-09 (36) — audit Codex V3 reçu, vérifié, et stratégie d'amélioration
