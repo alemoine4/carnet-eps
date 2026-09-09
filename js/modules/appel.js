@@ -496,7 +496,8 @@ async function vueAppel(c, seanceId) {
   carteBilan.append(champZone({
     id: 'ap-bilan', libelle: 'Quelques mots après le cours (optionnel)', valeur: seance.bilan || '',
     placeholder: 'Ce qui a marché, à revoir, incidents…',
-    onChange: async (v) => { seance.bilan = v; await enregistrer('seances', seance); },
+    // Écriture d'abord, mutation ensuite (audit Codex V3, V3-01).
+    onChange: async (v) => { await enregistrer('seances', { ...seance, bilan: v }); seance.bilan = v; },
   }));
   c.append(carteBilan);
 }

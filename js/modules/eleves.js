@@ -141,9 +141,14 @@ async function vueListeClasses(c) {
     for (const cl of archivees) {
       const btnRestaurer = el('button', { class: 'btn' }, 'Restaurer');
       btnRestaurer.addEventListener('click', async () => {
-        cl.archivee = false;
-        await enregistrer('classes', cl);
-        rafraichir();
+        // Écriture d'abord, mutation ensuite, et un message si elle est refusée (audit Codex V3, V3-01).
+        try {
+          await enregistrer('classes', { ...cl, archivee: false });
+          cl.archivee = false;
+          rafraichir();
+        } catch (e) {
+          toast(`Classe non restaurée : ${e?.message || e}`);
+        }
       });
       carteArch.append(el('div', { class: 'info-ligne' }, el('span', {}, `${cl.nom} (${comptes.get(cl.id) || 0} élèves)`), btnRestaurer));
     }
@@ -167,9 +172,31 @@ async function vueClasse(c, id) {
 
   // Carte classe (édition directe)
   const carteCl = carte(`Classe ${classe.nom}`, '', `${nbActifs} élève${nbActifs > 1 ? 's' : ''}${nbPartis ? ` · ${nbPartis} parti${nbPartis > 1 ? 's' : ''}` : ''}`);
+  // Écriture d'abord, mutation ensuite, et une écriture à la fois — même règle que la fiche élève
+  // (audit Codex V3, V3-01 ; revue du lot V3-A pour la sérialisation).
+  let fileCl = Promise.resolve();
+  const sauverClasse = (modifs = {}) => {
+    const suite = fileCl.catch(() => {}).then(async () => {
+      const candidat = { ...classe, ...modifs };
+      await enregistrer('classes', candidat);
+      Object.assign(classe, modifs);
+    });
+    fileCl = suite;
+    return suite;
+  };
   const inpCouleur = el('input', { type: 'color', id: 'cl-couleur' });
   inpCouleur.value = classe.couleur || PALETTE[0];
-  inpCouleur.addEventListener('change', async () => { classe.couleur = inpCouleur.value; await enregistrer('classes', classe); });
+  // Écriture d'abord, mutation ensuite, et un message si elle est refusée : ce champ n'avait AUCUN
+  // filet (rejet silencieux au niveau du champ) — audit Codex V3, V3-01.
+  inpCouleur.addEventListener('change', async () => {
+    const couleur = inpCouleur.value;
+    try {
+      await sauverClasse({ couleur });
+    } catch (e) {
+      inpCouleur.value = classe.couleur || PALETTE[0];
+      toast(`Couleur non enregistrée : ${e?.message || e}`);
+    }
+  });
   carteCl.append(
     champTexte({ id: 'cl-nom', libelle: 'Nom', valeur: classe.nom, onChange: async (v) => {
       if (!v) throw new Error('le nom de la classe ne peut pas être vide'); // « ✓ » sans écriture sinon (audit 2026-09-07, A36)
@@ -179,16 +206,22 @@ async function vueClasse(c, id) {
         rafraichir();
         return;
       }
-      classe.nom = v; await enregistrer('classes', classe);
+      await sauverClasse({ nom: v });
     } }),
-    champTexte({ id: 'cl-niveau', libelle: 'Niveau', valeur: classe.niveau || '', onChange: async (v) => { classe.niveau = v; await enregistrer('classes', classe); } }),
+    champTexte({ id: 'cl-niveau', libelle: 'Niveau', valeur: classe.niveau || '', onChange: async (v) => { await sauverClasse({ niveau: v }); } }),
     el('div', { class: 'champ' }, el('label', { for: 'cl-couleur' }, 'Couleur'), inpCouleur),
   );
   const btnArchiver = el('button', { class: 'btn' }, classe.archivee ? 'Restaurer' : 'Archiver');
   btnArchiver.addEventListener('click', async () => {
-    classe.archivee = !classe.archivee;
-    await enregistrer('classes', classe);
-    location.hash = '#/eleves';
+    // Écriture d'abord, mutation ensuite, et un message si elle est refusée : l'écran quittait la
+    // vue en croyant l'archivage fait (audit Codex V3, V3-01 — site manqué par l'audit).
+    const archivee = !classe.archivee;
+    try {
+      await sauverClasse({ archivee });
+      location.hash = '#/eleves';
+    } catch (e) {
+      toast(`${archivee ? 'Classe non archivée' : 'Classe non restaurée'} : ${e?.message || e}`);
+    }
   });
   const actions = el('div', { class: 'rang-btn' }, btnArchiver);
   if (!eleves.length) {
@@ -307,7 +340,19 @@ async function vueFiche(c, id) {
   const classe = classes.find((cl) => cl.id === eleve.classeId);
   c.append(el('a', { class: 'retour', href: `#/eleves/classe/${eleve.classeId}` }, `← ${classe ? classe.nom : 'Classes'}`));
 
-  const sauver = async () => { await enregistrer('eleves', eleve); };
+  // Mutation seulement après écriture validée (audit Codex V3, V3-01).
+  // …et sérialisées (revue du lot V3-A) : sans file d'attente, le second changement repartait de
+  // l'objet d'avant et écrasait le premier.
+  let file = Promise.resolve();
+  const sauver = (modifs = {}) => {
+    const suite = file.catch(() => {}).then(async () => {
+      const candidat = { ...eleve, ...modifs };
+      await enregistrer('eleves', candidat);
+      Object.assign(eleve, modifs);
+    });
+    file = suite;
+    return suite;
+  };
 
   const carteId = carte(`${eleve.nom} ${eleve.prenom}`, '', classe ? classe.nom : '');
   // Photo de l'élève (stockée localement, compressée) ou initiales.
@@ -370,18 +415,18 @@ async function vueFiche(c, id) {
   }
   carteId.append(rangPhoto, statutPhoto);
   carteId.append(
-    champTexte({ id: 'f-nom', libelle: 'Nom', valeur: eleve.nom, onChange: async (v) => { if (!v) throw new Error('le nom ne peut pas être vide'); eleve.nom = v; await sauver(); } }), // A36
-    champTexte({ id: 'f-prenom', libelle: 'Prénom', valeur: eleve.prenom, onChange: async (v) => { if (!v) throw new Error('le prénom ne peut pas être vide'); eleve.prenom = v; await sauver(); } }),
+    champTexte({ id: 'f-nom', libelle: 'Nom', valeur: eleve.nom, onChange: async (v) => { if (!v) throw new Error('le nom ne peut pas être vide'); await sauver({ nom: v }); } }), // A36
+    champTexte({ id: 'f-prenom', libelle: 'Prénom', valeur: eleve.prenom, onChange: async (v) => { if (!v) throw new Error('le prénom ne peut pas être vide'); await sauver({ prenom: v }); } }),
     champSelect({
       id: 'f-sexe', libelle: 'Sexe', valeur: eleve.sexe || '',
       options: [{ value: '', label: '—' }, { value: 'F', label: 'Fille' }, { value: 'M', label: 'Garçon' }],
-      onChange: async (v) => { eleve.sexe = v; await sauver(); },
+      onChange: async (v) => { await sauver({ sexe: v }); },
     }),
-    champTexte({ id: 'f-naissance', libelle: 'Date de naissance', type: 'date', valeur: eleve.dateNaissance || '', onChange: async (v) => { eleve.dateNaissance = v; await sauver(); } }),
+    champTexte({ id: 'f-naissance', libelle: 'Date de naissance', type: 'date', valeur: eleve.dateNaissance || '', onChange: async (v) => { await sauver({ dateNaissance: v }); } }),
     champSelect({
       id: 'f-classe', libelle: 'Classe', valeur: eleve.classeId,
       options: classes.map((cl) => ({ value: cl.id, label: cl.nom })),
-      onChange: async (v) => { eleve.classeId = v; await sauver(); },
+      onChange: async (v) => { await sauver({ classeId: v }); },
     }),
     // Élève parti en cours d'année : masqué à l'appel, aux notes et aux effectifs, historique
     // conservé (le champ `actif` du modèle n'avait aucune interface — audit 2026-09-05, B10).
@@ -391,9 +436,9 @@ async function vueFiche(c, id) {
         { value: 'oui', label: 'Oui — à l’appel et aux notes' },
         { value: 'parti', label: 'Parti (déménagement, changement d’établissement) — masqué, historique conservé' },
       ],
-      onChange: async (v) => { eleve.actif = v !== 'parti'; await sauver(); rafraichir(); },
+      onChange: async (v) => { await sauver({ actif: v !== 'parti' }); rafraichir(); },
     }),
-    champZone({ id: 'f-notes', libelle: 'À savoir (PAI, asthme, lunettes…)', valeur: eleve.notesPerso || '', placeholder: 'Visible uniquement sur cet appareil', onChange: async (v) => { eleve.notesPerso = v; await sauver(); } }),
+    champZone({ id: 'f-notes', libelle: 'À savoir (PAI, asthme, lunettes…)', valeur: eleve.notesPerso || '', placeholder: 'Visible uniquement sur cet appareil', onChange: async (v) => { await sauver({ notesPerso: v }); } }),
   );
   c.append(carteId);
 

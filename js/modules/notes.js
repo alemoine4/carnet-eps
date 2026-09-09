@@ -185,14 +185,28 @@ async function vueEval(c, evalId) {
   const inaptes = new Set((await inaptitudesActives()).map((i) => i.eleveId)); // pastille « partout » (audit 2026-09-07, C53)
   const notesMap = new Map((await parIndex('notes', 'evaluationId', evalId)).map((n) => [n.eleveId, n]));
   const bareme = baremeDe(ev);
-  const sauverEv = () => enregistrer('evaluations', ev);
+  // L'objet n'est modifié qu'APRÈS une écriture validée : muter avant l'`await` laissait une valeur
+  // REFUSÉE dans `ev`, que la prochaine écriture réussie (un autre champ) persistait en silence
+  // (audit Codex V3, V3-01 — classe de défauts, lot V3-A).
+  // …et SÉRIALISÉES : deux champs modifiés coup sur coup construisaient chacun leur candidat depuis
+  // l'objet d'avant, et le second écrasait le premier (revue adversariale du lot V3-A).
+  let fileEv = Promise.resolve();
+  const sauverEv = (modifs = {}) => {
+    const suite = fileEv.catch(() => {}).then(async () => {
+      const candidat = { ...ev, ...modifs };
+      await enregistrer('evaluations', candidat);
+      Object.assign(ev, modifs);
+    });
+    fileEv = suite;
+    return suite;
+  };
 
   // --- En-tête ---
   const statsEl = el('p', { class: 'compteurs' });
   const carteTete = carte(`${classe.nom} — ${ev.titre}`, '', ev.publieePronote ? `publiée ${dateFR(ev.publieePronote)} ✓` : '');
   const rangIdentite = el('div', { class: 'rang-2' },
-    champTexte({ id: 'ge-titre', libelle: 'Titre', valeur: ev.titre, onChange: async (v) => { if (!v) throw new Error('le titre ne peut pas être vide'); ev.titre = v; await sauverEv(); } }), // A36 (revue du lot 5)
-    champTexte({ id: 'ge-date', libelle: 'Date', type: 'date', valeur: ev.date || '', onChange: async (v) => { ev.date = v; await sauverEv(); } }),
+    champTexte({ id: 'ge-titre', libelle: 'Titre', valeur: ev.titre, onChange: async (v) => { if (!v) throw new Error('le titre ne peut pas être vide'); await sauverEv({ titre: v }); } }), // A36 (revue du lot 5)
+    champTexte({ id: 'ge-date', libelle: 'Date', type: 'date', valeur: ev.date || '', onChange: async (v) => { await sauverEv({ date: v }); } }),
   );
   // Barème modifiable après création, le TYPE reste figé (avis du lot 5 point 1, groupe 4 C15) :
   // refusé (throw → « ✗ » + toast + valeur restaurée, contrat V2-04) hors 1..200, et refusé si une
@@ -206,8 +220,7 @@ async function vueEval(c, evalId) {
         if (!(Number.isFinite(b) && b >= 1 && b <= 200)) throw new Error('le barème doit être compris entre 1 et 200');
         const depassement = [...notesMap.values()].find((n) => typeof n.valeur === 'number' && n.valeur > b);
         if (depassement) throw new Error(`une note saisie (${formatFR(depassement.valeur)}) dépasse ${formatFR(b)}`);
-        ev.bareme = b;
-        await sauverEv();
+        await sauverEv({ bareme: b });
         await rafraichir();
       },
     }));
@@ -346,16 +359,14 @@ async function vueEval(c, evalId) {
     };
     majMarquer();
     btnMarquer.addEventListener('click', async () => {
-      ev.publieePronote = ev.publieePronote ? null : isoAujourdhui();
-      await sauverEv();
+      await sauverEv({ publieePronote: ev.publieePronote ? null : isoAujourdhui() });
       if (!ev.publieePronote) zoneRecap.replaceChildren();
       majBadgePubliee();
       majMarquer();
     });
 
     const apresExport = async (codes, vides = 0) => {
-      ev.publieePronote = isoAujourdhui();
-      await sauverEv();
+      await sauverEv({ publieePronote: isoAujourdhui() });
       majBadgePubliee();
       majMarquer();
       zoneRecap.replaceChildren(
