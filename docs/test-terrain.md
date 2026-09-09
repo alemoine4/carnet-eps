@@ -1,6 +1,6 @@
-# Fiche de test terrain — Carnet EPS (v0.12.12 — une seule session, ~15 min)
+# Fiche de test terrain — Carnet EPS (v0.12.15 — une seule session, ~15 min)
 
-> À faire sur ton téléphone Android **une fois**, après la mise à jour en v0.12.12 (les points des v0.12.4 à v0.12.12 sont regroupés). Coche au fur et à mesure, note ce qui coince.
+> À faire sur ton téléphone Android **une fois**, après la mise à jour en v0.12.15 (les points des v0.12.4 à v0.12.15 sont regroupés). Coche au fur et à mesure, note ce qui coince.
 > App : **https://alemoine4.github.io/carnet-eps/** · Guide détaillé : Plus → Aide.
 > Reporte les ❌ ici ou dis-les-moi : je corrige.
 
@@ -9,9 +9,9 @@
 ## 1. Installation et mise à jour (~2 min)
 
 - [ ] Ouvrir l'URL → « Installer » (sinon menu ⋮ → « Installer l'application ») ; l'icône **EPS** apparaît, l'app s'ouvre plein écran
-- [ ] Plus → Réglages → **Version : v0.12.12** (sinon : Vérifier les mises à jour, puis « Recharger ») et protection contre l'effacement **active ✓**
+- [ ] Plus → Réglages → **Version : v0.12.15** (sinon : Vérifier les mises à jour, puis « Recharger ») et protection contre l'effacement **active ✓**
 - [ ] Réglages → **Trimestres** : saisir une fin de T2 **avant** la fin de T1 → refusée avec « ✗ » et un message (v0.12.9)
-- [ ] Plus → **Aide** : la carte « Installer sur le téléphone · transférer » est claire sur ton téléphone (v0.12.12 — dis-moi si un mot ne colle pas à ce que tu vois dans Chrome)
+- [ ] Plus → **Aide** : la carte « Installer sur le téléphone · transférer » est claire sur ton téléphone (v0.12.15 — dis-moi si un mot ne colle pas à ce que tu vois dans Chrome)
 
 ## 2. Appel d'une classe de 28 — chrono < 40 s ⏱ (critère officiel)
 
@@ -28,9 +28,9 @@ Gêne éventuelle : ________________________________________________
 
 - [ ] Suivi → Inaptitudes → Nouvelle → élève + dates + **pièce** : Android propose **Appareil photo / Fichiers / Galerie** → prendre la photo ; photo nette et **lisible** dans la visionneuse (toucher la vignette)
 - [ ] À la date du cours, l'élève est signalé 🩺 à l'appel : inaptitude **totale** sur certificat → « Inapte » d'office, **totale** sur un mot des parents → « Dispensé (mot) », **partielle** → reste « Présent » (pastille seule) ; « Terminer l'appel » respecte la même règle, même en rattrapant l'appel de la veille (v0.12.9)
-- [ ] Fiche élève → **Ajouter une photo** → choix appareil photo (arrière) / galerie (bouton, v0.12.10) ; « Compression de la photo… » s'affiche pendant l'attente (v0.12.12)
-- [ ] Élèves → la classe : l'élève sous inaptitude porte la pastille 🩺 dans la **liste** et dans la **grille de notes** (v0.12.12)
-- [ ] Une inaptitude avec un **PDF** joint → « Ouvrir … » : le PDF s'ouvre dans un onglet, même sur un téléphone lent (v0.12.11 : l'adresse reste valable 60 s)
+- [ ] Fiche élève → **Ajouter une photo** → choix appareil photo (arrière) / galerie (bouton, v0.12.10) ; « Compression de la photo… » s'affiche pendant l'attente (v0.12.15)
+- [ ] Élèves → la classe : l'élève sous inaptitude porte la pastille 🩺 dans la **liste** et dans la **grille de notes** (v0.12.15)
+- [ ] Une inaptitude avec un **PDF** joint → « Ouvrir … » : le PDF s'ouvre dans un onglet, même sur un téléphone lent (v0.12.15 : l'adresse reste valable 60 s)
 
 ## 4. Clavier virtuel (~1 min) — correctif préventif v0.12.10 à confirmer
 
@@ -46,7 +46,7 @@ Gêne éventuelle : ________________________________________________
 
 ## 6. Impression et hors ligne (~3 min)
 
-- [ ] Appel → Récapitulatifs → une classe → **Imprimer** (ou aperçu PDF) : tableau lisible, colonnes complètes, pastilles en couleur, nav et boutons masqués (v0.12.10), **établissement et « édité le »** en tête (v0.12.12, si l’établissement est saisi dans Réglages)
+- [ ] Appel → Récapitulatifs → une classe → **Imprimer** (ou aperçu PDF) : tableau lisible, colonnes complètes, pastilles en couleur, nav et boutons masqués (v0.12.10), **établissement et « édité le »** en tête (v0.12.15, si l’établissement est saisi dans Réglages)
 - [ ] Mode avion → l'app s'ouvre **immédiatement** (v0.12.14 : plus d'attente du réseau au démarrage) et fonctionne (appel, consultation, saisie) ; mode avion coupé → tout est toujours là
 - [ ] Si **Le Bar Clandestin** est installé sur le même appareil : après une mise à jour de Carnet EPS, l'ouvrir en mode avion → il se charge toujours (v0.12.8)
 
