@@ -603,12 +603,18 @@ async function vueFiche(c, id) {
 // (test de terrain du 2026-09-09).
 export function scinderNomPrenom(texte) {
   const mots = String(texte || '').trim().split(/\s+/).filter(Boolean);
-  if (!mots.length) return { nom: '', prenom: '' };
+  if (!mots.length) return { nom: '', prenom: '', devine: false };
   const majuscule = (m) => m === m.toLocaleUpperCase('fr') && m !== m.toLocaleLowerCase('fr');
   let i = 0;
   while (i < mots.length && majuscule(mots[i])) i++;
-  if (i === 0 || i === mots.length) i = 1; // pas de majuscules distinctives : le 1er mot fait le nom
-  return { nom: mots.slice(0, i).join(' '), prenom: mots.slice(i).join(' ') };
+  const sansSignal = i === 0 || i === mots.length;
+  // Au-delà de deux mots sans majuscule pour trancher, le découpage est DEVINÉ, pas déduit :
+  // « de La Fontaine Apolline » donne nom « de ». À deux mots la convention « NOM Prénom » suffit.
+  // Le dire, sinon l'écran d'appel affiche la paire inversée et l'export Pronote sort deux colonnes
+  // fausses sans que personne ne l'ait vu passer (revue du correctif de terrain).
+  const devine = sansSignal && mots.length > 2;
+  if (sansSignal) i = 1; // pas de majuscules distinctives : le 1er mot fait le nom
+  return { nom: mots.slice(0, i).join(' '), prenom: mots.slice(i).join(' '), devine };
 }
 
 function detecterColonnes(entetes) {
@@ -672,7 +678,7 @@ async function executerImport(lignes, dest) {
 
   const existants = await tous('eleves');
   const dejaLa = new Map(existants.map((e) => [`${cleTexte(e.nom)}|${cleTexte(e.prenom)}@${e.classeId}`, e]));
-  const resultat = { importes: 0, doublons: 0, reactives: 0, ignores: 0, homonymes: [], datesRejetees: 0, classesCreees, classesTouchees: new Set() };
+  const resultat = { importes: 0, doublons: 0, reactives: 0, ignores: 0, homonymes: [], datesRejetees: 0, scissionsDevinees: 0, classesCreees, classesTouchees: new Set() };
 
   for (const l of lignes) {
     if (!l.nom || !l.prenom) { resultat.ignores++; continue; }
@@ -700,6 +706,9 @@ async function executerImport(lignes, dest) {
       notesPerso: '', actif: true,
     });
     resultat.importes++;
+    // Un nom découpé au jugé est signalé comme les homonymes : sans cela, l'erreur ne se découvre
+    // qu'au premier appel, sur le terrain (revue du correctif de terrain).
+    if (l.scissionDevinee) resultat.scissionsDevinees++;
     // Même nom dans une AUTRE classe (partis compris) : changement de classe probable, l'historique
     // serait scindé en deux fiches sans un mot (audit 2026-09-07, C14) — signalé, pas bloqué.
     const ailleurs = existants.find((x) => x.classeId !== classe.id && cleTexte(x.nom) === cleTexte(l.nom) && cleTexte(x.prenom) === cleTexte(l.prenom));
@@ -793,13 +802,20 @@ async function afficherMapping(c, analyse) {
     apercuScission.hidden = !actif;
     if (!actif) return;
     const col = Number(selects.nomComplet.value);
-    const exemples = lignes.map((l) => String(l[col] || '').trim()).filter(Boolean).slice(0, 2)
+    const valeurs = lignes.map((l) => String(l[col] || '').trim()).filter(Boolean);
+    // Les cas DEVINÉS passent devant : montrer les deux premières lignes ne les aurait jamais fait
+    // voir, alors que ce sont les seuls où le découpage peut être faux.
+    const douteuses = valeurs.filter((v) => scinderNomPrenom(v).devine);
+    const exemples = [...new Set([...douteuses, ...valeurs])].slice(0, 2)
       .map((v) => {
         const s = scinderNomPrenom(v);
         return `« ${v} » → nom ${s.nom || '(vide)'}, prénom ${s.prenom || '(vide)'}`;
       });
+    const alerte = douteuses.length
+      ? ` ${douteuses.length} nom${douteuses.length > 1 ? 's' : ''} sans majuscule distinctive : le découpage y est deviné.`
+      : '';
     apercuScission.textContent = exemples.length
-      ? `Découpage de la colonne unique : ${exemples.join(' · ')}. Si c'est faux, désignez les colonnes « Nom » et « Prénom » séparément.`
+      ? `Découpage de la colonne unique : ${exemples.join(' · ')}.${alerte} Si c'est faux, désignez les colonnes « Nom » et « Prénom » séparément.`
       : '';
   };
   for (const cle of ['nomComplet', 'nom', 'prenom']) selects[cle].addEventListener('change', majApercuScission);
@@ -884,6 +900,7 @@ async function afficherMapping(c, analyse) {
         return {
           nom: scinde ? scinde.nom : valeur(l, 'nom').trim(),
           prenom: scinde ? scinde.prenom : valeur(l, 'prenom').trim(),
+          scissionDevinee: !!(scinde && scinde.devine),
           dateNaissance: valeur(l, 'dateNaissance'),
           sexe: valeur(l, 'sexe'),
           classe: valeur(l, 'classe').trim(),
@@ -905,6 +922,7 @@ async function afficherMapping(c, analyse) {
       if (r.doublons) morceaux.push(`· ${r.doublons} doublon${r.doublons > 1 ? 's' : ''} ignoré${r.doublons > 1 ? 's' : ''}`);
       if (r.ignores) morceaux.push(`· ${r.ignores} ligne${r.ignores > 1 ? 's' : ''} incomplète${r.ignores > 1 ? 's' : ''}`);
       if (r.datesRejetees) morceaux.push(`· ${r.datesRejetees} date${r.datesRejetees > 1 ? 's' : ''} de naissance non reconnue${r.datesRejetees > 1 ? 's' : ''} (laissée${r.datesRejetees > 1 ? 's' : ''} vide${r.datesRejetees > 1 ? 's' : ''})`);
+      if (r.scissionsDevinees) morceaux.push(`· ${r.scissionsDevinees} nom${r.scissionsDevinees > 1 ? 's' : ''} découpé${r.scissionsDevinees > 1 ? 's' : ''} au jugé (nom et prénom à vérifier)`);
       if (r.homonymes.length) morceaux.push(`· ${r.homonymes.length} élève${r.homonymes.length > 1 ? 's' : ''} porte${r.homonymes.length > 1 ? 'nt' : ''} le même nom qu’un élève d’une autre classe (${[...new Set(r.homonymes)].join(', ')}) — changement de classe ? à vérifier`);
       statutImport.textContent = morceaux.join(' ') + '.';
       statutImport.className = 'statut statut-ok';
