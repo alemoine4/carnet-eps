@@ -339,6 +339,26 @@ export async function compterTout() {
   });
 }
 
+// Poids total des pièces jointes, lu par CURSEUR sur le seul champ `taille` : les blobs ne sont
+// jamais chargés en mémoire (même compromis que compterTout, A23 ; avis du lot 5, D-08 (3)).
+export async function tailleFichiers() {
+  const db = await ouvrirDB();
+  return new Promise((resoudre, rejeter) => {
+    const tx = db.transaction('fichiers', 'readonly');
+    let total = 0;
+    const req = tx.objectStore('fichiers').openCursor();
+    req.onsuccess = () => {
+      const cur = req.result;
+      if (!cur) return;
+      total += Number(cur.value?.taille) || 0;
+      cur.continue();
+    };
+    tx.oncomplete = () => resoudre(total);
+    tx.onerror = (ev) => rejeter(ev.target?.error || tx.error || new Error('lecture refusée'));
+    tx.onabort = () => rejeter(tx.error || new Error('lecture interrompue'));
+  });
+}
+
 // Télécharge un texte (CSV…) — BOM UTF-8 en tête pour qu'Excel lise les accents.
 export function telechargerTexte(nomFichier, texte, mime = 'text/csv') {
   const blob = new Blob([String.fromCharCode(0xfeff) + texte], { type: `${mime};charset=utf-8` });

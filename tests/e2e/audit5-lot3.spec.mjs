@@ -439,10 +439,13 @@ test('B08 / B10 / B11 / B35 — impression : colonnes repliées, fonds des pasti
   expect(r).toEqual({ whiteSpace: 'normal', scroll: 'visible', colorAdjust: 'exact', marginLeft: '0px', toasts: 'none', nav: 'none' });
 });
 
-test('B31 (5e audit) / B31 (4e audit) — aide clavier visible sur PC ; viewport qui se redimensionne avec le clavier virtuel', async ({ page }) => {
+test('B31 (5e audit) / B31 (4e audit) — aide clavier visible sur PC et masquée sur tactile ; viewport qui se redimensionne avec le clavier virtuel', async ({ page }, infos) => {
   await seedClasse(page, 1);
   await page.goto('/#/appel/se');
-  await expect(page.locator('.aide-clavier')).toBeVisible();
+  // La règle marche DANS LES DEUX SENS : visible sur un pointeur fin (PC), masquée sur un appareil
+  // tactile — c'est le projet « mobile » (Pixel 7 émulé) qui le prouve (audit 2026-09-07, C60).
+  const tactile = infos.project.name === 'mobile';
+  await expect(page.locator('.aide-clavier')).toBeVisible({ visible: !tactile });
   // Chromium de bureau matche déjà (pointer: fine) : c'est la CONDITION de la règle qui porte la preuve
   // (tablette à pointeur grossier + clavier physique = any-pointer/any-hover).
   const cond = await page.evaluate(() => [...document.styleSheets].flatMap((s) => [...s.cssRules]).filter((r) => r.conditionText && r.cssText.includes('.aide-clavier')).map((r) => r.conditionText).join('|'));

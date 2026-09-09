@@ -95,7 +95,7 @@ async function vueSelecteur(c) {
           const deja = seances.filter((s) => s.sequenceId === seq.id && s.date < auj).length;
           const nouvelle = {
             id: crypto.randomUUID(), sequenceId: seq.id, date: auj, edtId: cr.id,
-            numero: deja + 1, theme: '', bilan: '', annulee: false,
+            numero: deja + 1, theme: '', bilan: '', // annulee retiré : champ mort, jamais lu (avis lot 5, A34)
           };
           await enregistrer('seances', nouvelle);
           location.hash = `#/appel/${nouvelle.id}`;

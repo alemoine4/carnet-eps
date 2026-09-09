@@ -190,7 +190,7 @@ async function vueDetail(c, id) {
       await enregistrer('seances', {
         id: crypto.randomUUID(), sequenceId: id, date: inpDate.value, edtId: null,
         numero: seances.filter((s) => s.date < inpDate.value).length + 1,
-        theme: inpTheme.value.trim(), bilan: '', annulee: false,
+        theme: inpTheme.value.trim(), bilan: '', // annulee retiré : champ mort, jamais lu (avis lot 5, A34)
       });
     } catch (e) {
       statutSe.textContent = `Ajout impossible : ${e?.message || e}`; statutSe.className = 'statut statut-erreur';

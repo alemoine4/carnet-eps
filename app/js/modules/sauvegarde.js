@@ -3,8 +3,9 @@
 // avant toute opération destructrice (BIBLE règle 4).
 
 import { enregistrerVue, el, carte, confirmer, toast } from '../ui.js';
-import { exporterJSON, importerJSON, validerExport, telechargerJSON, compterTout, viderTout, LIBELLES } from '../io.js';
+import { exporterJSON, importerJSON, validerExport, telechargerJSON, compterTout, tailleFichiers, viderTout, LIBELLES } from '../io.js';
 import { effacerPrefs } from '../state.js';
+import { octetsLisibles } from '../metier.js';
 
 function resumeComptes(comptes) {
   const parties = Object.entries(LIBELLES)
@@ -27,8 +28,14 @@ export function initialiser() {
     c.append(carteEtat);
     // Un seul comptage par affichage : l'import le réutilise au lieu de relire tous les blobs (revue du lot 1).
     const comptesActuels = compterTout();
-    comptesActuels.then((comptes) => {
+    comptesActuels.then(async (comptes) => {
       carteEtat.querySelector('p').textContent = resumeComptes(comptes);
+      // Poids des pièces : ce qui pèse dans une sauvegarde, invisible jusqu'ici (avis du lot 5, D-08 (3)).
+      // Lu par curseur sur le champ `taille`, sans charger un seul blob.
+      if (comptes.fichiers) {
+        const octets = await tailleFichiers().catch(() => null);
+        if (octets !== null) carteEtat.append(el('p', { class: 'note-discrete', id: 'sv-poids' }, `Pièces jointes : ${comptes.fichiers} (≈ ${octetsLisibles(octets)})`));
+      }
     }).catch((e) => { // lecture refusée : la carte restait sur « … » (C06, revue du lot 1)
       carteEtat.querySelector('p').textContent = `Comptage impossible (${e?.message || e}) — l’export reste possible.`;
     });
@@ -66,6 +73,13 @@ export function initialiser() {
       const fichier = inputFichier.files[0];
       if (!fichier) return;
       try {
+        // Plafond AVANT lecture : `fichier.text()` matérialise tout en mémoire avant la moindre
+        // validation, et un fichier énorme choisi par erreur gelait l'onglet (avis du lot 5, A33).
+        // Une sauvegarde complète avec pièces pèse quelques dizaines de Mo (plafond 8 Mo par pièce).
+        const PLAFOND = 200 * 1024 * 1024;
+        if (fichier.size > PLAFOND) {
+          throw new Error(`fichier trop lourd pour cet appareil (${(fichier.size / 1048576).toFixed(0)} Mo) — limite 200 Mo : ce n’est probablement pas une sauvegarde Carnet EPS`);
+        }
         const objet = JSON.parse(await fichier.text());
         const { date, comptes, absents } = validerExport(objet);
         const total = Object.values(comptes).reduce((a, b) => a + b, 0);

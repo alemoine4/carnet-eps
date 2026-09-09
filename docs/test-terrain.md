@@ -47,7 +47,7 @@ Gêne éventuelle : ________________________________________________
 ## 6. Impression et hors ligne (~3 min)
 
 - [ ] Appel → Récapitulatifs → une classe → **Imprimer** (ou aperçu PDF) : tableau lisible, colonnes complètes, pastilles en couleur, nav et boutons masqués (v0.12.10), **établissement et « édité le »** en tête (v0.12.12, si l’établissement est saisi dans Réglages)
-- [ ] Mode avion → l'app s'ouvre et fonctionne (appel, consultation, saisie) ; mode avion coupé → tout est toujours là
+- [ ] Mode avion → l'app s'ouvre **immédiatement** (v0.12.14 : plus d'attente du réseau au démarrage) et fonctionne (appel, consultation, saisie) ; mode avion coupé → tout est toujours là
 - [ ] Si **Le Bar Clandestin** est installé sur le même appareil : après une mise à jour de Carnet EPS, l'ouvrir en mode avion → il se charge toujours (v0.12.8)
 
 ---

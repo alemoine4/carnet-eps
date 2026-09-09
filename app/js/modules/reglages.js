@@ -4,13 +4,7 @@
 import { enregistrerVue, el, carte, champTexte } from '../ui.js';
 import { lireMeta, ecrireMeta } from '../io.js';
 import { etat, sauverPrefs, estLocalhost, VERSION_APP } from '../state.js';
-import { bornesTrimestres, dateFR } from '../metier.js';
-
-function octetsLisibles(n) {
-  if (!Number.isFinite(n)) return '?';
-  if (n < 1024 * 1024) return `${Math.round(n / 1024)} Ko`;
-  return `${(n / (1024 * 1024)).toFixed(1)} Mo`;
-}
+import { bornesTrimestres, dateFR, octetsLisibles } from '../metier.js';
 
 export function initialiser() {
   enregistrerVue('reglages', async (c) => {

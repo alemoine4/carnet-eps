@@ -1,10 +1,11 @@
 /* service-worker.js — Carnet EPS
-   BIBLE règle 5 : versionné, network-first sur le document/manifest (jamais de
-   version morte), cache-first sur les assets, purge des vieux caches à l'activation.
+   BIBLE règle 5 : versionné, cache-first + revalidation en arrière-plan sur la navigation
+   (A39 : pas d'attente réseau bloquante), network-first sur le manifest, cache-first sur les
+   assets, purge des vieux caches à l'activation (jamais de version morte).
    ⚠ Incrémenter VERSION à chaque déploiement (synchroniser avec VERSION_APP de state.js).
    Non enregistré sur localhost (voir main.js, décision D008). */
 
-const VERSION = '0.12.13';
+const VERSION = '0.12.14';
 const CACHE = `carnet-eps-${VERSION}`;
 const ASSETS = [
   './',
@@ -81,8 +82,32 @@ self.addEventListener('fetch', (e) => {
   // autre app de l'origine pouvait être servi à sa place — A18).
   const depuisCache = (r) => caches.open(CACHE).then((c) => c.match(r));
 
-  if (estDocument) {
-    // network-first : on sert le réseau, le cache n'est qu'un filet hors ligne.
+  if (req.mode === 'navigate') {
+    // cache-first + revalidation en arrière-plan (A39) : le réseau d'un gymnase peut être très
+    // lent et l'ancienne version network-first attendait le réseau SANS délai maximal — l'app
+    // pouvait paraître figée au démarrage. On sert la navigation depuis le cache versionné quand
+    // elle y est, et on revalide en arrière-plan (e.waitUntil) pour le lancement suivant ; le
+    // repli réseau puis 503 ne joue que si la navigation est absente du cache.
+    const fetchEtCache = () => fetch(req).then((rep) => {
+      if (cachable(rep)) mettreEnCache(e, req, rep);
+      return rep;
+    });
+    e.respondWith(
+      depuisCache(req).then((r) => {
+        if (r) {
+          // Échec muet : hors ligne pendant la revalidation est routine, pas une panne à signaler
+          // (un échec d'ÉCRITURE — quota — reste tracé par mettreEnCache elle-même, A41).
+          e.waitUntil(fetchEtCache().catch(() => {}));
+          return r;
+        }
+        return fetchEtCache()
+          .catch(() => depuisCache('./index.html')
+            .then((r2) => r2 || new Response('Hors ligne — reconnectez-vous une fois pour installer l’application.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })));
+      })
+    );
+  } else if (estDocument) {
+    // network-first inchangé (hors périmètre A39) : seul le manifest passe encore ici
+    // (url.pathname.endsWith('manifest.webmanifest')) ; le cache n'est qu'un filet hors ligne.
     // Seules les réponses OK de notre serveur sont mises en cache : une 404/5xx passagère
     // (déploiement en cours) ne doit pas devenir le filet hors ligne (audit 2026-09-05, B12).
     e.respondWith(
@@ -91,10 +116,9 @@ self.addEventListener('fetch', (e) => {
           if (cachable(rep)) mettreEnCache(e, req, rep);
           return rep;
         })
-        // Hors ligne : le document demandé, sinon index.html pour une NAVIGATION seulement (le
-        // manifest ne doit pas recevoir du HTML — A40), sinon une réponse claire plutôt qu'undefined.
+        // Hors ligne : le manifest demandé, sinon une réponse claire plutôt qu'undefined (A40 —
+        // le manifest ne doit pas recevoir du HTML : pas de repli sur index.html ici).
         .catch(() => depuisCache(req)
-          .then((r) => r || (req.mode === 'navigate' ? depuisCache('./index.html') : undefined))
           .then((r) => r || new Response('Hors ligne — reconnectez-vous une fois pour installer l’application.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })))
     );
   } else {

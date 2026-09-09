@@ -15,7 +15,14 @@ export default defineConfig({
     headless: true,
     trace: 'retain-on-failure', // trace.zip conservée seulement pour un test rouge — sans `retries`, l'ancien réglage n'en produisait jamais (C22)
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    // Cible n°1 = Android au pouce : les tests d'écran sont rejoués sur un vrai profil tactile
+    // (user-agent mobile, 5 points de contact, `pointer: coarse`), pas seulement à 360 px de large
+    // (audit 2026-09-07, C60). Limité aux specs d'écran : le reste ne dépend pas de l'appareil.
+    // (le test de position des toasts est explicitement « position PC » : il n'a pas de sens ici)
+    { name: 'mobile', use: { ...devices['Pixel 7'] }, testMatch: /audit5-lot3.spec.mjs/, grepInvert: /position PC/ },
+  ],
   webServer: {
     command: 'node server-carnet.mjs',
     port: 8160,

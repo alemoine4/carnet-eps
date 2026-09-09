@@ -14,6 +14,20 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-09 (35) — v0.12.14 : avis du lot 5 (points retenus), A39, projet de tests mobile
+
+**Fait** :
+- **A39** : la branche navigation du service-worker passe en cache-first + revalidation en arrière-plan ; 2 tests avec le **service-worker réel** (hôte de bouclage hors localhost) — l'un prouve qu'une navigation aboutit alors que le réseau ne répond JAMAIS (avant : `page.goto` expirait), l'autre que la revalidation met à jour le cache sans changer la réponse du jour.
+- **C15** (barème modifiable, type figé), **C45** (année affichée hors année scolaire courante), **A33** (plafond d'import 200 Mo avant lecture), **D-08 (3)** (poids des pièces par curseur), **A34 (a)** et **A31 (a)** (champs et paramètres morts), `octetsLisibles` remonté dans metier.js.
+- **C60** : projet Playwright « mobile » (Pixel 7 émulé) limité aux specs d'écran ; B31 réécrit pour prouver la règle dans les deux sens (aide clavier visible sur pointeur fin, masquée sur tactile).
+- **Défaut trouvé en chemin** : le champ barème a révélé une **réentrance de re-rendu** dans `vueEval` — deux `change` rapprochés lançaient deux rendus concurrents qui empilaient deux vues. Corrigé à la source (un seul re-rendu à la fois).
+
+**Décidé** : C44 (1) et C16 (2) écartés (raisons dans le CHANGELOG). A01 reste ta décision.
+
+**Coincé / à vérifier** : sur l'appareil, l'ouverture de l'app en mode avion (elle doit être immédiate) et le champ barème sur une évaluation existante.
+
+**Prochaine étape** : l'avis sur les **grilles d'évaluation EPS** (critères, niveaux, pondérations, note ramenée sur 20), demandé le 2026-09-09 — à rédiger avant tout code, en s'inspirant des grilles d'iDoceo.
+
 ## 2026-09-09 (34) — v0.12.13 : lot 2 (créations atomiques) + intégration continue
 
 Demande : « fait comme tu penses le mieux » — j'ai tranché les trois avis en attente (voir « Décidé »).

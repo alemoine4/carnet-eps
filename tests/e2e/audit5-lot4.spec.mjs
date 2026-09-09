@@ -102,7 +102,7 @@ test('A17 / A19 / A41 — précache hors du cache HTTP, réponses redirigées ou
   expect(src).toContain(`const VERSION = '${versionApp}'`); // C62 : numéros synchronisés, vérifié même quand les tests SW se sautent
   expect(src).toContain("c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' })))"); // A17
   expect(src).toContain("const cachable = (rep) => rep.ok && rep.type === 'basic' && !rep.redirected;"); // A19
-  expect(src.match(/if \(cachable\(rep\)\) mettreEnCache\(e, req, rep\);/g)?.length).toBe(2); // employé sur les deux branches
+  expect(src.match(/if \(cachable\(rep\)\) mettreEnCache\(e, req, rep\);/g)?.length).toBe(3); // employé aux trois points de mise en cache (A39 : navigate revalide + retente, manifest, assets)
   expect(src).toMatch(/e\.waitUntil\(caches\.open\(CACHE\)\.then\(\(c\) => c\.put\(req, copie\)\)\.catch/); // A41
   expect(src).not.toMatch(/caches\.open\(CACHE\)\.then\(\(c\) => c\.put\(req, copie\)\);/); // plus d'écriture flottante
 });
@@ -289,4 +289,65 @@ test('C07 / B14 — ouverture d’un PDF : pas de recopie du blob, URL révoqué
   expect(res.crees).toEqual([true]); // le blob lui-même, pas une copie
   expect(res.ouverts).toEqual([['_blank', 'noopener']]);
   expect(res.revoques).toEqual([]); // toujours valable après 1,5 s
+});
+
+// [a39-sw] A39 — une navigation déjà en cache est servie SANS attendre un réseau qui ne répond jamais
+test('A39 — une navigation déjà en cache est servie SANS attendre un réseau qui ne répond jamais', async ({ page, context }) => {
+  const base = await hoteSW(page);
+  test.skip(!base, 'aucun hôte de bouclage hors localhost joignable sur le port 8160');
+  await page.goto(`${base}/`);
+  await attendreSW(page);
+
+  // Réseau qui ne répond JAMAIS pour la navigation (un gymnase hors service, pas juste lent) :
+  // si la branche redevient network-first, page.goto() dépassera le timeout ci-dessous.
+  await context.route(`${base}/`, () => new Promise(() => {}));
+
+  const t0 = Date.now();
+  await page.goto(`${base}/`, { timeout: 4000 });
+  const duree = Date.now() - t0;
+  await expect(page.locator('.nav')).toBeVisible();
+  expect(duree, `navigation servie en ${duree} ms malgré un réseau qui ne répond jamais`).toBeLessThan(2000);
+
+  await context.unroute(`${base}/`);
+});
+
+// [a39-sw] A39 — la revalidation en arrière-plan met à jour le cache pour le lancement suivant, sans changer la réponse du jour
+test('A39 — la revalidation en arrière-plan met à jour le cache pour le lancement suivant, sans changer la réponse du jour', async ({ page, context }) => {
+  const base = await hoteSW(page);
+  test.skip(!base, 'aucun hôte de bouclage hors localhost joignable sur le port 8160');
+  await page.goto(`${base}/`);
+  await attendreSW(page);
+
+  const version = await page.evaluate(async () => (await import('/js/state.js')).VERSION_APP);
+  const avant = await page.evaluate(async (v) => {
+    const c = await caches.open(`carnet-eps-${v}`);
+    const r = await c.match('./');
+    return r ? await r.text() : null;
+  }, version);
+  expect(avant).not.toBeNull();
+  expect(avant).not.toContain('MARQUEUR_NOUVELLE_VERSION');
+
+  // Le serveur « déploie » une nouvelle réponse pour '/' — seule la revalidation en arrière-plan doit
+  // la voir ; la navigation en cours doit rester servie depuis l'ANCIEN cache (A39 : un cran de retard).
+  await context.route(`${base}/`, (route) => route.fulfill({
+    status: 200,
+    contentType: 'text/html; charset=utf-8',
+    body: avant.replace('<body', 'MARQUEUR_NOUVELLE_VERSION<body'),
+  }));
+
+  const html = await page.goto(`${base}/`).then((r) => r.text());
+  expect(html, 'la navigation servie doit venir du cache (ancienne version), pas du réseau').not.toContain('MARQUEUR_NOUVELLE_VERSION');
+  await expect(page.locator('.nav')).toBeVisible(); // l'app démarre bien depuis cette réponse
+
+  // La revalidation tourne dans e.waitUntil, en arrière-plan : on la laisse aboutir.
+  await expect.poll(async () => {
+    const c = await page.evaluate(async (v) => {
+      const c = await caches.open(`carnet-eps-${v}`);
+      const r = await c.match('./');
+      return r ? await r.text() : null;
+    }, version);
+    return c?.includes('MARQUEUR_NOUVELLE_VERSION') ?? false;
+  }, { timeout: 5000 }).toBe(true);
+
+  await context.unroute(`${base}/`);
 });

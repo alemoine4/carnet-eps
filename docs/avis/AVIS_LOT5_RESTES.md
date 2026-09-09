@@ -1,5 +1,7 @@
 # AVIS — Lot 5 du 5e audit : neuf points volontairement NON appliqués (à trancher)
 
+> **Tranché le 2026-09-09** par délégation (« fais comme tu penses le mieux ») et livré en **v0.12.14** : points 1 (barème seul), 2 (a), 3 (b), 4 (a), 5, 6 (limité aux specs d’écran) et 7 **appliqués** ; points 8 (décodage redimensionné) et 9 (confirmation avant copie) **écartés**, raisons dans le CHANGELOG. Conservé comme trace de la décision.
+>
 > Rédigé le 2026-09-08 avec la livraison de la v0.12.12. Chaque point ci-dessous change un comportement visible, la sémantique d'une donnée ou la configuration des tests : conformément à la BIBLE (avis avant tout changement structurant), rien n'est codé tant que tu n'as pas dit « go » point par point. Les correctifs proposés sont prêts (ancrages relevés par le triage) et tiennent chacun en quelques lignes.
 
 | # | Constat | Ce qui se passe aujourd'hui | Proposition | Ma recommandation |

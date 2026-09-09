@@ -678,3 +678,121 @@ test('A27 (revue) — un tap pendant l’écriture de « Terminer l’appel » n
   await expect(carte4.locator('.detail-txt')).toHaveText('Absent'); // avant : réaffiché « Présent » par l'instantané pris avant l'await
   expect(await page.evaluate(async () => (await (await import('/js/io.js')).lire('appels', 'se_e4'))?.statut)).toBe('absent'); // la base, elle, avait raison
 });
+// [c15-bareme] C15 (groupe 4) — barème modifiable après création : accepté 1..200, grille re-rendue, refusé sous une note existante
+test('C15 (groupe 4) — barème modifiable après création : accepté 1..200, grille re-rendue, refusé sous une note existante', async ({ page }) => {
+  await page.evaluate(async () => {
+    const io = await import('/js/io.js');
+    await io.enregistrer('classes', { id: 'c1', nom: '6A', archivee: false });
+    await io.enregistrer('eleves', { id: 'e1', classeId: 'c1', nom: 'NOM1', prenom: 'Prenom1', actif: true });
+    await io.enregistrer('eleves', { id: 'e2', classeId: 'c1', nom: 'NOM2', prenom: 'Prenom2', actif: true });
+    await io.enregistrer('sequences', { id: 'sq', classeId: 'c1', apsa: 'Bad', dateDebut: '2020-01-01', dateFin: '2099-12-31' });
+    await io.enregistrer('evaluations', { id: 'ev', sequenceId: 'sq', titre: 'Contrôle', date: '2026-09-01', type: 'bareme', bareme: 10, coef: 1 });
+    await io.enregistrer('notes', { id: 'ev_e1', evaluationId: 'ev', eleveId: 'e1', valeur: 8, commentaire: '' });
+    // Type figé « note20 » : le champ barème ne doit apparaître QUE pour le type « bareme ».
+    await io.enregistrer('evaluations', { id: 'ev20', sequenceId: 'sq', titre: 'Autre', date: '2026-09-01', type: 'note20', coef: 1 });
+  });
+
+  await page.goto('/#/notes/eval/ev20');
+  await expect(page.locator('#ge-bareme')).toHaveCount(0);
+
+  await page.goto('/#/notes/eval/ev');
+  await expect(page.locator('#ge-bareme')).toHaveValue('10');
+
+  // Passage à /20 accepté ; la grille est re-rendue avec les nouvelles bornes de saisie
+  // (une note à 15, refusée sous /10, est désormais acceptée pour un autre élève).
+  await page.locator('#ge-bareme').fill('20');
+  await page.locator('#ge-bareme').dispatchEvent('change');
+  await expect(page.locator('#vue')).toContainText('noté /20');
+  expect(await page.evaluate(async () => (await (await import('/js/io.js')).lire('evaluations', 'ev')).bareme)).toBe(20);
+  await expect(page.getByRole('heading', { name: 'Vers Pronote' })).toBeVisible();
+  await page.getByRole('textbox', { name: 'Note de NOM2 Prenom2' }).fill('15');
+  await page.getByRole('textbox', { name: 'Note de NOM2 Prenom2' }).dispatchEvent('change');
+  await expect(page.getByRole('textbox', { name: 'Note de NOM2 Prenom2' })).not.toHaveClass(/invalide/);
+  expect(await page.evaluate(async () => (await (await import('/js/io.js')).lire('notes', 'ev_e2')).valeur)).toBe(15);
+
+  // Refus à /5 sous la note de 8 de e1 : « ✗ », toast, valeur restaurée, base inchangée (V2-04).
+  await page.locator('#ge-bareme').fill('5');
+  await page.locator('#ge-bareme').dispatchEvent('change');
+  await expect(page.locator('.toast').last()).toContainText('Non enregistré');
+  await expect(page.locator('.toast').last()).toContainText('dépasse');
+  await expect(page.locator('label[for="ge-bareme"] .statut, #ge-bareme ~ .statut, .champ:has(#ge-bareme) .statut').first()).toHaveText('✗');
+  await expect(page.locator('#ge-bareme')).toHaveValue('20');
+  expect(await page.evaluate(async () => (await (await import('/js/io.js')).lire('evaluations', 'ev')).bareme)).toBe(20);
+});
+
+// [menages] A34 — la création d'une séance (fiche séquence) n'écrit plus le champ mort « annulee »
+test('A34 — la création d’une séance depuis la fiche séquence n’écrit plus le champ mort « annulee »', async ({ page }) => {
+  await page.evaluate(async () => {
+    const io = await import('/js/io.js');
+    await io.enregistrer('classes', { id: 'c1', nom: '6A', archivee: false });
+    await io.enregistrer('sequences', { id: 'sq', classeId: 'c1', apsa: 'Bad', nbSeancesPrevu: 5, dateDebut: '', dateFin: '' });
+  });
+  await page.goto('/#/sequences/sq');
+  await page.locator('#se-date').fill('2026-09-10');
+  await page.getByRole('button', { name: 'Ajouter' }).click();
+  const seance = await page.evaluate(async () => {
+    const io = await import('/js/io.js');
+    const [s] = await io.parIndex('seances', 'sequenceId', 'sq');
+    return s;
+  });
+  expect(seance).toBeTruthy();
+  expect('annulee' in seance).toBe(false); // rouge aujourd’hui : sequences.js écrit encore `annulee: false`
+});
+
+// [menages] C45 — dateFR affiche l'année seulement hors de l'année scolaire courante
+test('C45 — dateFR : année affichée seulement hors de l’année scolaire courante', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-08T10:00:00')); // aujourd'hui, année scolaire 2026 (août 2026 → juillet 2027)
+  const res = await page.evaluate(async () => {
+    const { dateFR } = await import('/js/metier.js');
+    return { courante: dateFR('2026-12-15'), passee: dateFR('2025-12-15') };
+  });
+  expect(res.courante).toBe('15/12');      // année scolaire courante : inchangé
+  expect(res.passee).toBe('15/12/2025');   // année scolaire passée : année affichée
+});
+
+test('A33 — import : un fichier de plus de 200 Mo est refusé AVANT lecture, avec un message clair', async ({ page }) => {
+  await page.goto('/#/sauvegarde');
+  // Sonde : `text()` ne doit jamais être appelée sur un fichier hors plafond (c'est elle qui gèle l'onglet).
+  await page.evaluate(() => { window.__lu = 0; const t = Blob.prototype.text; Blob.prototype.text = function (...a) { window.__lu++; return t.apply(this, a); }; });
+  // Fichier qui ANNONCE 201 Mo sans les allouer : la garde lit `fichier.size`, elle doit refuser
+  // AVANT toute lecture (Playwright refuse un tampon de plus de 50 Mo, et allouer 201 Mo serait
+  // précisément le gel que l'on veut éviter).
+  const injecte = await page.evaluate(() => {
+    const f = new File(['{"app":"carnet-eps"}'], 'enorme.json', { type: 'application/json' });
+    Object.defineProperty(f, 'size', { value: 201 * 1024 * 1024 });
+    const dt = new DataTransfer();
+    dt.items.add(f);
+    const input = document.querySelector('input[type=file][accept*="json"]');
+    input.files = dt.files;
+    const taille = input.files[0].size;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    return taille;
+  });
+  expect(injecte).toBe(201 * 1024 * 1024); // la taille annoncée est bien celle que lit la garde
+  await expect(page.locator('#vue .statut-erreur')).toContainText('fichier trop lourd pour cet appareil');
+  await expect(page.locator('#vue .statut-erreur')).toContainText('limite 200 Mo');
+  expect(await page.evaluate(() => window.__lu)).toBe(0); // avant : le fichier était lu en entier puis parsé
+  await expect(page.locator('dialog.feuille-confirm')).toHaveCount(0); // aucun parcours d'import engagé
+});
+
+test('D-08 (3) — Sauvegarde : le poids des pièces jointes est affiché sans charger un seul blob', async ({ page }) => {
+  await page.evaluate(async () => {
+    const io = await import('/js/io.js');
+    for (let i = 0; i < 3; i++) {
+      await io.enregistrer('fichiers', { id: 'f' + i, blob: new Blob([new Uint8Array(600 * 1024)], { type: 'application/pdf' }), mime: 'application/pdf', nom: `p${i}.pdf`, taille: 600 * 1024, dateAjout: '2026-09-01' });
+    }
+  });
+  await page.goto('/#/sauvegarde');
+  // Aucune lecture d'enregistrement complet du store `fichiers` : ni getAll, ni get. La sonde est
+  // posée par addInitScript (un page.evaluate ne survivrait pas au rechargement qui suit).
+  await page.addInitScript(() => {
+    window.__charges = 0;
+    for (const methode of ['getAll', 'get']) {
+      const orig = IDBObjectStore.prototype[methode];
+      IDBObjectStore.prototype[methode] = function (...a) { if (this.name === 'fichiers') window.__charges++; return orig.apply(this, a); };
+    }
+  });
+  await page.reload();
+  await expect(page.locator('#sv-poids')).toHaveText('Pièces jointes : 3 (≈ 1.8 Mo)'); // avant : aucune ligne de poids
+  expect(await page.evaluate(() => window.__charges)).toBe(0);
+});
