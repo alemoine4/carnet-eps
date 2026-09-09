@@ -97,7 +97,7 @@ async function carteMaintenant() {
         if (existante) { location.hash = `#/appel/${existante.id}`; return; }
         const nouvelle = {
           id: crypto.randomUUID(), sequenceId: sequence.id, date: isoJour,
-          edtId: creneau.id, numero, theme: '', bilan: '', annulee: false,
+          edtId: creneau.id, numero, theme: '', bilan: '', // annulee retiré : champ mort, jamais lu (avis lot 5, A34)
         };
         await enregistrer('seances', nouvelle);
         location.hash = `#/appel/${nouvelle.id}`;

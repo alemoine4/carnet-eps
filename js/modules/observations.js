@@ -7,13 +7,13 @@ import { parIndex, enregistrer, supprimer, restaurer } from '../io.js';
 import { TYPES_OBSERVATION, TONS_OBSERVATION, TAGS_OBSERVATION, MODELES_PHRASES, dateFR, isoAujourdhui } from '../metier.js';
 
 // Carte complète des observations d'un élève. `rafraichir` = re-rendu de la vue hôte.
-export async function carteObservations(eleveId, rafraichir, seanceId = null) {
+export async function carteObservations(eleveId, rafraichir) {
   const observations = (await parIndex('observations', 'eleveId', eleveId))
     .sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.dateAjout || '').localeCompare(a.dateAjout || ''));
 
   const carteO = carte('Observations');
   const btnAjouter = el('button', { class: 'btn btn-principal' }, '+ Observation');
-  btnAjouter.addEventListener('click', () => ouvrirFormObservation(eleveId, rafraichir, seanceId));
+  btnAjouter.addEventListener('click', () => ouvrirFormObservation(eleveId, rafraichir));
   carteO.append(el('div', { class: 'rang-btn' }, btnAjouter));
 
   if (!observations.length) {
@@ -44,7 +44,7 @@ export async function carteObservations(eleveId, rafraichir, seanceId = null) {
   return carteO;
 }
 
-function ouvrirFormObservation(eleveId, onSaved, seanceId) {
+function ouvrirFormObservation(eleveId, onSaved) {
   const selType = el('select', { id: 'obs-type' }, ...TYPES_OBSERVATION.map((t) => el('option', { value: t }, t)));
   const selTon = el('select', { id: 'obs-ton' }, ...TONS_OBSERVATION.map((t) => el('option', { value: t.cle }, t.libelle)));
   selTon.value = 'neutre';
@@ -77,7 +77,7 @@ function ouvrirFormObservation(eleveId, onSaved, seanceId) {
         ton: selTon.value,
         tags: tagsCases.filter((x) => x.cb.checked).map((x) => x.t),
         texte,
-        seanceId: seanceId || null,
+        seanceId: null, // réservé : la carte n'est branchée que sur la fiche élève (schéma documenté, avis A31)
         dateAjout: new Date().toISOString(),
       });
       dlg.close();

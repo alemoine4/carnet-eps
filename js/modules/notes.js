@@ -165,7 +165,15 @@ async function vueListe(c) {
 // ---------------------------------------------------------------------------
 
 async function vueEval(c, evalId) {
-  const rafraichir = () => { c.replaceChildren(); return vueEval(c, evalId); };
+  // UN SEUL re-rendu à la fois : deux `change` rapprochés (fill + dispatch, ou un double tap)
+  // lançaient deux rendus concurrents qui empilaient DEUX vues (révélé par le champ barème, C15).
+  let rafraichissement = null;
+  const rafraichir = () => {
+    if (rafraichissement) return rafraichissement;
+    c.replaceChildren();
+    rafraichissement = vueEval(c, evalId).finally(() => { rafraichissement = null; });
+    return rafraichissement;
+  };
   c.append(el('a', { class: 'retour', href: '#/notes' }, '← Notes'));
   const ev = await lire('evaluations', evalId);
   if (!ev) { c.append(carte('Évaluation introuvable', 'Elle a peut-être été supprimée.')); return; }
@@ -182,12 +190,31 @@ async function vueEval(c, evalId) {
   // --- En-tête ---
   const statsEl = el('p', { class: 'compteurs' });
   const carteTete = carte(`${classe.nom} — ${ev.titre}`, '', ev.publieePronote ? `publiée ${dateFR(ev.publieePronote)} ✓` : '');
+  const rangIdentite = el('div', { class: 'rang-2' },
+    champTexte({ id: 'ge-titre', libelle: 'Titre', valeur: ev.titre, onChange: async (v) => { if (!v) throw new Error('le titre ne peut pas être vide'); ev.titre = v; await sauverEv(); } }), // A36 (revue du lot 5)
+    champTexte({ id: 'ge-date', libelle: 'Date', type: 'date', valeur: ev.date || '', onChange: async (v) => { ev.date = v; await sauverEv(); } }),
+  );
+  // Barème modifiable après création, le TYPE reste figé (avis du lot 5 point 1, groupe 4 C15) :
+  // refusé (throw → « ✗ » + toast + valeur restaurée, contrat V2-04) hors 1..200, et refusé si une
+  // note déjà saisie dépasse le nouveau barème. La grille est re-rendue (bornes de saisie, carte
+  // « Vers Pronote ») via le rafraîchissement complet de la vue, déjà utilisé ailleurs (ex. eleves.js).
+  if (ev.type === 'bareme') {
+    rangIdentite.append(champTexte({
+      id: 'ge-bareme', libelle: 'Barème ( /x )', type: 'number', valeur: String(ev.bareme ?? ''),
+      onChange: async (v) => {
+        const b = Number(v);
+        if (!(Number.isFinite(b) && b >= 1 && b <= 200)) throw new Error('le barème doit être compris entre 1 et 200');
+        const depassement = [...notesMap.values()].find((n) => typeof n.valeur === 'number' && n.valeur > b);
+        if (depassement) throw new Error(`une note saisie (${formatFR(depassement.valeur)}) dépasse ${formatFR(b)}`);
+        ev.bareme = b;
+        await sauverEv();
+        await rafraichir();
+      },
+    }));
+  }
   carteTete.append(
     el('p', {}, `${sequence.apsa} · ${bareme ? `noté /${bareme}` : 'AFL / positionnement'} · coef ${ev.coef}`),
-    el('div', { class: 'rang-2' },
-      champTexte({ id: 'ge-titre', libelle: 'Titre', valeur: ev.titre, onChange: async (v) => { if (!v) throw new Error('le titre ne peut pas être vide'); ev.titre = v; await sauverEv(); } }), // A36 (revue du lot 5)
-      champTexte({ id: 'ge-date', libelle: 'Date', type: 'date', valeur: ev.date || '', onChange: async (v) => { ev.date = v; await sauverEv(); } }),
-    ),
+    rangIdentite,
     statsEl,
   );
   c.append(carteTete);

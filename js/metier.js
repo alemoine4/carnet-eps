@@ -57,13 +57,29 @@ export const baremeDe = (ev) => (ev.type === 'note20' ? 20 : ev.type === 'bareme
 // Nombre arrondi à 2 décimales, virgule française.
 export const formatFR = (n) => String(Math.round(n * 100) / 100).replace('.', ',');
 
+// Taille lisible (Ko / Mo) — partagée par Réglages (espace du site) et Sauvegarde (poids des pièces).
+export function octetsLisibles(n) {
+  if (!Number.isFinite(n)) return '?';
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} Ko`;
+  return `${(n / (1024 * 1024)).toFixed(1)} Mo`;
+}
+
 // ---- Dates & heures ----
 // Date LOCALE (pas toISOString/UTC : entre minuit et 1-2 h du matin, l'UTC est encore « hier »).
 export const isoAujourdhui = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
-export const dateFR = (iso) => (iso ? new Date(`${iso}T12:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) : '?');
+export const dateFR = (iso) => {
+  if (!iso) return '?';
+  // C45(b) : année affichée seulement si `iso` n'est pas dans l'année scolaire courante — comparaison
+  // 100 % synchrone via `anneeScolaireDe` (pure, ne lit pas `meta`), contrairement à `bornesTrimestres`
+  // (async, lit `meta`) qui n'est PAS utilisable ici.
+  const options = anneeScolaireDe(iso) === anneeScolaireDe(isoAujourdhui())
+    ? { day: '2-digit', month: '2-digit' }
+    : { day: '2-digit', month: '2-digit', year: 'numeric' };
+  return new Date(`${iso}T12:00:00`).toLocaleDateString('fr-FR', options);
+};
 export const enMinutes = (hm) => {
   const [h, m] = String(hm || '0:0').split(':').map(Number);
   return h * 60 + m;
