@@ -4,6 +4,28 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-09 — v0.12.18 : l'import ne prend plus l'identité du responsable pour celle de l'élève
+
+- **Constat V4-01 de l'audit Codex V4.** Avec l'en-tête « Élèves;Nom du responsable;Prénom du responsable;Classe », les deux colonnes du parent satisfaisaient les règles « nom » et « prénom ». Comme elles étaient **deux**, elles désarmaient la colonne unique « Élèves », et la base recevait l'identité du parent à la place de celle de l'élève. Le bilan annonçait « 1 élève importé », sans un mot.
+- **La correction ne tient pas à une liste de libellés interdits.** La revue adversariale l'a démontré avant la livraison : Pronote abrège « responsable » en « Resp. » dans ses propres en-têtes — l'export réel du terrain contient déjà « Cnx Resp. » — Siècle numérote « RL1 », et « Nom du contact d'urgence **de l'élève** » mentionne l'élève tout en désignant un tiers. Une liste aurait été à rallonger indéfiniment, en silence.
+- **C'est la forme de la règle qui change.** Les en-têtes sont découpés en **mots** au lieu d'être écrasés en une seule chaîne : sans frontières de mots, « Nombre d'élèves » contenait « nom ». Un en-tête qui ne nomme que le champ, l'élève et des mots de liaison est un signal **propre** ; celui qui nomme aussi autre chose ne l'est pas. Quand une colonne unique est reconnue, une colonne d'identité au signal moins propre ne peut plus la déplacer — et le retrait **se voit**, la liste déroulante repassant sur « ignorer ».
+- **Un fichier « Nom de l'élève;Prénom de l'élève » n'importait personne** : la première colonne était comptée comme une colonne unique, le découpage rendait un prénom vide, donc une ligne incomplète.
+- **Trois autres détections redressées** : « Nom légal » est une colonne de l'élève et ne doit pas être écartée ; « genre » et « division » passaient devant « Classe de rattachement », la colonne réelle de l'export Pronote ; « Date de naissance » perdait contre « Lieu de naissance » placée avant elle.
+- **Écran d'import** : l'identité incomplète est annoncée **avant** le clic au lieu d'affirmer « correspondance détectée » puis de refuser ; les notes qui apparaissent en cours de route sont annoncées aux lecteurs d'écran ; les astérisques « Nom * » et « Prénom * » se contredisaient et disparaissent, puisque c'est la **combinaison** qui est obligatoire ; un import abouti ne se rejoue plus.
+- **Une garde interdit désormais l'oubli d'incrément** : service-worker, application, CHANGELOG et journal de déploiement doivent porter la même version. Sans elle, le correctif ne serait jamais descendu sur le téléphone déjà installé.
+
+## 2026-09-09 — v0.12.17 : un découpage nom/prénom deviné ne passe plus en silence
+
+- Quand la colonne unique ne contient **aucune majuscule** pour trancher, le découpage n'est pas déduit mais **deviné** : « de La Fontaine Apolline » donne nom « de ». Ce n'est pas évitable, mais c'était **muet**.
+- L'aperçu montre désormais les cas devinés **en premier** — il n'affichait que les deux premières lignes, donc jamais le nom à particule du milieu de la liste — et le bilan les compte, comme il compte déjà les homonymes et les dates non reconnues.
+
+## 2026-09-09 — v0.12.16 : les trois constats du premier test de terrain sur Android
+
+- **« Terminer l'appel » sortait de l'écran** dès une vingtaine d'élèves, au point qu'on croyait devoir taper chaque élève pour le mettre présent. Le bouton vit maintenant dans une barre collante, toujours au-dessus de la barre de navigation, et la consigne dit ce qu'il fait.
+- **L'export « Élèves » de Pronote** met le nom et le prénom dans une seule cellule, et laisse « Classe de rattachement » vide quand on exporte une seule classe. Les deux cas sont pris en charge, avec un aperçu du découpage avant l'import.
+- **Rien à corriger sur les inaptitudes** : seule une inaptitude **totale** fixe un statut d'office ; une **partielle** laisse « présent » et se signale par la pastille. C'est la décision D013, et deux tests le prouvaient déjà.
+- Corrigés par la revue : la destination ne se choisit plus toute seule sur la première classe de la liste, une colonne « Nom du responsable » ne désarme plus le découpage, et la barre collante ne vole plus la ligne « Appel complet » à l'impression.
+
 ## 2026-09-09 — v0.12.15 : lot V3-A de l'audit Codex V3 — un champ refusé ne se réécrit plus tout seul
 
 - **Le « ✗ » ne ment plus.** Depuis la v0.12.9, un champ dont l'écriture est refusée affiche « ✗ », explique pourquoi et retrouve sa valeur d'avant. Ce contrat était tenu **à l'écran** mais pas **en mémoire** : le code modifiait l'objet avant de savoir si l'écriture passait. La valeur refusée restait donc dans l'objet, et la **prochaine écriture réussie d'un autre champ la persistait en silence**. Exemple reproduit : refuser un barème /20 sur une évaluation /10, puis se contenter de renommer l'évaluation — le /20 refusé partait en base, pendant que l'écran affichait toujours /10.

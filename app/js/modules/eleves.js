@@ -11,6 +11,7 @@ import {
 } from '../io.js';
 import {
   STATUTS, SEUIL_ALERTE, depasseSeuil, dateFR, isoAujourdhui, trierEleves, trierClasses, cleTexte, baremeDe, formatFR, inaptitudesActives,
+  normaliser,
   bornesTrimestres, compterStatutsParTrimestre,
 } from '../metier.js';
 import { preparerFichier, urlDuFichier } from '../media.js';
@@ -617,24 +618,80 @@ export function scinderNomPrenom(texte) {
   return { nom: mots.slice(0, i).join(' '), prenom: mots.slice(i).join(' '), devine };
 }
 
-function detecterColonnes(entetes) {
-  const n = entetes.map((e) => cleTexte(e));
-  const trouver = (test) => n.findIndex(test);
-  const cols = {
-    prenom: trouver((h) => h.includes('prenom')),
-    nom: trouver((h) => h === 'nom' || h === 'nomdefamille' || (h.includes('nom') && !h.includes('prenom'))),
-    // Colonne unique « Élèves » (export Pronote) : nom et prénom ensemble. « Nom complet » et
-    // « Nom de l'élève » satisfont aussi la règle « nom » : le garde-fou ci-dessous les lui retire.
-    nomComplet: trouver((h) => h === 'eleve' || h === 'eleves' || h === 'nomcomplet' || h === 'nomdeleleve'
-      || h.includes('nometprenom') || h.includes('nomprenom')),
-    dateNaissance: trouver((h) => h.includes('naissance') || h === 'neele' || h === 'nele' || h === 'nee'),
-    sexe: trouver((h) => h.includes('sexe') || h === 'genre'),
-    classe: trouver((h) => h.includes('classe') || h === 'division'),
+// Vocabulaire de la détection de colonnes. Les en-têtes sont découpés en MOTS (et non écrasés en une
+// seule chaîne) : sans frontières de mots, « Nombre d'élèves » contenait « nom » et « Resp. Nom »
+// ressemblait à « Nom » (audit Codex V4 et sa revue).
+const MOTS_LIAISON = new Set(['de', 'du', 'des', 'd', 'la', 'le', 'les', 'l', 'et', 'en', 'au', 'aux', 'pour', 'e']);
+const MOTS_ELEVE = new Set(['eleve', 'eleves', 'apprenant', 'apprenants']);
+const MOTS_QUALIF = new Set(['famille', 'usage', 'usuel', 'naissance', 'patronymique', 'legal', 'legale']);
+// Second rideau : un en-tête qui désigne franchement quelqu'un d'autre n'est jamais proposé d'office,
+// même quand aucune colonne d'élève ne vient le concurrencer. Le professeur peut le désigner à la main.
+const MOTS_TIERS = /responsable|parent|tuteur|tutrice|representant|pere|mere/;
+
+// Deux forces de signal, et c'est la force qui départage — à force ÉGALE, la première colonne du
+// fichier l'emporte :
+//   2 · l'en-tête ne nomme QUE le champ, l'élève et des mots de liaison  « Nom », « Nom de l'élève »
+//   1 · l'en-tête nomme AUSSI autre chose                               « Nom du contact d'urgence »
+// On énumère ce qu'on ACCEPTE autour du champ, jamais les tiers qu'on refuse : leur liste serait sans
+// fin. Pronote abrège « responsable » en « Resp. » dans ses propres en-têtes (l'export réel du terrain
+// contient « Cnx Resp. »), Siècle numérote « RL1 », et « Nom du contact d'urgence DE L'ÉLÈVE » mentionne
+// l'élève tout en désignant un tiers — c'est le constat V4-01, qu'aucune liste n'aurait couvert.
+export function detecterColonnes(entetes) {
+  const brutes = entetes.map((e) => cleTexte(e));
+  const t = entetes.map((e) => normaliser(e).replace(/[^a-z0-9]+/g, ' ').trim().split(' ')
+    .filter((m) => m && !MOTS_LIAISON.has(m)));
+  const meilleure = (champs, qualif, exclut = []) => {
+    let choix = -1;
+    let force = 0;
+    t.forEach((toks, i) => {
+      if (MOTS_TIERS.test(brutes[i])) return;
+      if (exclut.some((x) => toks.includes(x))) return;
+      if (!champs.some((c) => toks.includes(c))) return;
+      const propre = toks.every((m) => champs.includes(m) || MOTS_ELEVE.has(m) || qualif.has(m));
+      const f = propre ? 2 : 1;
+      if (f > force) { force = f; choix = i; }
+    });
+    return { i: choix, force };
   };
-  // Un en-tête « Nom et prénom » satisfait AUSSI la règle « prénom » : sans ce garde-fou, la même
-  // colonne était proposée deux fois, et désigner une colonne « Nom » à la main donnait un prénom
-  // « MARTIN Louise » entier (revue du correctif de terrain).
+  // Colonne unique « nom et prénom dans la même cellule » : l'en-tête ne nomme QUE l'élève
+  // (« Élèves »), ou il nomme les deux champs (« Nom et prénom »), ou il dit « complet ».
+  // « Nom de l'élève » n'en est PAS une : c'est un nom de famille, et la compter ici n'importait
+  // personne — le découpage rendait un prénom vide, donc une ligne incomplète.
+  const colonneUnique = () => {
+    let choix = -1;
+    let force = 0;
+    t.forEach((toks, i) => {
+      if (MOTS_TIERS.test(brutes[i])) return;
+      const entiteSeule = toks.length === 1 && MOTS_ELEVE.has(toks[0]);
+      const lesDeuxChamps = toks.includes('nom') && toks.includes('prenom');
+      const ditComplet = toks.includes('nom') && (toks.includes('complet') || toks.includes('complete'));
+      if (!(entiteSeule || lesDeuxChamps || ditComplet)) return;
+      const propre = toks.every((m) => m === 'nom' || m === 'prenom' || m === 'complet' || m === 'complete' || MOTS_ELEVE.has(m));
+      const f = propre ? 2 : 1;
+      if (f > force) { force = f; choix = i; }
+    });
+    return { i: choix, force };
+  };
+  const c = {
+    prenom: meilleure(['prenom'], MOTS_QUALIF),
+    nom: meilleure(['nom'], MOTS_QUALIF, ['prenom']),
+    nomComplet: colonneUnique(),
+    dateNaissance: meilleure(['naissance', 'ne', 'nee'], new Set(['date']), ['lieu', 'commune', 'ville', 'departement', 'pays']),
+    sexe: meilleure(['sexe', 'genre'], new Set()),
+    classe: meilleure(['classe', 'division'], new Set(['rattachement'])),
+  };
+  const cols = Object.fromEntries(Object.entries(c).map(([cle, v]) => [cle, v.i]));
+  // Une colonne PROPRE ne se marie pas avec une colonne SALE : « Nom » + « Prénom du responsable »
+  // donnerait le nom de l'élève et le prénom de son parent. Mieux vaut que l'import refuse et le dise.
+  if (c.nom.force === 2 && c.prenom.force === 1) cols.prenom = -1;
+  if (c.prenom.force === 2 && c.nom.force === 1) cols.nom = -1;
+  // Colonne unique reconnue : une identité séparée au signal plus FAIBLE ne peut pas la déplacer.
+  // Le retrait est VISIBLE — la liste déroulante repasse sur « — ignorer — ».
   if (cols.nomComplet >= 0) {
+    if (c.nom.force < c.nomComplet.force) cols.nom = -1;
+    if (c.prenom.force < c.nomComplet.force) cols.prenom = -1;
+    // Un en-tête « Nom et prénom » satisfait AUSSI la règle « prénom » : la même colonne ne doit pas
+    // être proposée deux fois (revue du correctif de terrain).
     if (cols.prenom === cols.nomComplet) cols.prenom = -1;
     if (cols.nom === cols.nomComplet) cols.nom = -1;
   }
@@ -774,11 +831,14 @@ async function afficherMapping(c, analyse) {
   const auto = detecterColonnes(entetes);
 
   // --- Étape 2 : correspondance des colonnes ---
-  const carteMap = carte('2 · Colonnes', 'Vérifiez la correspondance détectée automatiquement.');
+  const carteMap = carte('2 · Colonnes',
+    'Vérifiez la correspondance détectée. Pour l’identité, indiquez soit « Nom et prénom », soit « Nom » ET « Prénom ».');
   const selects = {};
   const cibles = [
+    // Pas d'astérisque : aucune de ces trois colonnes n'est obligatoire à elle seule, c'est la
+    // COMBINAISON qui l'est. Les trois étoiles d'avant se contredisaient entre elles (revue V4).
     ['nomComplet', 'Nom et prénom (une seule colonne)'],
-    ['nom', 'Nom *'], ['prenom', 'Prénom *'], ['dateNaissance', 'Date de naissance'],
+    ['nom', 'Nom'], ['prenom', 'Prénom'], ['dateNaissance', 'Date de naissance'],
     ['sexe', 'Sexe'], ['classe', 'Classe'],
   ];
   for (const [cle, libelle] of cibles) {
@@ -793,13 +853,25 @@ async function afficherMapping(c, analyse) {
   // La colonne unique « Nom et prénom » est découpée par une heuristique (majuscules de tête) qui peut
   // se tromper sur une casse inhabituelle : l'enseignant doit VOIR le résultat avant d'importer,
   // l'aperçu brut ne montrant que la cellule d'origine (revue du correctif de terrain).
-  const apercuScission = el('p', { class: 'note-discrete', id: 'apercu-scission', hidden: true }, '');
-  carteMap.append(apercuScission);
+  // role="status" : ces deux notes apparaissent en cours de route, au changement d'une liste
+  // déroulante. Sans région live, un lecteur d'écran ne les annonçait jamais (revue V4).
+  const apercuScission = el('p', { class: 'note-discrete', id: 'apercu-scission', role: 'status', hidden: true }, '');
+  // L'import refuse quand l'identité est incomplète : le dire AVANT le clic, pas après. La carte
+  // affirmait « correspondance détectée » alors qu'elle n'avait rien trouvé (revue V4).
+  // Le texte est POSÉ au moment où la note s'affiche, pas écrit une fois pour toutes : une région
+  // live n'annonce que ce qui CHANGE, et dévoiler un texte déjà présent en retirant « hidden » ne
+  // déclenche rien de garanti chez tous les lecteurs d'écran (revue V4).
+  const noteIdentite = el('p', { class: 'note-discrete', id: 'note-identite', role: 'status', hidden: true }, '');
+  const TEXTE_IDENTITE = 'Identité incomplète : désignez une colonne « Nom et prénom », ou les colonnes « Nom » ET « Prénom ».';
+  carteMap.append(apercuScission, noteIdentite);
   const modeCombine = () => Number(selects.nomComplet.value) >= 0
     && (Number(selects.nom.value) < 0 || Number(selects.prenom.value) < 0);
   const majApercuScission = () => {
     const actif = modeCombine();
     apercuScission.hidden = !actif;
+    const identiteOk = actif || (Number(selects.nom.value) >= 0 && Number(selects.prenom.value) >= 0);
+    noteIdentite.hidden = identiteOk;
+    noteIdentite.textContent = identiteOk ? '' : TEXTE_IDENTITE;
     if (!actif) return;
     const col = Number(selects.nomComplet.value);
     const valeurs = lignes.map((l) => String(l[col] || '').trim()).filter(Boolean);
@@ -844,8 +916,8 @@ async function afficherMapping(c, analyse) {
   const rColonne = radio('colonne', 'Utiliser la colonne « Classe » (création automatique)');
   const rExistante = radio('existante', 'Tout mettre dans :', selExistante);
   const rNouvelle = radio('nouvelle', 'Créer la classe :', inpNouvelle);
-  const noteClasse = el('p', { class: 'note-discrete', id: 'note-classe', hidden: true },
-    'La colonne « Classe » du fichier est vide : indiquez la classe ci-dessous.');
+  const noteClasse = el('p', { class: 'note-discrete', id: 'note-classe', role: 'status', hidden: true }, '');
+  const TEXTE_CLASSE = 'La colonne « Classe » du fichier est vide : indiquez la classe ci-dessous.';
   carteDest.append(noteClasse);
   if (!classes.length) rExistante.r.disabled = true;
   const colonneRemplie = (col) => col >= 0 && lignes.some((l) => String(l[col] || '').trim());
@@ -864,6 +936,7 @@ async function afficherMapping(c, analyse) {
     const vide = col >= 0 && !utilisable;
     rColonne.r.disabled = !utilisable;
     noteClasse.hidden = !vide;
+    noteClasse.textContent = vide ? TEXTE_CLASSE : '';
     const defaut = utilisable ? rColonne : vide ? rNouvelle : classes.length ? rExistante : rNouvelle;
     if (premierRendu || (rColonne.r.disabled && rColonne.r.checked)) defaut.r.checked = true;
   };
@@ -881,7 +954,9 @@ async function afficherMapping(c, analyse) {
   carteGo.append(el('div', { class: 'rang-btn' }, btnImporter), statutImport);
   c.append(carteGo);
 
+  let importFait = false;
   btnImporter.addEventListener('click', async () => {
+    if (importFait) return;
     try {
       const colonne = (cle) => Number(selects[cle].value);
       // Deux façons de nommer un élève : deux colonnes séparées, ou une seule « Nom et prénom »
@@ -926,12 +1001,19 @@ async function afficherMapping(c, analyse) {
       if (r.homonymes.length) morceaux.push(`· ${r.homonymes.length} élève${r.homonymes.length > 1 ? 's' : ''} porte${r.homonymes.length > 1 ? 'nt' : ''} le même nom qu’un élève d’une autre classe (${[...new Set(r.homonymes)].join(', ')}) — changement de classe ? à vérifier`);
       statutImport.textContent = morceaux.join(' ') + '.';
       statutImport.className = 'statut statut-ok';
-      carteGo.append(el('div', { class: 'rang-btn' }, el('a', { class: 'btn btn-principal', href: '#/eleves' }, 'Voir les classes')));
+      // Import abouti : le bouton NE se réarme pas. Un second clic rejouait tout l'import (les
+      // élèves revenaient en « doublons ignorés », ce qui masquait le premier bilan) et empilait
+      // un deuxième « Voir les classes » sous le premier (revue V4).
+      importFait = true;
+      if (!carteGo.querySelector('.apres-import')) {
+        carteGo.append(el('div', { class: 'rang-btn apres-import' },
+          el('a', { class: 'btn btn-principal', href: '#/eleves' }, 'Voir les classes')));
+      }
     } catch (e) {
       statutImport.textContent = `Import impossible : ${e?.message || e}`;
       statutImport.className = 'statut statut-erreur';
     } finally {
-      btnImporter.disabled = false;
+      btnImporter.disabled = importFait;
     }
   });
 }

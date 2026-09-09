@@ -70,7 +70,20 @@ d'écran n'atteint pas.
 ⚠ Les jeux d'essai reprennent la **structure** de cet export réel avec des **noms inventés** : aucune donnée
 nominative dans le dépôt.
 
-Total de la suite : **187 tests** (+ 24 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs`, sauf le test de position des toasts, propre au PC).
+**`audit-v4.spec.mjs` (7)** — audit Codex V4 du 2026-09-09 (`audit codex/AUDIT_V4.md`, hors dépôt), rendu sur la
+v0.12.17. Constat **V4-01** : deux colonnes « du responsable » satisfont les règles « nom » et « prénom » et
+désarmaient la colonne unique « Élèves » — l'élève entrait dans la base sous l'identité de son parent.
+La détection ne repose PAS sur une liste de libellés interdits : elle classe les colonnes par **force du signal**
+— 3 l'en-tête nomme le champ et l'entité (« Nom de l'élève »), 2 l'en-tête EST le champ (« Nom », « Élèves »),
+1 il contient seulement le mot (« Resp. Nom ») — et une colonne d'identité au signal faible ne peut pas déplacer
+une colonne unique reconnue. La revue adversariale a montré qu'une liste ne pouvait pas tenir : Pronote abrège
+« responsable » en « Resp. » dans ses propres en-têtes (l'export réel du terrain contient « Cnx Resp. ») et Siècle
+numérote « RL1 ». Deux **témoins** encadrent le correctif (de vraies colonnes « Nom » et « Prénom » gardent la
+priorité ; le choix manuel des colonnes du responsable reste possible), une **table de non-régression** couvre
+vingt et une combinaisons d'en-têtes — dont les abréviations qu'aucune liste ne contient — et deux tests gardent
+les correctifs d'écran : l'identité incomplète est annoncée avant le clic, et un import abouti ne se rejoue pas.
+
+Total de la suite : **194 tests** (+ 24 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs`, sauf le test de position des toasts, propre au PC).
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse
