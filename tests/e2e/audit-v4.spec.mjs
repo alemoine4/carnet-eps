@@ -37,7 +37,7 @@ test('V4-01 — deux colonnes « du responsable » ne prennent pas la place de l
   await expect(page.locator('#map-nom')).toHaveValue('-1');
   await expect(page.locator('#map-prenom')).toHaveValue('-1');
   await expect(page.locator('#apercu-scission')).toBeVisible();
-  await page.getByRole('button', { name: /^Importer 1 élèves$/ }).click();
+  await page.getByRole('button', { name: /^Importer 1 élève$/ }).click();
   await expect(page.locator('#vue .statut').last()).toContainText('1 élève importé');
   expect(await elevesEnBase(page)).toEqual(['FICTIF|Louise']);
 });
@@ -52,7 +52,7 @@ test('V4-01 (témoin) — des colonnes « Nom » et « Prénom » VÉRITABLES ga
   await expect(page.locator('#map-nom')).toHaveValue('1');
   await expect(page.locator('#map-prenom')).toHaveValue('2');
   await expect(page.locator('#apercu-scission')).toBeHidden();
-  await page.getByRole('button', { name: /^Importer 1 élèves$/ }).click();
+  await page.getByRole('button', { name: /^Importer 1 élève$/ }).click();
   await expect(page.locator('#vue .statut').last()).toContainText('1 élève importé');
   expect(await elevesEnBase(page)).toEqual(['FICTIF|Louise']);
 });
@@ -67,7 +67,7 @@ test('V4-01 (choix manuel) — désigner soi-même les colonnes du responsable r
   await page.locator('#map-nomComplet').selectOption('-1');
   await page.locator('#map-nom').selectOption('1');
   await page.locator('#map-prenom').selectOption('2');
-  await page.getByRole('button', { name: /^Importer 1 élèves$/ }).click();
+  await page.getByRole('button', { name: /^Importer 1 élève$/ }).click();
   await expect(page.locator('#vue .statut').last()).toContainText('1 élève importé');
   expect(await elevesEnBase(page)).toEqual(['PARENT|Alex']);
 });
@@ -154,7 +154,7 @@ test('V4 (revue) — l’identité incomplète est annoncée AVANT le clic, pas 
   const note = page.locator('#note-identite');
   await expect(note).toBeVisible();
   await expect(note).toHaveAttribute('role', 'status'); // annoncée aux lecteurs d’écran
-  await page.getByRole('button', { name: /^Importer 1 élèves$/ }).click();
+  await page.getByRole('button', { name: /^Importer 1 élève$/ }).click();
   await expect(page.locator('#vue .statut').last()).toContainText('Import impossible');
   expect(await elevesEnBase(page)).toEqual([]);
   // Le professeur désigne lui-même la colonne « Prénom du responsable » : la note s’efface.
@@ -167,7 +167,7 @@ test('V4 (revue) — un import abouti ne se rejoue pas, et n’empile pas un sec
     'Élèves;Nom du responsable;Prénom du responsable;Classe',
     'FICTIF Louise;PARENT;Alex;6TEST',
   ]);
-  const btn = page.getByRole('button', { name: /^Importer 1 élèves$/ });
+  const btn = page.getByRole('button', { name: /^Importer 1 élève$/ });
   await btn.click();
   await expect(page.locator('#vue .statut').last()).toContainText('1 élève importé');
   await expect(btn).toBeDisabled();

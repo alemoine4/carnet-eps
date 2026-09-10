@@ -83,7 +83,17 @@ priorité ; le choix manuel des colonnes du responsable reste possible), une **t
 vingt et une combinaisons d'en-têtes — dont les abréviations qu'aucune liste ne contient — et deux tests gardent
 les correctifs d'écran : l'identité incomplète est annoncée avant le clic, et un import abouti ne se rejoue pas.
 
-Total de la suite : **194 tests** (+ 24 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs`, sauf le test de position des toasts, propre au PC).
+**`audit-v5.spec.mjs` (5)** — audit Codex V5 du 2026-09-09 (`audit codex/AUDIT_V5.md`, hors dépôt), rendu sur la
+v0.12.18. V4-01 y est confirmé corrigé ; **V5-01** en est la variante résiduelle : le correctif V4 écartait une
+colonne d'identité faible **face** à une colonne sûre, mais deux signaux faibles restaient retenus **ensemble**
+quand rien de sûr ne leur faisait concurrence. Un fichier `Nom contact;Prénom contact;Classe` créait donc un élève
+sous l'identité du contact. La détection tient désormais en **une seule règle** : une identité n'est proposée
+d'office que sur un en-tête **propre**, qui ne nomme que le champ, l'élève et des mots de liaison. Les deux
+arbitrages de la v0.12.18 disparaissent, absorbés par elle. Un témoin garde le mapping manuel, et la table couvre
+les libellés de tiers sans colonne sûre en face, ainsi que les pluriels (« Prénoms », « Prénom(s) ») qui
+n'étaient reconnus par rien.
+
+Total de la suite : **199 tests** (+ 24 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs`, sauf le test de position des toasts, propre au PC).
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse

@@ -620,38 +620,50 @@ export function scinderNomPrenom(texte) {
 
 // Vocabulaire de la détection de colonnes. Les en-têtes sont découpés en MOTS (et non écrasés en une
 // seule chaîne) : sans frontières de mots, « Nombre d'élèves » contenait « nom » et « Resp. Nom »
-// ressemblait à « Nom » (audit Codex V4 et sa revue).
-const MOTS_LIAISON = new Set(['de', 'du', 'des', 'd', 'la', 'le', 'les', 'l', 'et', 'en', 'au', 'aux', 'pour', 'e']);
-const MOTS_ELEVE = new Set(['eleve', 'eleves', 'apprenant', 'apprenants']);
-const MOTS_QUALIF = new Set(['famille', 'usage', 'usuel', 'naissance', 'patronymique', 'legal', 'legale']);
-// Second rideau : un en-tête qui désigne franchement quelqu'un d'autre n'est jamais proposé d'office,
-// même quand aucune colonne d'élève ne vient le concurrencer. Le professeur peut le désigner à la main.
+// ressemblait à « Nom » (audit Codex V4).
+// Élisions et mots de liaison : les SEULS jetons courts qu'on accepte de perdre. Tout autre caractère
+// isolé — « Nom 1 », « Prénom 2 », « Nom R » — reste un mot, donc rend l'en-tête SALE. Les juger « au
+// poids » laissait passer la numérotation des responsables (revue de l'audit V5).
+const MOTS_LIAISON = new Set(['d', 'l', 'de', 'du', 'des', 'la', 'le', 'les', 'et', 'en', 'au', 'aux', 'pour']);
+// Mots qui nomment l'APPRENANT, et qualificatifs d'un NOM : deux catégories closes de la langue.
+// Y ajouter un mot, c'est remplir une catégorie — l'inverse d'une liste de tiers, qui serait sans fin.
+const MOTS_ELEVE = new Set(['eleve', 'apprenant', 'stagiaire', 'etudiant', 'inscrit', 'jeune']);
+const MOTS_QUALIF_NOM = new Set(['famille', 'usage', 'usuel', 'naissance', 'patronymique', 'legal', 'legale', 'marital', 'maritale', 'fille']);
+const MOTS_QUALIF_PRENOM = new Set(['usage', 'usuel', 'naissance', 'legal', 'legale']);
+// Second rideau, utile aux champs non identitaires : « Date de naissance du responsable » ne doit pas
+// être proposée. Pour l'identité, c'est la règle de propreté ci-dessous qui fait tout le travail.
 const MOTS_TIERS = /responsable|parent|tuteur|tutrice|representant|pere|mere/;
+const racineMot = (m) => (m.length > 3 && m.endsWith('s') ? m.slice(0, -1) : m);
+// La flexion entre parenthèses est retirée À LA SOURCE : « Prénom(s) » → « prenom », « Né(e) le » →
+// « ne le ». C'est ce qui permet de garder tous les autres jetons courts.
+const motsEntete = (e) => normaliser(e).replace(/\((?:s|e|es)\)/g, '')
+  .replace(/[^a-z0-9]+/g, ' ').trim().split(' ')
+  .filter((m) => m && !MOTS_LIAISON.has(m)).map(racineMot);
 
-// Deux forces de signal, et c'est la force qui départage — à force ÉGALE, la première colonne du
-// fichier l'emporte :
-//   2 · l'en-tête ne nomme QUE le champ, l'élève et des mots de liaison  « Nom », « Nom de l'élève »
-//   1 · l'en-tête nomme AUSSI autre chose                               « Nom du contact d'urgence »
-// On énumère ce qu'on ACCEPTE autour du champ, jamais les tiers qu'on refuse : leur liste serait sans
-// fin. Pronote abrège « responsable » en « Resp. » dans ses propres en-têtes (l'export réel du terrain
-// contient « Cnx Resp. »), Siècle numérote « RL1 », et « Nom du contact d'urgence DE L'ÉLÈVE » mentionne
-// l'élève tout en désignant un tiers — c'est le constat V4-01, qu'aucune liste n'aurait couvert.
+// UNE règle, et une seule : une colonne d'identité n'est proposée d'office que si son en-tête est
+// PROPRE, c'est-à-dire s'il ne nomme QUE le champ, l'élève et des mots de liaison. Dès qu'il nomme
+// autre chose — « Nom contact », « Nom Resp. », « Nom RL1 », « Nom du contact d'urgence de l'élève » —
+// l'application s'abstient et le dit, au lieu d'inventer une identité (audit Codex V4 puis V5).
+// On énumère ce qu'on ACCEPTE autour du champ, jamais les tiers qu'on refuse : Pronote abrège
+// « responsable » en « Resp. », Siècle numérote « RL1 », et la liste n'aurait pas de fin.
+// Le professeur garde la main : les colonnes écartées restent choisissables dans les listes.
 export function detecterColonnes(entetes) {
   const brutes = entetes.map((e) => cleTexte(e));
-  const t = entetes.map((e) => normaliser(e).replace(/[^a-z0-9]+/g, ' ').trim().split(' ')
-    .filter((m) => m && !MOTS_LIAISON.has(m)));
-  const meilleure = (champs, qualif, exclut = []) => {
+  const t = entetes.map(motsEntete);
+  const evaluer = (toks, i, champs, qualif, exclut) => {
+    if (MOTS_TIERS.test(brutes[i])) return 0;
+    if (exclut.some((x) => toks.includes(x))) return 0;
+    if (!champs.some((c) => toks.includes(c))) return 0;
+    return toks.every((m) => champs.includes(m) || MOTS_ELEVE.has(m) || qualif.has(m)) ? 2 : 1;
+  };
+  const meilleure = (champs, qualif, exclut, propreSeulement) => {
     let choix = -1;
     let force = 0;
     t.forEach((toks, i) => {
-      if (MOTS_TIERS.test(brutes[i])) return;
-      if (exclut.some((x) => toks.includes(x))) return;
-      if (!champs.some((c) => toks.includes(c))) return;
-      const propre = toks.every((m) => champs.includes(m) || MOTS_ELEVE.has(m) || qualif.has(m));
-      const f = propre ? 2 : 1;
-      if (f > force) { force = f; choix = i; }
+      const f = evaluer(toks, i, champs, qualif, exclut);
+      if (f > force) { force = f; choix = i; } // à force égale, la première colonne du fichier gagne
     });
-    return { i: choix, force };
+    return propreSeulement && force < 2 ? -1 : choix;
   };
   // Colonne unique « nom et prénom dans la même cellule » : l'en-tête ne nomme QUE l'élève
   // (« Élèves »), ou il nomme les deux champs (« Nom et prénom »), ou il dit « complet ».
@@ -664,40 +676,27 @@ export function detecterColonnes(entetes) {
       if (MOTS_TIERS.test(brutes[i])) return;
       const entiteSeule = toks.length === 1 && MOTS_ELEVE.has(toks[0]);
       const lesDeuxChamps = toks.includes('nom') && toks.includes('prenom');
-      const ditComplet = toks.includes('nom') && (toks.includes('complet') || toks.includes('complete'));
+      const ditComplet = toks.includes('nom') && toks.includes('complet');
       if (!(entiteSeule || lesDeuxChamps || ditComplet)) return;
-      const propre = toks.every((m) => m === 'nom' || m === 'prenom' || m === 'complet' || m === 'complete' || MOTS_ELEVE.has(m));
+      const propre = toks.every((m) => m === 'nom' || m === 'prenom' || m === 'complet' || MOTS_ELEVE.has(m));
       const f = propre ? 2 : 1;
       if (f > force) { force = f; choix = i; }
     });
-    return { i: choix, force };
+    return force < 2 ? -1 : choix;
   };
-  const c = {
-    prenom: meilleure(['prenom'], MOTS_QUALIF),
-    nom: meilleure(['nom'], MOTS_QUALIF, ['prenom']),
+  return {
+    // Les trois cibles d'identité exigent un signal propre ; les autres se contentent du meilleur
+    // disponible, une erreur y étant visible (une date, un sexe) ou rattrapée par le choix explicite
+    // de la destination (la classe).
+    prenom: meilleure(['prenom'], MOTS_QUALIF_PRENOM, [], true),
+    nom: meilleure(['nom'], MOTS_QUALIF_NOM, ['prenom'], true),
     nomComplet: colonneUnique(),
-    dateNaissance: meilleure(['naissance', 'ne', 'nee'], new Set(['date']), ['lieu', 'commune', 'ville', 'departement', 'pays']),
-    sexe: meilleure(['sexe', 'genre'], new Set()),
-    classe: meilleure(['classe', 'division'], new Set(['rattachement'])),
+    // « Né(e) à » désigne un LIEU : le « a » reste un mot pour qu'on puisse l'exclure.
+    dateNaissance: meilleure(['naissance', 'ne', 'nee'], new Set(['date']), ['lieu', 'commune', 'ville', 'departement', 'pay', 'a'], false),
+    sexe: meilleure(['sexe', 'genre'], new Set(), [], false),
+    classe: meilleure(['classe', 'division'], new Set(['rattachement']), [], false),
   };
-  const cols = Object.fromEntries(Object.entries(c).map(([cle, v]) => [cle, v.i]));
-  // Une colonne PROPRE ne se marie pas avec une colonne SALE : « Nom » + « Prénom du responsable »
-  // donnerait le nom de l'élève et le prénom de son parent. Mieux vaut que l'import refuse et le dise.
-  if (c.nom.force === 2 && c.prenom.force === 1) cols.prenom = -1;
-  if (c.prenom.force === 2 && c.nom.force === 1) cols.nom = -1;
-  // Colonne unique reconnue : une identité séparée au signal plus FAIBLE ne peut pas la déplacer.
-  // Le retrait est VISIBLE — la liste déroulante repasse sur « — ignorer — ».
-  if (cols.nomComplet >= 0) {
-    if (c.nom.force < c.nomComplet.force) cols.nom = -1;
-    if (c.prenom.force < c.nomComplet.force) cols.prenom = -1;
-    // Un en-tête « Nom et prénom » satisfait AUSSI la règle « prénom » : la même colonne ne doit pas
-    // être proposée deux fois (revue du correctif de terrain).
-    if (cols.prenom === cols.nomComplet) cols.prenom = -1;
-    if (cols.nom === cols.nomComplet) cols.nom = -1;
-  }
-  return cols;
 }
-
 async function executerImport(lignes, dest) {
   const annee = await lireMeta('anneeScolaire', '');
   const classes = await tous('classes');
@@ -831,8 +830,10 @@ async function afficherMapping(c, analyse) {
   const auto = detecterColonnes(entetes);
 
   // --- Étape 2 : correspondance des colonnes ---
+  // Pas de « correspondance détectée » : sur un fichier dont aucun en-tête ne nomme franchement
+  // l'élève, l'app n'en détecte aucune, et la carte l'affirmait quand même (revue de l'audit V5).
   const carteMap = carte('2 · Colonnes',
-    'Vérifiez la correspondance détectée. Pour l’identité, indiquez soit « Nom et prénom », soit « Nom » ET « Prénom ».');
+    'Vérifiez la correspondance des colonnes. Pour l’identité, indiquez soit « Nom et prénom », soit « Nom » ET « Prénom ».');
   const selects = {};
   const cibles = [
     // Pas d'astérisque : aucune de ces trois colonnes n'est obligatoire à elle seule, c'est la
@@ -891,7 +892,6 @@ async function afficherMapping(c, analyse) {
       : '';
   };
   for (const cle of ['nomComplet', 'nom', 'prenom']) selects[cle].addEventListener('change', majApercuScission);
-  majApercuScission();
 
   // aperçu brut des 3 premières lignes
   const table = el('table', { class: 'table-apercu' },
@@ -901,6 +901,10 @@ async function afficherMapping(c, analyse) {
   );
   carteMap.append(el('div', { class: 'table-scroll', tabindex: '0', role: 'region', 'aria-label': 'Aperçu du fichier' }, table));
   c.append(carteMap);
+  // Le premier calcul vient APRÈS l'insertion : une région live injectée déjà remplie n'est annoncée
+  // par aucun lecteur d'écran, et c'est justement l'instant où l'app décide de ne rien proposer
+  // (revue de l'audit V5).
+  majApercuScission();
 
   // --- Étape 3 : destination ---
   const carteDest = carte('3 · Classe de destination');
@@ -917,7 +921,8 @@ async function afficherMapping(c, analyse) {
   const rExistante = radio('existante', 'Tout mettre dans :', selExistante);
   const rNouvelle = radio('nouvelle', 'Créer la classe :', inpNouvelle);
   const noteClasse = el('p', { class: 'note-discrete', id: 'note-classe', role: 'status', hidden: true }, '');
-  const TEXTE_CLASSE = 'La colonne « Classe » du fichier est vide : indiquez la classe ci-dessous.';
+  const TEXTE_CLASSE_VIDE = 'La colonne « Classe » du fichier est vide : indiquez la classe ci-dessous.';
+  const TEXTE_CLASSE_ABSENTE = 'Aucune colonne « Classe » dans le fichier : indiquez la classe ci-dessous.';
   carteDest.append(noteClasse);
   if (!classes.length) rExistante.r.disabled = true;
   const colonneRemplie = (col) => col >= 0 && lignes.some((l) => String(l[col] || '').trim());
@@ -933,10 +938,13 @@ async function afficherMapping(c, analyse) {
   const majDestination = (premierRendu) => {
     const col = Number(selects.classe.value);
     const utilisable = colonneRemplie(col);
-    const vide = col >= 0 && !utilisable;
+    // ABSENTE compte autant que VIDE : sans colonne de classe du tout, « Tout mettre dans : » se
+    // cochait encore sur la PREMIÈRE classe de la liste — le cas le plus banal, un simple
+    // copier-coller « Nom;Prénom » depuis un tableur (revue de l'audit V5).
+    const vide = !utilisable;
     rColonne.r.disabled = !utilisable;
     noteClasse.hidden = !vide;
-    noteClasse.textContent = vide ? TEXTE_CLASSE : '';
+    noteClasse.textContent = vide ? (col >= 0 ? TEXTE_CLASSE_VIDE : TEXTE_CLASSE_ABSENTE) : '';
     const defaut = utilisable ? rColonne : vide ? rNouvelle : classes.length ? rExistante : rNouvelle;
     if (premierRendu || (rColonne.r.disabled && rColonne.r.checked)) defaut.r.checked = true;
   };
@@ -949,7 +957,8 @@ async function afficherMapping(c, analyse) {
 
   // --- Étape 4 : import ---
   const carteGo = carte('4 · Importer');
-  const btnImporter = el('button', { class: 'btn btn-principal' }, `Importer ${lignes.length} élèves`);
+  const btnImporter = el('button', { class: 'btn btn-principal' },
+    `Importer ${lignes.length} élève${lignes.length > 1 ? 's' : ''}`);
   const statutImport = el('p', { class: 'statut', role: 'status' });
   carteGo.append(el('div', { class: 'rang-btn' }, btnImporter), statutImport);
   c.append(carteGo);
@@ -1012,6 +1021,12 @@ async function afficherMapping(c, analyse) {
     } catch (e) {
       statutImport.textContent = `Import impossible : ${e?.message || e}`;
       statutImport.className = 'statut statut-erreur';
+      // Le bouton vit un écran plus bas que la carte des colonnes : sans ce renvoi, il fallait
+      // remonter et retrouver soi-même les bonnes listes (revue de l'audit V5).
+      if (/colonne/i.test(e?.message || '')) {
+        carteMap.scrollIntoView({ block: 'start' });
+        selects.nom.focus();
+      }
     } finally {
       btnImporter.disabled = importFait;
     }

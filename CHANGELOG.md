@@ -4,6 +4,16 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-09 — v0.12.19 : sans identité d'élève sûre, l'import s'abstient au lieu d'inventer
+
+- **Constat V5-01 de l'audit Codex V5**, variante résiduelle de V4-01. Le correctif précédent écartait une colonne d'identité douteuse **face** à une colonne sûre. Mais quand aucune colonne sûre ne leur faisait concurrence, **deux colonnes douteuses restaient retenues ensemble** : un fichier « Nom contact;Prénom contact;Classe » créait un élève nommé d'après le contact, et l'import annonçait « 1 élève importé ».
+- **La détection tient maintenant en une seule règle.** Une identité n'est proposée d'office que si l'en-tête est **propre** : il ne nomme que le champ, l'élève et des mots de liaison. Dès qu'il nomme autre chose — « Nom contact », « Nom Resp. », « Nom RL1 », « Nom du contact d'urgence de l'élève » — l'application **s'abstient et le dit**, au lieu d'inventer une identité. Les deux arbitrages de la v0.12.18 disparaissent, absorbés par cette règle : le code est plus court qu'avant.
+- **Le professeur garde la main** : les colonnes écartées restent choisissables dans les listes, et un choix manuel intentionnel est accepté.
+- **Pluriels et parenthèses enfin reconnus** : « Prénoms » et « Prénom(s) » n'étaient captés par aucune règle et laissaient la colonne sur « ignorer » sans explication. La flexion est retirée **à la source**, ce qui permet de garder tous les autres jetons courts — une première version les jetait « au poids » et déclarait du coup « Nom 1;Prénom 1 » identique à « Nom;Prénom », rouvrant le défaut sur la numérotation des responsables.
+- **Aucune colonne « Classe » dans le fichier** : « Tout mettre dans : » se cochait encore sur la première classe de la liste. C'est le cas le plus banal, un simple copier-coller « Nom;Prénom » depuis un tableur, et un seul clic y versait toute la classe. Le correctif de la v0.12.16 ne couvrait que la colonne détectée mais **vide**.
+- **« Né(e) à » n'est plus pris pour une date de naissance** quand il précède « Né(e) le » : c'est un lieu.
+- **Écran d'import** : la carte 2 n'affirme plus « correspondance détectée » quand elle n'a rien détecté ; la note d'identité est posée **après** l'insertion de la carte, faute de quoi aucun lecteur d'écran ne l'annonçait au premier rendu ; un import refusé pour cause de colonnes renvoie au bon endroit au lieu de laisser chercher ; et le bouton accorde enfin « Importer 1 élève ».
+
 ## 2026-09-09 — v0.12.18 : l'import ne prend plus l'identité du responsable pour celle de l'élève
 
 - **Constat V4-01 de l'audit Codex V4.** Avec l'en-tête « Élèves;Nom du responsable;Prénom du responsable;Classe », les deux colonnes du parent satisfaisaient les règles « nom » et « prénom ». Comme elles étaient **deux**, elles désarmaient la colonne unique « Élèves », et la base recevait l'identité du parent à la place de celle de l'élève. Le bilan annonçait « 1 élève importé », sans un mot.

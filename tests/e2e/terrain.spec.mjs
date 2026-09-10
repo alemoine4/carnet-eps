@@ -191,19 +191,20 @@ test('terrain (revue) — scinderNomPrenom : les cas limites, y compris son repl
   ]);
 });
 
-test('terrain (revue) — la note « colonne Classe vide » suit le remappage manuel au lieu de mentir', async ({ page }) => {
+test('terrain (revue) — la note de destination suit le remappage manuel au lieu de mentir', async ({ page }) => {
   await page.goto('/#/eleves/import');
   await page.getByLabel('Données CSV collées').fill(CSV_PRONOTE);
   await page.getByRole('button', { name: 'Analyser' }).click();
   await expect(page.locator('#map-nom')).toBeVisible();
   const note = page.locator('#note-classe');
-  await expect(note).toBeVisible();
+  await expect(note).toContainText('est vide');
   await expect(page.locator('#dest-colonne')).toBeDisabled();
 
-  // L'enseignant désigne « — ignorer — » : il n'y a plus de colonne de classe du tout, la note
-  // ne décrit plus rien. Avant : elle restait affichée telle quelle.
+  // L'enseignant désigne « — ignorer — » : il n'y a plus de colonne de classe du tout. La note
+  // change de texte au lieu de mentir — et elle ne disparaît PAS, car sans colonne de classe la
+  // destination doit être choisie à la main tout autant (revue de l'audit V5).
   await page.locator('#map-classe').selectOption('-1');
-  await expect(note).toBeHidden();
+  await expect(note).toContainText('Aucune colonne');
   await expect(page.locator('#dest-colonne')).toBeDisabled();
 
   // Il désigne une colonne REMPLIE (« Option 1 ») : le mode « colonne » redevient possible.
@@ -214,7 +215,7 @@ test('terrain (revue) — la note « colonne Classe vide » suit le remappage ma
   // Il revient sur la colonne vide : la note doit reparaître. Avant : elle n'apparaissait jamais
   // à la suite d'un remappage, la radio et le message venaient de deux sources différentes.
   await page.locator('#map-classe').selectOption('8');
-  await expect(note).toBeVisible();
+  await expect(note).toContainText('est vide');
   await expect(page.locator('#dest-colonne')).toBeDisabled();
 });
 
