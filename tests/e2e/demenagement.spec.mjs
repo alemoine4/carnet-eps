@@ -10,7 +10,10 @@ const servirAdresse = (page, adresse) => page.route('**/js/demenagement.js', (ro
   body: `export const NOUVELLE_ADRESSE = ${JSON.stringify(adresse)};`,
 }));
 
-test('Déménagement — sans adresse (état du dépôt), aucun bandeau', async ({ page }) => {
+// L'adresse est fournie par le test, jamais lue dans le dépôt : sinon ce test passerait au rouge le jour
+// où l'on renseigne vraiment NOUVELLE_ADRESSE — c'est-à-dire au moment de publier (revue v0.13.1).
+test('Déménagement — sans adresse, aucun bandeau', async ({ page }) => {
+  await servirAdresse(page, '');
   await page.goto('/#/accueil');
   await expect(page.locator('.entete h1')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Carnet EPS a déménagé' })).toHaveCount(0);

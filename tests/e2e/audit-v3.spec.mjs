@@ -179,6 +179,9 @@ test('V3-A (course) — deux champs modifiés coup sur coup sont TOUS LES DEUX e
   // d'AVANT et écrase la première modification (revue adversariale du lot V3-A).
   await seedBase(page);
   await page.goto('/#/eleves/fiche/e1');
+  // La fiche se rend de façon asynchrone : sans cette attente, le test ne passait que grâce au
+  // ralentissement de la capture de trace (revue v0.13.1, même classe que `ouvrirSaisie`).
+  await expect(page.locator('#f-prenom')).toBeVisible();
   await page.evaluate(() => {
     for (const [id, valeur] of [['#f-nom', 'NOUVEAUNOM'], ['#f-prenom', 'NOUVEAUPRENOM']]) {
       const champ = document.querySelector(id);

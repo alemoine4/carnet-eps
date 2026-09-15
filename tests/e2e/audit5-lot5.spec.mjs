@@ -566,7 +566,8 @@ test('B51 — Sauvegarde : base illisible → « Comptage impossible » au lieu 
       return original.call(this, stores, mode, ...rest);
     };
   });
-  await page.locator('a[href="#/sauvegarde"]').click(); // navigation par hash : le prototype patché survit
+  // Dans #vue : le bandeau de déménagement, une fois l'adresse renseignée, ajoute un second lien vers la sauvegarde.
+  await page.locator('#vue a[href="#/sauvegarde"]').click(); // navigation par hash : le prototype patché survit
   await expect(page.locator('#vue .carte').first().locator('p')).toContainText('Comptage impossible (Base indisponible)');
 });
 
