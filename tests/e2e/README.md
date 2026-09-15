@@ -135,7 +135,7 @@ calculée sur une partie des critères est listée dans le récapitulatif de cop
 Les tests existants qui changeaient le barème d'une évaluation notée répondent désormais « Garder les points », ce qui préserve
 le scénario qu'ils prouvaient ; une mutation qui retire la sérialisation des changements de barème les rend rouges.
 
-**`audit-independant.spec.mjs` (21)** — premier lot de l'**audit indépendant du 2026-09-16** (rapport hors dépôt), livré avant l'essai
+**`audit-independant.spec.mjs` (22)** — premier lot de l'**audit indépendant du 2026-09-16** (rapport hors dépôt), livré avant l'essai
 téléphone, complété par deux revues adversariales du lot. **FON-01** : le module `state.js` est intercepté pour FORCER le drapeau dans
 les deux sens — vrai, l'en-tête et le titre annoncent la version d'essai ; faux, l'application démarre (preuves produites par `main.js`
 après le bloc d'essai, sans quoi le test serait vrai sur le HTML statique) sans marqueur — et une garde statique exige que le manifeste
@@ -151,10 +151,10 @@ appui long commencé pendant une écriture qui ouvre bien « Ajuster » ; vue qu
 suivant accepté) ; erreur de rafale non recouverte, nommée avec sa cause, prise sur la ligne touchée en mode par critère, sans message
 en double, visible après passage à l'élève suivant et en message si la vue est quittée ; feuille « Ajuster » ouverte pendant une
 écriture (valeur voulue, focus rendu) ; bouton désactivé à opacité réduite. **SEC-04** : garde statique sur la CI, insensible au CRLF —
-bloc `permissions` en lecture seule et chaque action épinglée par un SHA de 40 caractères commenté de sa version. **23 mutants** (un par
+bloc `permissions` en lecture seule et chaque action épinglée par un SHA de 40 caractères commenté de sa version. **25 mutants** (un par
 promesse) rendent ces tests rouges.
 
-Total de la suite : **272 tests** (+ 72 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs`, `grilles-robustesse.spec.mjs` et `audit-independant.spec.mjs`).
+Total de la suite : **273 tests** (+ 73 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs`, `grilles-robustesse.spec.mjs` et `audit-independant.spec.mjs`).
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse
