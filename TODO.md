@@ -5,7 +5,9 @@ Vue d'ensemble des phases : `docs/roadmap.md`.
 
 ## 🎒 Jalon rentrée 2026 : phases 1→9 TERMINÉES — app EN LIGNE (https://alemoine4.github.io/carnet-eps/) — restent les validations terrain ci-dessous
 
-## Phase active : post-v1 — 5e audit du 2026-09-07 : **les 5 lots sont livrés** (v0.12.9 → v0.12.13) ; restent A39, les points retenus de l’avis du lot 5, et **A01 qui attend TA décision** (changement d’adresse : réinstallation + migration sur chaque appareil)
+## Phase active (2026-09-16) : **période à deux adresses** — v0.13.1 publiée sur l’origine d’essai https://carnet-eps.github.io/ (bandeau « version d’essai », grille sans tap perdu, CI durcie : premier lot de l’**audit indépendant du 2026-09-16**, rapport hors dépôt, 36 constats, plan d’action en §6) ; l’ancienne adresse reste en v0.12.20. **Étape 3 = essai téléphone** (`docs/essai-telephone.md`, données fictives, sans installer) → étape 4 = mise en service : `MODE_ESSAI = false` + manifeste publiés sur la nouvelle adresse, et bandeau « a déménagé » publié sur l’ancienne (branche `demenagement`) → étape 5 = SEULEMENT ENSUITE, migration des données appareil par appareil (procédure : `docs/deploiement.md`, « Période à deux adresses »).
+
+## Phase précédente : post-v1 — 5e audit du 2026-09-07 : **les 5 lots sont livrés** (v0.12.9 → v0.12.13) ; restent A39, les points retenus de l’avis du lot 5, et **A01 qui attend TA décision** (changement d’adresse : réinstallation + migration sur chaque appareil)
 
 ### 5e audit du 2026-09-07 (rapport : `docs/audit-2026-09-07.md`, données : `docs/audit-2026-09-07.json`)
 - [x] 2026-09-07 — **Audit livré** : 179 constats (0 P0, **9 P1**, 86 P2, 84 P3) = Codex V2 (6, rejoués 9/9) + 13 lentilles par agents Opus indépendants en 3 lots (173, 71 doublons écartés). Les 9 P1 reproduits ou démontrés ; 13 reproductions dynamiques réintégrées en tests de non-régression avec le lot 1.

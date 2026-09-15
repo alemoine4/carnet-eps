@@ -21,7 +21,7 @@ export default defineConfig({
     // (user-agent mobile, 5 points de contact, `pointer: coarse`), pas seulement à 360 px de large
     // (audit 2026-09-07, C60). Limité aux specs d'écran : le reste ne dépend pas de l'appareil.
     // (le test de position des toasts est explicitement « position PC » : il n'a pas de sens ici)
-    { name: 'mobile', use: { ...devices['Pixel 7'] }, testMatch: /audit5-lot3.spec.mjs|grilles.spec.mjs|grilles-robustesse.spec.mjs/, grepInvert: /position PC/ },
+    { name: 'mobile', use: { ...devices['Pixel 7'] }, testMatch: /audit5-lot3.spec.mjs|grilles.spec.mjs|grilles-robustesse.spec.mjs|audit-independant.spec.mjs/, grepInvert: /position PC/ },
   ],
   webServer: {
     command: 'node server-carnet.mjs',

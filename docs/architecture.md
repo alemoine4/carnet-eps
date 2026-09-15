@@ -24,7 +24,7 @@ PWA **vanilla** (HTML/CSS/JS ES modules), multi-fichiers, **sans étape de build
 |---|---|---|---|
 | Boot/Router | `main.js` | démarrage, table des routes, SW | logique métier |
 | Vues | `ui.js` + `modules/*.js` | rendu DOM, interactions | accès direct à IndexedDB (passer par `io.js`) |
-| État | `state.js` | préférences UI en mémoire (`etat.prefs`), pub/sub (`abonner`/`emettre`), `VERSION_APP` | persistance métier, état de route (le hash fait foi) |
+| État | `state.js` | préférences UI en mémoire (`etat.prefs`), pub/sub (`abonner`/`emettre`), `VERSION_APP`, `MODE_ESSAI` (bandeau et titre « version d’essai » ; va de pair avec `manifest.webmanifest`) | persistance métier, état de route (le hash fait foi) |
 | Données | `io.js` | IndexedDB (CRUD + index), **écritures groupées atomiques** (`supprimerLot`, `restaurer`, cascades, import : une transaction multi-stores — avis B29), export/import JSON, parse CSV | manipulation du DOM |
 
 Règle de croissance (détail et contrat d'un module : `docs/modules.md`) : **un module métier = un fichier** dans `modules/` (ex. `appel.js`) qui exporte `enregistrerVue()`. `main.js` importe les modules ; jamais l'inverse entre modules (passer par `state.js`/événements). Exception assumée : `modules/observations.js` est une **brique** (carte réutilisable) importée par `eleves.js` (v0.12.0).

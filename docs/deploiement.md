@@ -1,7 +1,9 @@
 # Déploiement & retour arrière — Carnet EPS
 
 > Comment l'app est mise en ligne, l'historique des versions, et **comment revenir à une version antérieure** si besoin.
-> Dépôt : https://github.com/alemoine4/carnet-eps · App en ligne : https://alemoine4.github.io/carnet-eps/
+> Dépôt : https://github.com/alemoine4/carnet-eps · App en ligne : https://alemoine4.github.io/carnet-eps/ (v0.12, vraies données) · Origine d'essai : https://carnet-eps.github.io/ (v0.13, données fictives)
+
+> 🔴 **Toute commande qui pousse vers `origin gh-pages`** — déploiement comme retour arrière, dans tout ce document — **ne se lance que depuis `main` ou `demenagement` (ligne v0.12), jamais depuis `grilles-schema3`.** Elle publierait le schéma 3 sur l'ancienne adresse, où vivent les vraies données : leur base passerait en schéma 3 **sans retour possible**, sous un bandeau « version d'essai ». La v0.13 a ses propres commandes (section « Période à deux adresses »). Avant toute poussée : `git branch --show-current`.
 
 ## Comment déployer une nouvelle version
 
@@ -25,10 +27,42 @@
 
 > ⚠ La branche **`gh-pages`** contient uniquement le dossier `app/` (pas `docs/`, donc ni les avis ni les rapports d'audit). C'est elle qui est publiée. `app/.nojekyll` (fichier vide, poussé avec le subtree) désactive le traitement Jekyll de GitHub Pages : sans lui, un fichier ou dossier commençant par `_` disparaîtrait du site en silence (audit 2026-09-07, A42).
 
+## Période à deux adresses (depuis le 2026-09-15) — publier la branche `grilles-schema3`
+
+La v0.13 se publie sur l'**origine dédiée** https://carnet-eps.github.io/ (dépôt `carnet-EPS/carnet-eps.github.io`, site d'organisation servi à la racine, branche `main`) :
+
+0. Suite verte (`npm test`), versions synchronisées (`service-worker.js` + `state.js`), suivi à jour, commit sur `grilles-schema3`.
+1. Publier le seul dossier `app/` (Git Bash ; la vérification du SHA empêche qu'un découpage en échec ne transforme la poussée en **suppression** de `main`) :
+   ```bash
+   sha=$(git subtree split --prefix app grilles-schema3) && test -n "$sha" && git push https://github.com/carnet-EPS/carnet-eps.github.io.git "$sha":refs/heads/main
+   git push origin grilles-schema3
+   ```
+2. Poser et pousser le tag sur le commit de `grilles-schema3`, compléter la ligne du tableau.
+3. Vérifier en ligne : `curl -s https://carnet-eps.github.io/service-worker.js | grep "const VERSION"`.
+
+**Retour arrière sur l'origine d'essai** : `git revert <commit>` sur `grilles-schema3`, suite verte, puis l'étape 1 ci-dessus. Jamais de retour vers une v0.12 sur cette origine : une base ouverte en schéma 3 ne s'ouvre plus en v0.12 (voir plus bas).
+
+**Mise en service de la nouvelle adresse** (après l'essai téléphone, AVANT tout import de vraies données) :
+
+1. Sur `grilles-schema3` : `MODE_ESSAI = false` dans `app/js/state.js` **et** `name` / `short_name` remis à « Carnet EPS » dans `app/manifest.webmanifest` (une garde de `tests/e2e/audit-independant.spec.mjs` refuse l'un sans l'autre) ; bump de version ; publier comme ci-dessus.
+2. Sur la branche `demenagement` (ligne v0.12) :
+   ```bash
+   git checkout demenagement
+   # renseigner NOUVELLE_ADRESSE = 'https://carnet-eps.github.io/' dans app/js/demenagement.js
+   npm test                                         # le spec du bandeau fixe lui-même l'adresse qu'il teste
+   git commit -am "v0.12.21 : bandeau « Carnet EPS a déménagé »"
+   git push origin demenagement
+   git subtree push --prefix app origin gh-pages    # ancienne adresse
+   git tag -a v0.12.21 -m "v0.12.21 — bandeau de déménagement" && git push origin v0.12.21
+   ```
+   Le bandeau « a déménagé » invite à exporter puis importer sur la nouvelle adresse.
+3. Seulement ensuite, sur chaque appareil : sauvegarde complète depuis l'ancienne adresse, import sur la nouvelle.
+
 ## Historique des versions (tag → commit `main`)
 
 | Version | Tag | Commit main | Résumé |
 |---|---|---|---|
+| v0.13.1 | `v0.13.1` | *(à compléter au commit)* (branche `grilles-schema3`) | **Premier lot de l’audit indépendant du 2026-09-16**, publié **uniquement sur l’origine d’essai** https://carnet-eps.github.io/ : bandeau, titre et nom court « version d’essai » pilotés par `MODE_ESSAI` (FON-01) ; saisie par grille sérialisée dans une file partagée, plus aucun tap perdu, chaque tap jugé sur l’état voulu (même geste = même résultat), retour immédiat de la ligne, mise à jour sur place en fin de rafale, écriture en cours signalée sans verrouillage, erreur nommée avec sa cause, règle d’effacement affichée pour toutes les grilles (FON-05, PER-05) ; marge de focus qui suit la hauteur de l’en-tête, bandeau sur une ligne ; style `:disabled` global ; CI : jeton déclaré en lecture et actions épinglées par SHA de commit (SEC-04, défense en profondeur) ; procédures de publication et de retour arrière de l’origine d’essai ; fiche `docs/essai-telephone.md` ; deux revues adversariales (18/19 puis 17/20 constats retenus, corrigés) ; 21 tests, 23 mutants tués, suite 272 — l’ancienne adresse reste en v0.12.20 |
 | v0.13.0 | `v0.13.0` | `7836ece` (branche `grilles-schema3`) | **Grilles d’évaluation EPS**, reprises de la copie de travail de Codex et fusionnées sur la v0.12.20 ; **schéma 3** (store `grilles`) ; validation des sauvegardes stricte sur les grilles et tolérante envers l’historique ; 35 tests, suite 251 ; signalement des notes de grille partielles à la copie ; choix convertir / garder / annuler au changement de barème (V3-B3) — **publiée le 2026-09-15 sur l’origine dédiée https://carnet-eps.github.io/** (dépôt `carnet-EPS/carnet-eps.github.io`, commit du site `513827c`), pour un essai avec des données fictives ; l’ancienne adresse reste en v0.12.20, schéma 2 : attend une sauvegarde complète sur chaque appareil |
 | v0.12.20 | `v0.12.20` | `d68d56d` | **Les quatre derniers constats de l’audit Codex V3**, repris de la copie de travail de Codex sans ses grilles ni son schéma 3 (version réversible). V3-02 : écritures de notes sérialisées, sorties Pronote qui relisent la base, case en erreur qui bloque la copie même après le succès d’une autre note. V3-03 : « à remettre à jour » posé dans la transaction de la note. Concurrence entre onglets : note attendue comparée à la base, barème relu dans la transaction. V3-04 : accueil à paramètre servi du cache. V3-05 : limite de 200 Mo commune à l’export et à l’import. Écart volontaire : tolérance aux notes anciennes ; 17 tests, suite 216 — déployée le 2026-09-15 (gh-pages `ba129f0`) |
 | v0.12.19 | `v0.12.19` | `853ff41` | Constat **V5-01** de l’audit Codex V5 : sans colonne d’identité sûre, deux colonnes douteuses (« Nom contact », « Nom Resp. », « Nom RL1 ») étaient retenues **ensemble** et créaient un élève sous l’identité du contact. La détection tient désormais en **une seule règle** — une identité n’est proposée que sur un en-tête propre — qui absorbe les deux arbitrages de la v0.12.18 ; pluriels « Prénoms » / « Prénom(s) » reconnus ; 5 tests, suite 199 — déployée le 2026-09-09 (gh-pages `0dd3069`) |

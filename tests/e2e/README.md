@@ -135,7 +135,26 @@ calculée sur une partie des critères est listée dans le récapitulatif de cop
 Les tests existants qui changeaient le barème d'une évaluation notée répondent désormais « Garder les points », ce qui préserve
 le scénario qu'ils prouvaient ; une mutation qui retire la sérialisation des changements de barème les rend rouges.
 
-Total de la suite : **251 tests** (+ 51 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs` et `grilles-robustesse.spec.mjs`).
+**`audit-independant.spec.mjs` (21)** — premier lot de l'**audit indépendant du 2026-09-16** (rapport hors dépôt), livré avant l'essai
+téléphone, complété par deux revues adversariales du lot. **FON-01** : le module `state.js` est intercepté pour FORCER le drapeau dans
+les deux sens — vrai, l'en-tête et le titre annoncent la version d'essai ; faux, l'application démarre (preuves produites par `main.js`
+après le bloc d'essai, sans quoi le test serait vrai sur le HTML statique) sans marqueur — et une garde statique exige que le manifeste
+suive le drapeau commité, champ par champ ; en-tête compact à 320 et 375 px, bandeau sur une ligne à 200 % ; **B05** : la marge de focus
+suit la hauteur réelle de l'en-tête (Maj+Tab ne cache plus la case sous le bandeau), y compris texte agrandi sans redimensionnement.
+**FON-05 / PER-05** : taps rapides sur deux critères ou deux élèves tous enregistrés (clics dans la MÊME tâche, sans délai artificiel :
+le second était jeté par le verrou `occupe`) ; **même geste, même résultat** — retoucher efface, que le second tap arrive pendant ou
+après l'écriture, consigne affichée sur la grille par défaut, et changer d'avis dans la rafale garde le dernier choix ; retour immédiat
+sur une ligne qui n'est pas la première (ancien niveau éteint, autres lignes intactes), rien de désactivé, `aria-busy` ; contour pointillé
+réellement **calculé** sur une case choisie, effacée, atteinte au clavier et sur le sélecteur de statut ; **fin de rafale sans
+reconstruction** (MutationObserver : aucun retrait, cases toujours dans la page, focus resté où l'on est allé, score mis à jour) ;
+appui long commencé pendant une écriture qui ouvre bien « Ajuster » ; vue quittée puis rouverte en pleine rafale (état final relu, tap
+suivant accepté) ; erreur de rafale non recouverte, nommée avec sa cause, prise sur la ligne touchée en mode par critère, sans message
+en double, visible après passage à l'élève suivant et en message si la vue est quittée ; feuille « Ajuster » ouverte pendant une
+écriture (valeur voulue, focus rendu) ; bouton désactivé à opacité réduite. **SEC-04** : garde statique sur la CI, insensible au CRLF —
+bloc `permissions` en lecture seule et chaque action épinglée par un SHA de 40 caractères commenté de sa version. **23 mutants** (un par
+promesse) rendent ces tests rouges.
+
+Total de la suite : **272 tests** (+ 72 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs`, `grilles-robustesse.spec.mjs` et `audit-independant.spec.mjs`).
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse

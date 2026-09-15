@@ -11,6 +11,13 @@ on:
     branches: [main]
   workflow_dispatch: # relance à la main depuis l'onglet Actions
 
+# Le jeton GITHUB_TOKEN n'a besoin que de LIRE le dépôt. Le réglage du dépôt est déjà en lecture seule
+# (vérifié le 2026-09-15 : `gh api repos/alemoine4/carnet-eps/actions/permissions/workflow`) ; ce bloc garde
+# la lecture seule même si ce réglage change un jour, alors que la branche de production (gh-pages) vit dans
+# ce même dépôt (audit indépendant 2026-09-16, SEC-04 — défense en profondeur).
+permissions:
+  contents: read
+
 # Une seule exécution à la fois par branche : un push qui suit annule le précédent.
 concurrency:
   group: tests-${{ github.ref }}
@@ -21,9 +28,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      # Actions épinglées par SHA de commit : un tag `v4` peut être déplacé, un commit non (SEC-04). Les SHA retenus
+      # sont ceux que `v4` désignait le 2026-09-15 : le code exécuté ne change pas. Version lisible en commentaire.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
@@ -38,7 +47,7 @@ jobs:
       - run: npx playwright test
 
       # Rapport HTML et traces des tests rouges (C22) : téléchargeables depuis l'exécution.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
         with:
           name: rapport-playwright
