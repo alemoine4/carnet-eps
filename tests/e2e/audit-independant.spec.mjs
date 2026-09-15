@@ -36,6 +36,12 @@ const seed = async (page, grille = null) => {
   }, grille);
 };
 const detailEnBase = (page, note) => page.evaluate(async (id) => (await (await import('/js/io.js')).lire('notes', id))?.detail ?? null, note);
+// `goto` sur une ancre rend la main AVANT le rendu (la vue lit six fois IndexedDB) : sans cette attente, les tests
+// qui lisent le DOM tout de suite ne passaient que grâce au ralentissement de la capture de trace (revue v0.13.1).
+const ouvrirSaisie = async (page, lignes = 4) => {
+  await page.goto('/#/grilles/saisie/v');
+  await expect(page.locator('.grille-critere')).toHaveCount(lignes);
+};
 // Plusieurs taps dans la MÊME tâche : chacun arrive pendant l'écriture du précédent, sans dépendre d'un délai.
 const tapsRapides = (page, taps) => page.evaluate((taps) => {
   const blocs = document.querySelectorAll('.grille-critere');
@@ -96,23 +102,30 @@ test('FON-01 — cohérence : le drapeau MODE_ESSAI et le manifeste disent la m�
     .toEqual({ short_name: essai === 'true', name: essai === 'true' });
 });
 
-test('FON-01 — sur téléphone, l’en-tête avec le marqueur reste compact, même texte agrandi à 200 %', async ({ page }) => {
+test('FON-01 — sur téléphone, le marqueur est lisible EN ENTIER et l’en-tête reste compact, même texte agrandi', async ({ page }) => {
   await forcerEssai(page, true);
-  for (const [largeur, hauteur] of [[320, 640], [375, 812]]) {
+  // Le texte est ce qui compte : une version « une seule ligne » tronquait « données fictives » dès 320 px.
+  const mesure = () => page.evaluate(() => {
+    const b = document.querySelector('.essai'), r = document.createRange(); r.selectNodeContents(b);
+    const dedans = b.getBoundingClientRect(), texte = r.getBoundingClientRect(), s = getComputedStyle(b);
+    return { coupeLargeur: texte.right > dedans.right - parseFloat(s.paddingRight) + 1, coupeHauteur: b.scrollHeight > b.clientHeight + 1,
+      lignes: new Set([...r.getClientRects()].map((x) => Math.round(x.top))).size,
+      entete: document.querySelector('.entete').getBoundingClientRect().height };
+  });
+  for (const [largeur, hauteur] of [[320, 640], [360, 800], [375, 812]]) {
     await page.setViewportSize({ width: largeur, height: hauteur });
     await page.goto('/#/accueil');
     await expect(marqueur(page)).toBeVisible();
-    const entete = await page.locator('.entete').boundingBox();
-    expect(entete.height, `${largeur} px`).toBeLessThan(hauteur / 5);
+    const m = await mesure();
+    expect({ largeur, ...m, entete: undefined }).toEqual({ largeur, coupeLargeur: false, coupeHauteur: false, lignes: 1, entete: undefined });
+    expect(m.entete, `${largeur} px`).toBeLessThan(hauteur / 5);
   }
-  // Réglage d'accessibilité « texte agrandi » : le bandeau reste sur UNE ligne et l'en-tête sous le tiers de l'écran.
+  // Réglage d'accessibilité « texte agrandi » : toujours rien de coupé, et l'en-tête sous le tiers de l'écran.
   await page.setViewportSize({ width: 320, height: 640 });
-  const agrandi = await page.evaluate(() => {
-    document.documentElement.style.fontSize = '200%';
-    const b = document.querySelector('.essai'), s = getComputedStyle(b);
-    return { hauteurBandeau: b.getBoundingClientRect().height, uneLigne: parseFloat(s.lineHeight) + parseFloat(s.paddingTop) + parseFloat(s.paddingBottom), entete: document.querySelector('.entete').getBoundingClientRect().height };
-  });
-  expect(agrandi.hauteurBandeau).toBeLessThanOrEqual(agrandi.uneLigne + 1);
+  await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+  const agrandi = await mesure();
+  expect({ coupeLargeur: agrandi.coupeLargeur, coupeHauteur: agrandi.coupeHauteur }).toEqual({ coupeLargeur: false, coupeHauteur: false });
+  expect(agrandi.lignes).toBeLessThanOrEqual(2);
   expect(agrandi.entete).toBeLessThan(640 / 3);
 });
 
@@ -120,7 +133,7 @@ test('B05 — la marge de focus suit la hauteur réelle de l’en-tête : Maj+Ta
   await forcerEssai(page, true);
   await seed(page);
   await page.setViewportSize({ width: 320, height: 640 });
-  await page.goto('/#/grilles/saisie/v');
+  await ouvrirSaisie(page);
   await expect(marqueur(page)).toBeVisible();
   await expect(page.locator('.grille-critere')).toHaveCount(4);
   // La mesure passe par un ResizeObserver (asynchrone) : attente bornée de la marge ≥ hauteur de l'en-tête.
@@ -149,8 +162,7 @@ test('B05 — la marge de focus suit la hauteur réelle de l’en-tête : Maj+Ta
 
 test('FON-05 — deux taps rapides sur deux critères du même élève : aucun n’est perdu', async ({ page }) => {
   const g = await seed(page);
-  await page.goto('/#/grilles/saisie/v');
-  await expect(page.locator('.grille-critere')).toHaveCount(4);
+  await ouvrirSaisie(page);
   await tapsRapides(page, [[0, 1], [1, 2]]);
   await expect(statut(page)).toHaveText('Enregistré ✓');
   expect(await detailEnBase(page, 'v_a')).toEqual({ [g.criteres[0].id]: g.niveaux[1].cle, [g.criteres[1].id]: g.niveaux[2].cle });
@@ -160,7 +172,7 @@ test('FON-05 — deux taps rapides sur deux critères du même élève : aucun n
 
 test('FON-05 — par critère, deux élèves tapés coup sur coup sont tous deux enregistrés', async ({ page }) => {
   const g = await seed(page);
-  await page.goto('/#/grilles/saisie/v');
+  await ouvrirSaisie(page);
   await page.getByLabel('Mode de saisie').selectOption('critere');
   await expect(page.locator('.grille-critere')).toHaveCount(2);
   await tapsRapides(page, [[0, 3], [1, 1]]);
@@ -171,7 +183,7 @@ test('FON-05 — par critère, deux élèves tapés coup sur coup sont tous deux
 
 test('FON-05 — même geste, même résultat : retoucher une case l’efface, que le second tap arrive pendant ou après l’écriture', async ({ page }) => {
   await seed(page);
-  await page.goto('/#/grilles/saisie/v');
+  await ouvrirSaisie(page);
   // La règle est affichée pour toute grille, pas seulement avec les points ajustables (grille par défaut ici).
   await expect(page.locator('.grille-consigne')).toContainText('Retoucher le niveau sélectionné efface ce critère.');
   // Pendant : les deux taps dans la même tâche.
@@ -190,7 +202,7 @@ test('FON-05 — même geste, même résultat : retoucher une case l’efface, q
 
 test('FON-05 — changer d’avis dans la même rafale : niveau 1 choisi, puis 2, puis de nouveau 1 → le niveau 1 reste', async ({ page }) => {
   const g = await seed(page);
-  await page.goto('/#/grilles/saisie/v');
+  await ouvrirSaisie(page);
   await case_(page, 0, 1).click();
   await expect(statut(page)).toHaveText('Enregistré ✓');
   // Jugé sur l'écran figé, le troisième tap (niveau 1, affiché sélectionné) effaçait le critère.
@@ -204,7 +216,7 @@ test('FON-05 — dès le tap, la ligne touchée montre le choix, rien n’est ve
   // Une ligne qui n'est pas la première, avec un niveau déjà choisi : l'ancien niveau doit s'éteindre, et elle seule change.
   await page.evaluate(async ({ note }) => { const io = await import('/js/io.js'); await io.enregistrer('notes', note); },
     { note: { id: 'v_a', evaluationId: 'v', eleveId: 'a', valeur: 0, detail: { [g.criteres[1].id]: g.niveaux[1].cle }, commentaire: '' } });
-  await page.goto('/#/grilles/saisie/v');
+  await ouvrirSaisie(page);
   await expect(case_(page, 1, 1)).toHaveAttribute('aria-pressed', 'true');
   const pendant = await page.evaluate(() => {
     const blocs = document.querySelectorAll('.grille-critere');
@@ -228,7 +240,7 @@ test('FON-05 — dès le tap, la ligne touchée montre le choix, rien n’est ve
 
 test('FON-05 — le signal d’écriture se VOIT : case choisie, case effacée, case atteinte au clavier et sélecteur de statut', async ({ page }) => {
   await seed(page);
-  await page.goto('/#/grilles/saisie/v');
+  await ouvrirSaisie(page);
   // Case choisie : elle devient sélectionnée au tap, et le contour plein de la sélection masquait le pointillé.
   const choisie = await page.evaluate(() => { const b = document.querySelectorAll('.grille-critere')[0].querySelectorAll('.grille-niveaux button[data-niveau-cle]')[3]; b.click(); const s = getComputedStyle(b); return { busy: b.getAttribute('aria-busy'), style: s.outlineStyle, largeur: parseFloat(s.outlineWidth) }; });
   expect(choisie.busy).toBe('true'); expect(choisie.style).toBe('dashed'); expect(choisie.largeur).toBeGreaterThan(0);
@@ -251,7 +263,7 @@ test('FON-05 — le signal d’écriture se VOIT : case choisie, case effacée, 
 
 test('FON-05 — fin de rafale : l’écran n’est pas reconstruit, les cases restent en place et le focus reste où l’on est allé', async ({ page }) => {
   await seed(page);
-  await page.goto('/#/grilles/saisie/v');
+  await ouvrirSaisie(page);
   await page.getByLabel('Mode de saisie').selectOption('critere');
   await expect(page.locator('.grille-critere')).toHaveCount(2);
   await page.evaluate(() => {
@@ -276,8 +288,7 @@ test('FON-05 — fin de rafale : l’écran n’est pas reconstruit, les cases r
 
 test('FON-05 — un appui long commencé pendant une écriture ouvre bien la feuille « Ajuster »', async ({ page }) => {
   await seed(page, grilleAjustable([{ id: 'technique', libelle: 'Technique', poids: 1 }, { id: 'placement', libelle: 'Placement', poids: 1 }]));
-  await page.goto('/#/grilles/saisie/v');
-  await expect(page.locator('.grille-critere')).toHaveCount(2);
+  await ouvrirSaisie(page, 2);
   await page.evaluate(() => {
     const blocs = document.querySelectorAll('.grille-critere');
     blocs[0].querySelector('button[data-niveau-cle="bas"]').click(); // écriture en vol
@@ -293,8 +304,7 @@ test('FON-05 — un appui long commencé pendant une écriture ouvre bien la feu
 
 test('FON-05 — vue quittée puis rouverte pendant une rafale : l’écran relit l’état final et le tap suivant passe', async ({ page }) => {
   const g = await seed(page);
-  await page.goto('/#/grilles/saisie/v');
-  await expect(page.locator('.grille-critere')).toHaveCount(4);
+  await ouvrirSaisie(page);
   await page.evaluate(() => {
     const blocs = document.querySelectorAll('.grille-critere');
     for (let i = 0; i < 4; i++) blocs[i].querySelectorAll('.grille-niveaux button[data-niveau-cle]')[1].click();
@@ -312,7 +322,7 @@ test('FON-05 — vue quittée puis rouverte pendant une rafale : l’écran reli
 
 test('FON-05 — une erreur au milieu d’une rafale n’est pas recouverte par le succès suivant, et nomme l’élève', async ({ page }) => {
   const g = await seed(page);
-  await page.goto('/#/grilles/saisie/v');
+  await ouvrirSaisie(page);
   await pannerNotes(page, ['Disque plein (test)']);
   await tapsRapides(page, [[0, 1], [1, 2]]);
   await expect(page.locator('#vue > .statut-erreur')).toContainText('Non enregistré pour FICTIF Alice (Disque plein (test))');
@@ -323,9 +333,21 @@ test('FON-05 — une erreur au milieu d’une rafale n’est pas recouverte par 
   await expect(page.locator('.toast')).toHaveCount(0); // vue affichée : le statut suffit, pas de message en double
 });
 
+test('FON-05 — statut ABS refusé : le sélecteur revient à l’état enregistré en fin de rafale', async ({ page }) => {
+  await seed(page);
+  await ouvrirSaisie(page);
+  await pannerNotes(page, ['Disque plein (test)']);
+  const selecteur = page.getByLabel('Statut de l’élève');
+  await selecteur.selectOption('ABS');
+  await expect(page.locator('#vue > .statut-erreur')).toContainText('Non enregistré pour FICTIF Alice');
+  // Sans la remise à jour sur place, le sélecteur restait sur ABS alors que la base n'a aucune note.
+  await expect(selecteur).toHaveValue('');
+  expect(await detailEnBase(page, 'v_a')).toBeNull();
+});
+
 test('FON-05 — par critère, chaque élève en échec est nommé avec SA cause', async ({ page }) => {
   await seed(page);
-  await page.goto('/#/grilles/saisie/v');
+  await ouvrirSaisie(page);
   await page.getByLabel('Mode de saisie').selectOption('critere');
   await expect(page.locator('.grille-critere')).toHaveCount(2);
   // L'élève « courant » de la vue par élève reste Alice : le nom doit venir de la LIGNE touchée.
@@ -338,7 +360,7 @@ test('FON-05 — par critère, chaque élève en échec est nommé avec SA cause
 
 test('FON-05 — passé à l’élève suivant pendant une écriture refusée : l’erreur nomme l’élève en échec', async ({ page }) => {
   await seed(page);
-  await page.goto('/#/grilles/saisie/v');
+  await ouvrirSaisie(page);
   await pannerNotes(page, ['Disque plein (test)']);
   await page.evaluate(() => {
     document.querySelector('.grille-critere .grille-niveaux button[data-niveau-cle]').click();
@@ -351,7 +373,7 @@ test('FON-05 — passé à l’élève suivant pendant une écriture refusée : 
 
 test('FON-05 — vue quittée pendant une écriture refusée : l’échec reste visible par un message', async ({ page }) => {
   await seed(page);
-  await page.goto('/#/grilles/saisie/v');
+  await ouvrirSaisie(page);
   await pannerNotes(page, ['Disque plein (test)'], true);
   await page.evaluate(() => {
     document.querySelector('.grille-critere .grille-niveaux button[data-niveau-cle]').click();
@@ -363,7 +385,7 @@ test('FON-05 — vue quittée pendant une écriture refusée : l’échec reste 
 
 test('FON-05 — « Ajuster » ouvert pendant une écriture : valeur actuelle à jour et focus rendu à la case', async ({ page }) => {
   await seed(page, grilleAjustable());
-  await page.goto('/#/grilles/saisie/v');
+  await ouvrirSaisie(page, 1); // grille à un seul critère
   const ajuster = page.getByRole('button', { name: 'Ajuster Acquis — Technique', exact: true });
   await ajuster.click();
   await page.getByRole('dialog').getByRole('button', { name: '7', exact: true }).click();
