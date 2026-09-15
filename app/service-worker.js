@@ -5,7 +5,7 @@
    ⚠ Incrémenter VERSION à chaque déploiement (synchroniser avec VERSION_APP de state.js).
    Non enregistré sur localhost (voir main.js, décision D008). */
 
-const VERSION = '0.12.19';
+const VERSION = '0.12.20';
 const CACHE = `carnet-eps-${VERSION}`;
 const ASSETS = [
   './',
@@ -93,7 +93,14 @@ self.addEventListener('fetch', (e) => {
       return rep;
     });
     e.respondWith(
-      depuisCache(req).then((r) => {
+      depuisCache(req).then(async (exacte) => {
+        // Accueil avec paramètre inédit (« /?source=… ») : la page d'application est DÉJÀ en cache,
+        // la servir tout de suite au lieu d'attendre le réseau. Le repli est limité à la racine et à
+        // index.html de la portée, jamais aux autres documents du site (audit Codex V3, V3-04 ;
+        // reprise de la copie de travail de Codex, v0.13.2).
+        const accueil = url.pathname === new URL('./', self.registration.scope).pathname
+          || url.pathname === new URL('./index.html', self.registration.scope).pathname;
+        const r = exacte || (accueil ? await depuisCache('./index.html') : null);
         if (r) {
           // Échec muet : hors ligne pendant la revalidation est routine, pas une panne à signaler
           // (un échec d'ÉCRITURE — quota — reste tracé par mettreEnCache elle-même, A41).

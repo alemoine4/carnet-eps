@@ -4,6 +4,21 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-15 — v0.12.20 : les quatre derniers constats de l'audit V3, repris de la copie de travail de Codex
+
+Codex a travaillé plusieurs jours sur une copie complète du dépôt (`copie-codex/`, non déployée), jusqu'à une v0.13.3 qui ajoute les grilles d'évaluation et passe la base en schéma 3. Cette version n'en reprend **que les corrections des constats V3 encore ouverts**, sans les grilles et **sans changer de schéma** : elle reste réversible. Les grilles feront l'objet d'une étape à part.
+
+- **V3-02 — la copie pouvait transmettre l'ancienne note.** « Copier pour Pronote » lisait la grille en mémoire pendant qu'une saisie était encore en vol : 8 copié, 9 enregistré. Les écritures de notes sont sérialisées, et les trois sorties — copie, zone de secours, CSV — attendent la file, puis **relisent la base** avant de produire quoi que ce soit.
+- **Une case en erreur bloque la copie tant qu'elle n'est pas corrigée.** Ma première version surveillait seulement la dernière écriture de la file : une saisie refusée (« 12a ») ou une écriture échouée était oubliée dès qu'une **autre** note s'enregistrait, et la colonne repartait avec l'ancienne valeur. Chaque case garde désormais la mémoire de son erreur.
+- **V3-03 — le marquage « publiée » survivait aux modifications.** La date de publication est conservée, et l'évaluation passe « à remettre à jour » dans le badge et dans les alertes du suivi. Pour une note, le drapeau est posé **dans la même transaction** que la note, jamais après coup.
+- **Deux onglets ouverts ne s'écrasent plus en silence.** Chaque écriture de note compare la note attendue à celle réellement en base ; un onglet resté sur une ancienne version est refusé avec un message, au lieu d'effacer ce qu'un autre onglet venait d'enregistrer. Le barème est relu dans la transaction : un onglet ancien ne peut plus enregistrer une note au-dessus d'un barème abaissé ailleurs.
+- **Une copie en cours ne confirme plus une publication périmée.** Le texte copié et les notes qu'il contient sont figés ensemble ; si une note change avant la fin de la copie, la publication n'est pas confirmée « à jour », et l'écran le dit.
+- **La zone de copie manuelle disparaît dès qu'une note change**, pour qu'on ne puisse pas coller dans Pronote une colonne qui ne correspond plus à la grille.
+- **V3-04 — démarrage instantané aussi avec un paramètre.** Une adresse d'accueil portant un paramètre inédit attendait le réseau alors que la page était en cache : environ 4 secondes sur un réseau lent. Le repli sur la page en cache est limité à l'accueil de l'application.
+- **V3-05 — plus de sauvegarde impossible à restaurer.** Des pièces acceptées une à une pouvaient produire une sauvegarde plus grosse que la limite de restauration. La limite de 200 Mo est désormais **commune** à l'export et à l'import, l'écran Sauvegarde affiche le poids encodé estimé, et un export trop gros est refusé **avant** de produire le fichier. La limite n'est pas relevée, conformément à la décision prise faute de mesure sur Android.
+- **Écart volontaire avec la copie de Codex : la tolérance aux données anciennes.** Sa version validait toutes les notes d'une évaluation à chaque écriture, et refusait en bloc une sauvegarde contenant la moindre anomalie historique : barème à 0, note au-dessus du barème, note d'un élève supprimé. Ici, seules les notes **écrites** sont contrôlées, et la validation des sauvegardes est inchangée. Un test le garde.
+- **Reste ouvert** : le piège du barème (V3-B3 de la stratégie) — changer le maximum conserve les points bruts, 8/10 devient 8/20 ; la décision « demander à l'enseignant » n'est pas encore implémentée.
+
 ## 2026-09-09 — v0.12.19 : sans identité d'élève sûre, l'import s'abstient au lieu d'inventer
 
 - **Constat V5-01 de l'audit Codex V5**, variante résiduelle de V4-01. Le correctif précédent écartait une colonne d'identité douteuse **face** à une colonne sûre. Mais quand aucune colonne sûre ne leur faisait concurrence, **deux colonnes douteuses restaient retenues ensemble** : un fichier « Nom contact;Prénom contact;Classe » créait un élève nommé d'après le contact, et l'import annonçait « 1 élève importé ».

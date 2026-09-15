@@ -1,6 +1,7 @@
 # Stratégie d'amélioration après l'audit Codex V3
 
 > Rédigé le 2026-09-09 sur **v0.12.14** (commit `ab8cb24`). Source : `audit codex/AUDIT_V3.md` (dossier hors dépôt), 5 constats reproduits + 2 contrôles positifs.
+> **État au 2026-09-15 (v0.12.20)** : V3-01 (lot V3-A, v0.12.15), V3-02 et V3-03 (V3-B1, V3-B2), V3-04 (V3-D) et V3-05 (V3-C1) sont corrigés — les trois derniers repris de la copie de travail de Codex. **Reste ouvert : V3-B3**, le piège du barème (demander à l'enseignant s'il faut convertir les notes).
 > **Aucune correction n'est appliquée par ce document.** Il dit ce qu'il faut corriger, dans quel ordre, avec quelle preuve, et ce qui demande une décision.
 
 ## 1. Ce que dit l'audit, et ce que j'en retiens

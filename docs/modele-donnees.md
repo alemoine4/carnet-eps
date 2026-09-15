@@ -45,7 +45,7 @@ fichiers      { id, blob, mime, nom, taille, dateAjout }
               → photos certificats, photos élèves, documents. Photos compressées canvas→JPEG ≤ ~300 Ko.
 
 evaluations   { id, sequenceId*, titre, date, type ("note20"|"bareme"|"afl"), bareme?, coef,
-                publieePronote? (date|null) }
+                publieePronote? (date|null), publieeObsolete? (bool) }
 
 notes         { id, evaluationId*, eleveId*, valeur (number | "ABS"|"DISP"|"NN"), commentaire }
 

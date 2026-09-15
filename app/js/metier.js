@@ -236,12 +236,22 @@ export async function collecterAlertes() {
   const nbNotes = new Map();
   for (const n of notes) nbNotes.set(n.evaluationId, (nbNotes.get(n.evaluationId) || 0) + 1);
   for (const ev of evaluations) {
-    if (ev.publieePronote || ev.type === 'afl' || !(nbNotes.get(ev.id) > 0)) continue;
+    // Deux motifs de remontée : jamais faite, ou faite puis PÉRIMÉE par une modification des
+    // valeurs exportables (note ou barème). Le second manquait : l'évaluation disparaissait des
+    // alertes alors que Pronote contenait des valeurs fausses (audit Codex V3, constat V3-03).
+    const aRefaire = ev.publieePronote && ev.publieeObsolete;
+    if ((ev.publieePronote && !aRefaire) || ev.type === 'afl' || !(nbNotes.get(ev.id) > 0)) continue;
     if (ev.date && ev.date < bornes.debut) continue; // année passée : plus rien à remonter (C09)
     const seq = sequences.find((s) => s.id === ev.sequenceId);
     const cl = seq ? classeDe(seq.classeId) : null;
     if (cl?.archivee) continue; // classe archivée : l'évaluation n'est plus à remonter (C09)
-    alertes.push({ grave: false, href: `#/notes/eval/${ev.id}`, texte: `« ${ev.titre} »${cl ? ' (' + cl.nom + ')' : ''} — pas encore remontée vers Pronote` });
+    alertes.push({
+      grave: false,
+      href: `#/notes/eval/${ev.id}`,
+      texte: `« ${ev.titre} »${cl ? ' (' + cl.nom + ')' : ''} — ${aRefaire
+        ? 'à remettre à jour dans Pronote (les notes ou le barème ont changé depuis la remontée)'
+        : 'pas encore remontée vers Pronote'}`,
+    });
   }
 
   // Les graves d'abord (tri stable : l'ordre d'insertion est conservé dans chaque groupe) : l'accueil

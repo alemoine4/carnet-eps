@@ -83,6 +83,28 @@ priorité ; le choix manuel des colonnes du responsable reste possible), une **t
 vingt et une combinaisons d'en-têtes — dont les abréviations qu'aucune liste ne contient — et deux tests gardent
 les correctifs d'écran : l'identité incomplète est annoncée avant le clic, et un import abouti ne se rejoue pas.
 
+**`audit-v3-b.spec.mjs` (6)** — famille B de l'audit Codex V3, la passerelle Pronote. **V3-02** : « Copier pour
+Pronote » lisait la grille en mémoire pendant qu'une saisie était encore en vol et transmettait l'ancienne
+valeur, pendant que la base enregistrait la nouvelle. Les écritures de notes sont désormais **sérialisées**, et
+les trois sorties (copie, zone de secours, CSV) attendent la file — une écriture refusée bloque la copie et le
+dit, plutôt que de laisser partir une valeur périmée. **V3-03** : le marquage « publiée » survivait à un
+changement de note ou de barème, si bien que l'écran affirmait « publiée ✓ » sur des valeurs qui n'étaient
+jamais parties dans Pronote. La date est conservée — elle dit quand la remontée a eu lieu — et l'évaluation
+passe « à remettre à jour », dans le badge comme dans les alertes du suivi. Un témoin vérifie qu'une nouvelle
+copie efface la demande.
+
+**`audit-v3-c.spec.mjs` (11)** — fin des constats ouverts de l'audit Codex V3, **repris de la copie de travail de Codex**
+(`copie-codex/`, v0.13.2) sans ses grilles d'évaluation ni son schéma 3. **V3-02, suite** : une case en erreur bloque
+la copie tant qu'elle n'est pas corrigée, même si une autre note s'enregistre ensuite — que l'erreur vienne d'une
+panne de stockage ou d'une simple saisie refusée — et la zone de copie manuelle disparaît dès qu'une note change.
+**Concurrence** : un barème abaissé attend la saisie en vol puis la contrôle, un onglet resté sur l'ancien barème ne
+peut plus enregistrer au-delà du nouveau, un onglet périmé ne peut plus écraser une note modifiée ailleurs, la copie
+relit la base, et une note modifiée pendant la copie empêche de confirmer la publication. **V3-04** : l'accueil à
+paramètre inédit sort du cache sans attendre un réseau ralenti de 4 s. **V3-05** : export et import partagent la
+limite de 200 Mo, et un export trop gros est refusé avant de produire le fichier. Un dernier test garde un **écart
+volontaire** avec la copie : une évaluation qui porte une note ancienne au-dessus du barème reste modifiable — la
+version de Codex validait toutes les notes à chaque écriture, ce qu'une mutation dédiée rend rouge.
+
 **`audit-v5.spec.mjs` (5)** — audit Codex V5 du 2026-09-09 (`audit codex/AUDIT_V5.md`, hors dépôt), rendu sur la
 v0.12.18. V4-01 y est confirmé corrigé ; **V5-01** en est la variante résiduelle : le correctif V4 écartait une
 colonne d'identité faible **face** à une colonne sûre, mais deux signaux faibles restaient retenus **ensemble**
@@ -93,7 +115,7 @@ arbitrages de la v0.12.18 disparaissent, absorbés par elle. Un témoin garde le
 les libellés de tiers sans colonne sûre en face, ainsi que les pluriels (« Prénoms », « Prénom(s) ») qui
 n'étaient reconnus par rien.
 
-Total de la suite : **199 tests** (+ 24 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs`, sauf le test de position des toasts, propre au PC).
+Total de la suite : **216 tests** (+ 24 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs`, sauf le test de position des toasts, propre au PC).
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse

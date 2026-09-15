@@ -17,6 +17,10 @@ archives/
 # Restitution d'une autre IA (Codex) — hors dépôt tant que non tranché (ajouté par erreur dans 8ca9d47, retiré aussitôt)
 audit codex/
 
+# Copie de travail de Codex (v0.13.x, grilles + schéma 3) — ses corrections V3 sont reprises en v0.12.20,
+# les grilles restent à intégrer à part : jamais dans le dépôt tel quel.
+copie-codex/
+
 # Exports de l'app (sauvegardes JSON, CSV) : données nominatives, jamais dans le dépôt public (audit 2026-09-07, A03)
 carnet-eps_*.json
 releve_*.csv

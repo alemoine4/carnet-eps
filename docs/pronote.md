@@ -34,7 +34,7 @@ Export CSV `;` : `Nom;Prénom;Note` (virgule décimale, codes ABS/DISP/NN tels q
 
 ### Métadonnées de traçabilité
 
-Après export, l'évaluation est marquée `publieePronote = date` → le tableau de bord liste les évaluations **non encore remontées**.
+Après export, l'évaluation est marquée `publieePronote = date` → le tableau de bord liste les évaluations **non encore remontées**. Si une valeur exportable change ensuite (une note, le barème), la date est **conservée** — elle dit quand la remontée a eu lieu — et `publieeObsolete = true` fait passer l'évaluation en « à remettre à jour » : elle revient dans les alertes et le badge le dit. Une nouvelle copie Pronote, ou le marquage manuel, remet le compteur à zéro.
 
 ## 3. Absences : position claire (décision D006)
 
