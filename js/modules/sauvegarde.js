@@ -3,7 +3,7 @@
 // avant toute opération destructrice (BIBLE règle 4).
 
 import { enregistrerVue, el, carte, confirmer, toast } from '../ui.js';
-import { exporterJSON, importerJSON, validerExport, telechargerJSON, compterTout, tailleFichiers, viderTout, LIBELLES } from '../io.js';
+import { exporterJSON, importerJSON, validerExport, telechargerJSON, compterTout, tailleFichiers, LIMITE_SAUVEGARDE, viderTout, LIBELLES } from '../io.js';
 import { effacerPrefs } from '../state.js';
 import { octetsLisibles } from '../metier.js';
 
@@ -34,7 +34,11 @@ export function initialiser() {
       // Lu par curseur sur le champ `taille`, sans charger un seul blob.
       if (comptes.fichiers) {
         const octets = await tailleFichiers().catch(() => null);
-        if (octets !== null) carteEtat.append(el('p', { class: 'note-discrete', id: 'sv-poids' }, `Pièces jointes : ${comptes.fichiers} (≈ ${octetsLisibles(octets)})`));
+        if (octets !== null) {
+          carteEtat.append(el('p', { class: 'note-discrete', id: 'sv-poids' }, `Pièces jointes : ${comptes.fichiers} (≈ ${octetsLisibles(octets)})`));
+          const estime = 4 * Math.ceil(octets / 3);
+          carteEtat.append(el('p', { role: 'status', class: estime >= LIMITE_SAUVEGARDE * .9 ? 'statut statut-erreur' : 'note-discrete' }, `Pièces encodées dans la sauvegarde : au moins ≈ ${octetsLisibles(estime)}. Limite du fichier complet : 200 Mo.` + (estime > LIMITE_SAUVEGARDE ? ' Export complet et effacement bloqués tant que la sauvegarde dépasse cette limite.' : '')));
+        }
       }
     }).catch((e) => { // lecture refusée : la carte restait sur « … » (C06, revue du lot 1)
       carteEtat.querySelector('p').textContent = `Comptage impossible (${e?.message || e}) — l’export reste possible.`;
@@ -76,9 +80,9 @@ export function initialiser() {
         // Plafond AVANT lecture : `fichier.text()` matérialise tout en mémoire avant la moindre
         // validation, et un fichier énorme choisi par erreur gelait l'onglet (avis du lot 5, A33).
         // Une sauvegarde complète avec pièces pèse quelques dizaines de Mo (plafond 8 Mo par pièce).
-        const PLAFOND = 200 * 1024 * 1024;
+        const PLAFOND = LIMITE_SAUVEGARDE;
         if (fichier.size > PLAFOND) {
-          throw new Error(`fichier trop lourd pour cet appareil (${(fichier.size / 1048576).toFixed(0)} Mo) — limite 200 Mo : ce n’est probablement pas une sauvegarde Carnet EPS`);
+          throw new Error(`fichier trop lourd pour cet appareil (${(fichier.size / 1048576).toFixed(0)} Mo) — limite 200 Mo : ce fichier dépasse la limite de restauration de Carnet EPS`);
         }
         const objet = JSON.parse(await fichier.text());
         const { date, comptes, absents } = validerExport(objet);

@@ -1,12 +1,19 @@
 // modules/notes.js — évaluations & notes + export Pronote (phase 6).
 // Sous-routes : #/notes (liste + création) · #/notes/eval/<id> (grille de saisie)
 //               · #/notes/releve/<classeId> (relevé imprimable)
+// Un marquage « publiée » ne vaut que pour les valeurs qui ont ÉTÉ remontées. Dès qu'une note ou le
+// barème change, la date est conservée — elle dit quand la remontée a eu lieu — et l'évaluation
+// passe « à remettre à jour » (audit Codex V3, constat V3-03).
+const texteBadgePubliee = (ev) => (ev.publieePronote
+  ? `publiée ${dateFR(ev.publieePronote)}${ev.publieeObsolete ? ' · à remettre à jour' : ' ✓'}`
+  : '');
+
 // Export Pronote (docs/pronote.md) : voie A = colonne presse-papiers triée alphabétiquement
 // (codes ABS/DISP/NN laissés en lignes vides + liste à saisir à la main, garde-fou effectif) ;
 // voie B = CSV Nom;Prénom;Note. Type « afl » = positionnement libre, non exportable vers Pronote.
 
 import { enregistrerVue, el, carte, champ, champTexte, confirmer, toast } from '../ui.js';
-import { tous, lire, lireMeta, parIndex, enregistrer, supprimer, supprimerLot, restaurer, telechargerTexte, champCSV } from '../io.js';
+import { tous, lire, lireMeta, parIndex, enregistrer, supprimerLot, restaurer, telechargerTexte, champCSV, mettreAJourEvaluation } from '../io.js';
 import { isoAujourdhui, dateFR, trierEleves, trierClasses, baremeDe, formatFR, inaptitudesActives } from '../metier.js';
 import { sauverPrefs } from '../state.js';
 
@@ -136,7 +143,7 @@ async function vueListe(c) {
       const morceaux = [dateFR(ev.date), bar ? `/${bar}` : 'AFL', `coef ${ev.coef}`,
         `${nbNotes.get(ev.id) || 0}/${cl ? effectifs.get(cl.id) || 0 : '?'} notes`];
       const carteEv = carte(`${cl?.nom || '?'} — ${ev.titre}`, `${seq?.apsa || '?'} · ${morceaux.join(' · ')}`,
-        ev.publieePronote ? `publiée ${dateFR(ev.publieePronote)} ✓` : '');
+        texteBadgePubliee(ev));
       const pastille = el('span', { class: 'pastille', 'aria-hidden': 'true' });
       pastille.style.background = cl?.couleur || 'var(--c-accent)';
       carteEv.querySelector('h2').prepend(pastille);
@@ -191,11 +198,13 @@ async function vueEval(c, evalId) {
   // …et SÉRIALISÉES : deux champs modifiés coup sur coup construisaient chacun leur candidat depuis
   // l'objet d'avant, et le second écrasait le premier (revue adversariale du lot V3-A).
   let fileEv = Promise.resolve();
-  const sauverEv = (modifs = {}) => {
+  // L'écriture passe par `mettreAJourEvaluation` : l'évaluation est RELUE dans la transaction et
+  // les notes jointes y sont contrôlées ; la vue n'adopte que ce que la base a réellement enregistré
+  // (copie de travail de Codex, AUD-001 et AUD-002).
+  const sauverEv = (modifs = {}, operations = [], attentes = []) => {
     const suite = fileEv.catch(() => {}).then(async () => {
-      const candidat = { ...ev, ...modifs };
-      await enregistrer('evaluations', candidat);
-      Object.assign(ev, modifs);
+      const candidat = await mettreAJourEvaluation(evalId, modifs, operations, attentes);
+      Object.assign(ev, candidat);
     });
     fileEv = suite;
     return suite;
@@ -203,7 +212,46 @@ async function vueEval(c, evalId) {
 
   // --- En-tête ---
   const statsEl = el('p', { class: 'compteurs' });
-  const carteTete = carte(`${classe.nom} — ${ev.titre}`, '', ev.publieePronote ? `publiée ${dateFR(ev.publieePronote)} ✓` : '');
+  const carteTete = carte(`${classe.nom} — ${ev.titre}`, '', texteBadgePubliee(ev));
+  const majBadgePubliee = () => {
+    carteTete.querySelector('h2 .badge')?.remove();
+    const t = texteBadgePubliee(ev);
+    if (t) carteTete.querySelector('h2').append(el('span', { class: 'badge' }, t));
+  };
+  // Une valeur EXPORTABLE qui change (une note, le barème) fait passer une évaluation déjà remontée
+  // « à remettre à jour », date de publication conservée (audit Codex V3, V3-03). Pour une note, le
+  // drapeau est posé dans la MÊME transaction qu'elle, par `mettreAJourEvaluation`.
+  // Les écritures de notes sont SÉRIALISÉES, et toute sortie vers Pronote attend la file. Avant,
+  // « Copier pour Pronote » lisait la grille en mémoire pendant qu'une saisie était encore en vol :
+  // la colonne partait avec l'ANCIENNE valeur pendant que la base enregistrait la nouvelle
+  // (audit Codex V3, constat V3-02).
+  let fileNotes = Promise.resolve();
+  const enFileNote = (travail) => {
+    const suite = fileNotes.catch(() => {}).then(travail);
+    fileNotes = suite;
+    return suite;
+  };
+  // Une case en erreur (saisie refusée, écriture échouée) bloque toute sortie vers Pronote tant
+  // qu'elle n'est pas corrigée, même si une AUTRE note s'enregistre ensuite. Surveiller la seule file
+  // ne suffisait pas : sa dernière promesse redevenait résolue au premier succès suivant (défaut
+  // trouvé par la revue du lot, corrigé dans la copie de travail de Codex).
+  const erreursNotes = new Set();
+  // Compteur de modifications : une copie dont le texte a été figé AVANT une modification ne peut
+  // pas confirmer une publication « à jour ».
+  let revisionNotes = 0;
+  // La zone de copie manuelle affiche une colonne FIGÉE : elle est retirée dès qu'une note change,
+  // pour qu'on ne puisse pas coller dans Pronote une colonne qui ne correspond plus à la grille.
+  let retirerZoneSecours = () => {};
+  const ecrireNote = async (op) => {
+    const cle = op.op === 'delete' ? op.cle : op.valeur.id;
+    const attendue = [...notesMap.values()].find((x) => x.id === cle) || null;
+    await sauverEv({}, [{ store: 'notes', ...op }], [{ id: cle, note: attendue }]);
+    majBadgePubliee();
+  };
+  const notesAJour = async () => {
+    await fileNotes.catch(() => {});
+    if (erreursNotes.size) throw new Error('une note n’a pas pu être enregistrée : corrigez-la d’abord');
+  };
   const rangIdentite = el('div', { class: 'rang-2' },
     champTexte({ id: 'ge-titre', libelle: 'Titre', valeur: ev.titre, onChange: async (v) => { if (!v) throw new Error('le titre ne peut pas être vide'); await sauverEv({ titre: v }); } }), // A36 (revue du lot 5)
     champTexte({ id: 'ge-date', libelle: 'Date', type: 'date', valeur: ev.date || '', onChange: async (v) => { await sauverEv({ date: v }); } }),
@@ -218,9 +266,14 @@ async function vueEval(c, evalId) {
       onChange: async (v) => {
         const b = Number(v);
         if (!(Number.isFinite(b) && b >= 1 && b <= 200)) throw new Error('le barème doit être compris entre 1 et 200');
+        // Les saisies en vol d'abord : sinon cette garde lisait une grille périmée. La transaction
+        // revérifie de toute façon les notes EN BASE (AUD-001).
+        await notesAJour();
         const depassement = [...notesMap.values()].find((n) => typeof n.valeur === 'number' && n.valeur > b);
         if (depassement) throw new Error(`une note saisie (${formatFR(depassement.valeur)}) dépasse ${formatFR(b)}`);
-        await sauverEv({ bareme: b });
+        revisionNotes++;
+        retirerZoneSecours();
+        await sauverEv({ bareme: b, ...(ev.publieePronote ? { publieeObsolete: true } : {}) });
         await rafraichir();
       },
     }));
@@ -273,10 +326,10 @@ async function vueEval(c, evalId) {
       const idNote = `${evalId}_${eleve.id}`;
       if (!bareme) { // afl : texte libre
         const t = input.value.trim();
-        if (!t) { await supprimer('notes', idNote); notesMap.delete(eleve.id); }
+        if (!t) { await ecrireNote({ op: 'delete', cle: idNote }); notesMap.delete(eleve.id); }
         else {
           const rec = { id: idNote, evaluationId: evalId, eleveId: eleve.id, valeur: t, commentaire: '' };
-          await enregistrer('notes', rec); notesMap.set(eleve.id, rec);
+          await ecrireNote({ op: 'put', valeur: rec }); notesMap.set(eleve.id, rec);
         }
         majStats();
         return;
@@ -295,18 +348,22 @@ async function vueEval(c, evalId) {
       input.removeAttribute('aria-invalid');
       input.removeAttribute('aria-describedby');
       if (alerteSaisie.dataset.pour === eleve.id) alerteSaisie.textContent = ''; // le message d'un AUTRE élève reste
-      if (r.vide) { await supprimer('notes', idNote); notesMap.delete(eleve.id); majStats(); return; }
+      if (r.vide) { await ecrireNote({ op: 'delete', cle: idNote }); notesMap.delete(eleve.id); majStats(); return; }
       const valeur = r.code || r.nombre;
       const rec = { id: idNote, evaluationId: evalId, eleveId: eleve.id, valeur, commentaire: '' };
-      await enregistrer('notes', rec);
+      await ecrireNote({ op: 'put', valeur: rec });
       notesMap.set(eleve.id, rec);
       if (r.code) { input.value = r.code; input.classList.add('code'); }
       else input.value = formatFR(r.nombre);
       majStats();
     };
     input.addEventListener('change', async () => {
+      revisionNotes++;
+      retirerZoneSecours();
+      erreursNotes.add(eleve.id); // levée seulement quand la note est bel et bien enregistrée
       try {
-        await appliquer();
+        await enFileNote(appliquer);
+        if (!input.classList.contains('invalide')) erreursNotes.delete(eleve.id);
       } catch (e) {
         // Écriture refusée : la case restait « propre » comme si la note était en base (D-05).
         input.classList.add('invalide');
@@ -326,6 +383,7 @@ async function vueEval(c, evalId) {
     const carteExp = carte('Vers Pronote', 'Dans Pronote, ouvrez le service de notation (même classe, même barème), cliquez sur la première case de la colonne et collez.');
     const statutExp = el('p', { class: 'statut', role: 'status' });
     const zoneSecours = el('div', {}); // textarea de copie manuelle (si presse-papiers indisponible)
+    retirerZoneSecours = () => zoneSecours.replaceChildren();
     const zoneRecap = el('div', {});
     const btnCopier = el('button', { class: 'btn btn-principal' }, 'Copier pour Pronote');
     const btnCSV = el('button', { class: 'btn' }, 'Exporter CSV');
@@ -347,10 +405,6 @@ async function vueEval(c, evalId) {
     // « Publiée » n'est marquée que sur PREUVE de copie (presse-papiers réussi, ou copie
     // effective depuis la zone de secours) — audit A13. Le CSV ne marque plus ; un bouton
     // de marquage manuel couvre les autres workflows (et corrige un marquage erroné).
-    const majBadgePubliee = () => {
-      carteTete.querySelector('h2 .badge')?.remove();
-      if (ev.publieePronote) carteTete.querySelector('h2').append(el('span', { class: 'badge' }, `publiée ${dateFR(ev.publieePronote)} ✓`));
-    };
     const btnMarquer = el('button', { class: 'btn' }, '');
     const majMarquer = () => {
       btnMarquer.textContent = ev.publieePronote
@@ -359,14 +413,18 @@ async function vueEval(c, evalId) {
     };
     majMarquer();
     btnMarquer.addEventListener('click', async () => {
-      await sauverEv({ publieePronote: ev.publieePronote ? null : isoAujourdhui() });
+      await sauverEv({ publieePronote: ev.publieePronote ? null : isoAujourdhui(), publieeObsolete: false });
       if (!ev.publieePronote) zoneRecap.replaceChildren();
       majBadgePubliee();
       majMarquer();
     });
 
-    const apresExport = async (codes, vides = 0) => {
-      await sauverEv({ publieePronote: isoAujourdhui() });
+    const apresExport = async (codes, vides, revisionCopie, notesCopie) => {
+      // La remontée vient d'être refaite : la demande de mise à jour tombe, SAUF si la grille a changé
+      // depuis que le texte copié a été figé. Et les notes copiées sont revérifiées en base dans la
+      // transaction : un autre onglet a pu les modifier pendant la copie (AUD-002).
+      const aJour = revisionCopie === revisionNotes;
+      await sauverEv({ publieePronote: isoAujourdhui(), publieeObsolete: !aJour }, [], aJour ? notesCopie : []);
       majBadgePubliee();
       majMarquer();
       zoneRecap.replaceChildren(
@@ -378,7 +436,29 @@ async function vueEval(c, evalId) {
       );
     };
 
+    // Toute sortie vers Pronote attend d'abord que la grille soit RÉELLEMENT en base, et refuse si
+    // une écriture a échoué : transmettre une valeur périmée est pire que ne rien transmettre.
+    const grillePrete = async () => {
+      try {
+        await notesAJour();
+        await fileEv.catch(() => {}); // un ancien échec est rattrapé par la relecture ci-dessous
+        // Relire la base : un autre onglet a pu changer le barème ou les notes (AUD-002).
+        const actuelle = await lire('evaluations', evalId);
+        if (!actuelle || baremeDe(actuelle) !== bareme) throw new Error('évaluation modifiée dans un autre onglet : rechargez la page');
+        const enBase = await parIndex('notes', 'evaluationId', evalId);
+        notesMap.clear();
+        for (const x of enBase) notesMap.set(x.eleveId, x);
+        Object.assign(ev, actuelle);
+        return true;
+      } catch (e) {
+        statutExp.textContent = `Copie impossible : ${e?.message || e}`;
+        statutExp.className = 'statut statut-erreur';
+        return false;
+      }
+    };
+
     btnCopier.addEventListener('click', async () => {
+      if (!await grillePrete()) return;
       // Rien à copier → rien à marquer « publiée » : une grille vide désarmait l'alerte (B24).
       if (!eleves.some((e) => notesMap.has(e.id))) {
         statutExp.textContent = 'Aucune note à copier : saisissez d’abord la grille.';
@@ -386,18 +466,33 @@ async function vueEval(c, evalId) {
         return;
       }
       const { texte, codes, vides } = construireColonne();
+      const revisionCopie = revisionNotes;
+      // Figées AVEC le texte : ce sont ces notes-là qui partent, et elles seules que la publication
+      // peut confirmer.
+      const notesCopie = structuredClone(eleves.map((e) => ({ id: `${evalId}_${e.id}`, note: notesMap.get(e.id) || null })));
       try {
         await navigator.clipboard.writeText(texte);
         statutExp.textContent = 'Colonne copiée dans le presse-papiers ✓';
         statutExp.className = 'statut statut-ok';
         zoneSecours.replaceChildren();
-        await apresExport(codes, vides); // copie réussie = preuve
+        try {
+          await apresExport(codes, vides, revisionCopie, notesCopie); // copie réussie = preuve
+        } catch (e) {
+          // Surtout pas la zone de secours : la colonne EST copiée, c'est la publication qui échoue.
+          statutExp.textContent = `Colonne copiée, mais publication non confirmée : ${e?.message || e}`;
+          statutExp.className = 'statut statut-erreur';
+        }
       } catch {
         // Pas de presse-papiers (http réseau local…) : colonne à copier à la main.
         // « Publiée » ne sera marquée qu'à la copie réelle (événement copy).
         const zone = el('textarea', { rows: 8, 'aria-label': 'Colonne à copier' }); // enveloppée dans .champ ci-dessous (style — B49)
         zone.value = texte;
-        zone.addEventListener('copy', () => { apresExport(codes, vides); }, { once: true });
+        zone.addEventListener('copy', () => {
+          apresExport(codes, vides, revisionCopie, notesCopie).catch((e) => {
+            statutExp.textContent = `Publication non confirmée : ${e?.message || e}`;
+            statutExp.className = 'statut statut-erreur';
+          });
+        }, { once: true });
         zoneSecours.replaceChildren(
           el('p', {}, 'Copie automatique indisponible : sélectionnez tout puis copiez (Ctrl+C) — l’évaluation sera alors marquée « publiée ».'),
           el('div', { class: 'champ' }, zone)); // même style que les autres zones de texte (B49)
@@ -406,7 +501,8 @@ async function vueEval(c, evalId) {
       }
     });
 
-    btnCSV.addEventListener('click', () => {
+    btnCSV.addEventListener('click', async () => {
+      if (!await grillePrete()) return;
       const lignes = eleves.map((e) => {
         const v = notesMap.get(e.id)?.valeur;
         return [e.nom, e.prenom, typeof v === 'number' ? formatFR(v) : v || ''].map(champCSV).join(';');

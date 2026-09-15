@@ -145,6 +145,98 @@ export async function enregistrer(store, objet) {
   return objet;
 }
 
+// Mise à jour d'une évaluation et de ses notes : lecture, contrôle de concurrence et écriture dans
+// UNE transaction. Les files de promesses d'une vue ne protègent pas contre un second onglet ; ici,
+// chaque note écrite est comparée à celle que la vue croyait en base (`attentes`), et le barème est
+// relu dans la transaction même. Reprise de la copie de travail de Codex (v0.13.2, AUD-001 et
+// AUD-002), en version TOLÉRANTE : seules les notes ÉCRITES sont validées, jamais les notes
+// anciennes laissées intactes — un historique antérieur aux gardes actuelles (barème à 0, note
+// au-dessus du barème) ne doit pas rendre une évaluation impossible à modifier.
+const CODES_NOTE = ['ABS', 'DISP', 'NN'];
+const baremeEvaluation = (ev) => (ev.type === 'note20' ? 20 : ev.type === 'bareme' ? Number(ev.bareme) || 20 : null);
+// Comparaison indépendante de l'ordre des clés : une note relue d'une sauvegarde peut ranger ses
+// champs autrement que la vue qui l'a écrite, sans être différente pour autant.
+const canonique = (v) => (v && typeof v === 'object'
+  ? (Array.isArray(v) ? v.map(canonique) : Object.fromEntries(Object.keys(v).sort().map((k) => [k, canonique(v[k])])))
+  : v);
+const memeNote = (a, b) => JSON.stringify(canonique(a ?? null)) === JSON.stringify(canonique(b ?? null));
+
+function validerNoteEcrite(note, ev) {
+  if (note.evaluationId !== ev.id || note.id !== `${ev.id}_${note.eleveId}`) {
+    throw new Error('note incohérente avec son évaluation : rechargez la page');
+  }
+  const bareme = baremeEvaluation(ev);
+  if (bareme === null) {
+    if (typeof note.valeur !== 'string') throw new Error('le positionnement doit être un texte');
+    return;
+  }
+  if (typeof note.valeur === 'number') {
+    if (!Number.isFinite(note.valeur) || note.valeur < 0 || note.valeur > bareme) {
+      throw new Error(`la note ${String(note.valeur).replace('.', ',')} dépasse le barème de cette évaluation (0 à ${bareme}) : rechargez la page`);
+    }
+  } else if (!CODES_NOTE.includes(note.valeur)) {
+    throw new Error('code de note inconnu');
+  }
+}
+
+export async function mettreAJourEvaluation(id, modifs = {}, operations = [], attentes = []) {
+  const db = await ouvrirDB();
+  return new Promise((resolve, reject) => {
+    let resultat;
+    let erreur;
+    const tx = db.transaction(['evaluations', 'notes'], 'readwrite');
+    const evaluations = tx.objectStore('evaluations');
+    const notes = tx.objectStore('notes');
+    const reqEv = evaluations.get(id);
+    const reqNotes = notes.index('evaluationId').getAll(id);
+    tx.oncomplete = () => resolve(resultat);
+    tx.onabort = () => reject(erreur || motifEcriture(tx.error || new Error('écriture interrompue')));
+    tx.onerror = (e) => { erreur ||= motifEcriture(e.target?.error || tx.error); };
+    reqNotes.onsuccess = () => {
+      try {
+        const actuel = reqEv.result;
+        if (!actuel) throw new Error('évaluation supprimée entre-temps : rechargez la page');
+        const enBase = new Map(reqNotes.result.map((n) => [n.id, n]));
+        for (const { id: cle, note } of attentes) {
+          if (!memeNote(enBase.get(cle), note)) {
+            throw new Error('note modifiée dans un autre onglet : rechargez la page avant de réessayer');
+          }
+        }
+        const candidat = { ...actuel, ...modifs };
+        for (const op of operations) {
+          if (op.store !== 'notes' || !['put', 'delete'].includes(op.op)) throw new Error('opération de note invalide');
+          if (op.op === 'put') validerNoteEcrite(op.valeur, candidat);
+        }
+        // Barème abaissé : aucune note en base ne doit le dépasser. Relu ICI, dans la transaction,
+        // et non dans la mémoire de la vue, qu'une saisie en vol ou un autre onglet rendent périmée.
+        const bareme = baremeEvaluation(candidat);
+        if ('bareme' in modifs && bareme !== null) {
+          const ecrites = new Map(operations.filter((o) => o.op === 'put').map((o) => [o.valeur.id, o.valeur]));
+          const supprimees = new Set(operations.filter((o) => o.op === 'delete').map((o) => o.cle));
+          for (const n of enBase.values()) {
+            const finale = ecrites.get(n.id) || (supprimees.has(n.id) ? null : n);
+            if (finale && typeof finale.valeur === 'number' && finale.valeur > bareme) {
+              throw new Error(`une note saisie (${String(finale.valeur).replace('.', ',')}) dépasse ${bareme}`);
+            }
+          }
+        }
+        // Une valeur exportable change sur une évaluation déjà remontée : « à remettre à jour » est
+        // posé dans la MÊME transaction que la note, jamais après coup (audit Codex V3, V3-03).
+        if (operations.length && actuel.publieePronote) candidat.publieeObsolete = true;
+        for (const op of operations) {
+          if (op.op === 'delete') notes.delete(op.cle);
+          else notes.put(op.valeur);
+        }
+        evaluations.put(candidat);
+        resultat = candidat;
+      } catch (e) {
+        erreur = e;
+        tx.abort();
+      }
+    };
+  });
+}
+
 export async function supprimer(store, id) {
   return ecrireLot([{ store, op: 'delete', cle: id }]);
 }
@@ -207,10 +299,27 @@ function dateLocaleISO(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// Plafond COMMUN à l'export et à l'import (audit Codex V3, V3-05) : l'app acceptait de produire une
+// sauvegarde qu'elle refusait ensuite de restaurer — une pièce de 6 Mio pèse 8 Mio une fois encodée,
+// et 26 pièces admises dépassaient déjà les 200 Mio de l'import. Le plafond n'est PAS relevé
+// (décision de l'enseignant, faute de mesure sur Android) : on refuse de produire l'inutilisable.
+// Reprise de la copie de travail de Codex (v0.13.2).
+export const LIMITE_SAUVEGARDE = 200 * 1024 * 1024;
+export function verifierTailleSauvegarde(octets) {
+  if (octets > LIMITE_SAUVEGARDE) {
+    throw new Error('sauvegarde supérieure à la limite restaurable de 200 Mo. Aucun effacement effectué. Exportez les pièces jointes séparément avant d’en réduire le volume : une sauvegarde sans pièces ne les conserve pas.');
+  }
+}
+// Borne basse AVANT encodage, sans lire un seul blob : 4 octets de base64 pour 3 octets de pièce.
+export function tailleBase64Projetee(fichiers) {
+  return fichiers.reduce((s, f) => s + (f.blob ? 4 * Math.ceil(f.blob.size / 3) : 0), 0);
+}
+
 export async function exporterJSON({ avecFichiers = true } = {}) {
   // Instantané cohérent : tous les stores lus dans UNE transaction (H02) ; les blobs sont
   // convertis HORS transaction (un Blob lu reste lisible après sa fin).
   const brut = await lireLot(avecFichiers ? STORES : STORES.filter((n) => n !== 'fichiers'));
+  verifierTailleSauvegarde(tailleBase64Projetee(brut.fichiers || []));
   const stores = {};
   for (const nom of STORES) {
     if (nom === 'fichiers') {
@@ -313,6 +422,7 @@ export async function importerJSON(objet) {
 export async function telechargerJSON(objet, suffixe = 'sauvegarde') {
   const nom = `carnet-eps_${suffixe}_${dateLocaleISO()}.json`;
   const blob = new Blob([JSON.stringify(objet)], { type: 'application/json' });
+  verifierTailleSauvegarde(blob.size); // contrôle EXACT, sur le fichier réellement produit
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
