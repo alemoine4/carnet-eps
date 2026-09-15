@@ -252,7 +252,7 @@ test('A23 — compterTout() compte sans charger les enregistrements (count, pas 
     IDBObjectStore.prototype.getAll = oG; IDBObjectStore.prototype.count = oC;
     return { getAll, count, classes: comptes.classes, stores: Object.keys(comptes).length };
   });
-  expect(res).toEqual({ getAll: 0, count: 14, classes: 1, stores: 14 });
+  expect(res).toEqual({ getAll: 0, count: 15, classes: 1, stores: 15 });
 });
 
 test('C08 / B39 — une pièce jointe non-image de plus de 8 Mo est refusée avec un message', async ({ page }) => {

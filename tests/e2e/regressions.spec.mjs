@@ -370,7 +370,7 @@ test('H03 — une écriture ne résout qu’à la validation de la transaction (
   expect(res.presente).toBe(false);
 });
 
-test('H01 — la purge totale tient en une seule transaction sur les 14 stores', async ({ page }) => {
+test('H01 — la purge totale tient en une seule transaction sur les 15 stores', async ({ page }) => {
   const res = await page.evaluate(async () => {
     const io = await import('/js/io.js');
     await io.enregistrer('classes', { id: 'c1', nom: '6A', archivee: false });
@@ -383,7 +383,7 @@ test('H01 — la purge totale tient en une seule transaction sur les 14 stores',
     const comptes = await io.compterTout();
     return { appels, total: Object.values(comptes).reduce((a, b) => a + b, 0) };
   });
-  expect(res.appels).toEqual([14]);
+  expect(res.appels).toEqual([15]);
   expect(res.total).toBe(0);
 });
 

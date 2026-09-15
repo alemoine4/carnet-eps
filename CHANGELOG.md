@@ -4,6 +4,18 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-15 — v0.13.0 : grilles d'évaluation EPS (préparée, non déployée)
+
+Module repris de la copie de travail de Codex (`copie-codex/`, v0.13.3), fusionné sur la v0.12.20. **Cette version fait passer la base en schéma 3 : un appareil qui l'ouvre ne peut plus revenir aux versions 0.12.** Elle est préparée sur la branche `grilles-schema3` et n'est pas mise en ligne tant que chaque appareil n'a pas une sauvegarde complète.
+
+- **Grilles d'évaluation réutilisables** : critères pondérés, niveaux de maîtrise, points par niveau. Le total brut et la note sur le barème choisi s'affichent ; le relevé ramène tout sur 20. Exemple de référence : 18 sur 24 donne 15 sur 20.
+- **Un critère non évalué n'est pas un zéro.** Par défaut il sort du calcul, numérateur comme dénominateur ; l'option « compter comme zéro » existe, et sans aucun critère évalué aucune note n'est produite.
+- **Arrondi configurable** (exact, quart, demi ou point entier) et **points ajustables** dans une plage par niveau, au toucher, à l'appui long ou au clavier.
+- **Chaque évaluation fige sa grille** : modifier le modèle ensuite ne change pas les notes déjà saisies. « Réutiliser cette grille » recrée un modèle depuis l'instantané exact.
+- **Saisie par élève ou par critère**, bilan de classe par critère, impression, statuts ABS/DISP/NN conservés sans perdre les observations.
+- **Export Pronote inchangé** : les valeurs partent sur le barème choisi, avec les protections de la v0.12.20 (attente des écritures, relecture de la base, publication « à remettre à jour »).
+- **Sauvegardes : écart volontaire avec la copie de Codex.** Sa version refusait en bloc toute sauvegarde contenant une anomalie historique. Ici, la validation est **stricte sur les structures neuves** — modèles de grilles, grilles figées, notes de grille cohérentes avec leurs critères — et **tolérante envers l'historique** : une sauvegarde qui porte un barème à 0, une note au-dessus du barème, la note d'un élève supprimé ou la séquence d'une classe supprimée reste restaurable.
+
 ## 2026-09-15 — v0.12.20 : les quatre derniers constats de l'audit V3, repris de la copie de travail de Codex
 
 Codex a travaillé plusieurs jours sur une copie complète du dépôt (`copie-codex/`, non déployée), jusqu'à une v0.13.3 qui ajoute les grilles d'évaluation et passe la base en schéma 3. Cette version n'en reprend **que les corrections des constats V3 encore ouverts**, sans les grilles et **sans changer de schéma** : elle reste réversible. Les grilles feront l'objet d'une étape à part.

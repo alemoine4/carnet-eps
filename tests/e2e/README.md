@@ -115,7 +115,19 @@ arbitrages de la v0.12.18 disparaissent, absorbés par elle. Un témoin garde le
 les libellés de tiers sans colonne sûre en face, ainsi que les pluriels (« Prénoms », « Prénom(s) ») qui
 n'étaient reconnus par rien.
 
-Total de la suite : **216 tests** (+ 24 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs`, sauf le test de position des toasts, propre au PC).
+**`grilles.spec.mjs` (21)** — module des grilles d'évaluation, **repris de la copie de travail de Codex** (v0.13.3) : calcul
+(18 sur 24 donne 15 sur 20, poids, critère non évalué distinct de zéro, arrondis), bibliothèque de modèles, parcours complet
+jusqu'à la copie Pronote, grille figée, saisie par critère, statuts ABS/DISP/NN, points ajustables au clavier et à l'appui long,
+panne et écriture concurrente, sauvegarde et rendu mobile. Seule adaptation : le message de conflit attendu est celui de la
+v0.12.20 (« autre onglet »).
+
+**`grilles-robustesse.spec.mjs` (6)** — quatre tests de concurrence et de clavier repris de la copie de Codex (AUD-002, AUD-006),
+et deux tests propres à l'intégration qui fixent la frontière de la validation des sauvegardes : une sauvegarde ancienne portant
+un barème à 0, une note au-dessus du barème, la note d'un élève supprimé et la séquence d'une classe supprimée **reste
+restaurable** en schéma 3 — la copie la refusait en bloc, ce qu'une mutation rend rouge — tandis qu'une note de grille
+incohérente avec ses critères est refusée avant toute écriture.
+
+Total de la suite : **243 tests** (+ 51 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs` et `grilles-robustesse.spec.mjs`).
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse

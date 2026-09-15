@@ -5,7 +5,7 @@
 - `id` : `crypto.randomUUID()` — keyPath de tous les stores (sauf `meta` : keyPath `cle`). Exceptions assumées : `appels.id = <seanceId>_<eleveId>` et `notes.id = <evaluationId>_<eleveId>` — clés composites garantissant un enregistrement unique par élève × séance / élève × évaluation (`appel.js`, `notes.js`).
 - Dates : chaînes ISO `YYYY-MM-DD` (tri lexicographique = tri chronologique) ; heures `HH:MM`.
 - Champs marqués `*` : indexés (requêtes fréquentes).
-- `DB_VERSION` (entier, **2** depuis v0.12.0) dans `io.js` ; `onupgradeneeded` crée les stores **manquants** et, sur un store existant, les **index manquants** de `SCHEMA` — **à condition d'incrémenter `DB_VERSION` dans le même geste** : sans montée de version, `onupgradeneeded` ne se déclenche pas et l'index n'existe sur aucune base déjà ouverte (migration additive, décision D009 — jamais de suppression ni de transformation ; v0.12.12, D-11). Une future migration non additive imposerait un `switch (oldVersion)` et l'export JSON automatique préalable (BIBLE). ⚠ Ne jamais redéployer une version dont le `DB_VERSION` est inférieur à celui déjà ouvert sur les appareils (`indexedDB.open` échouerait en `VersionError`) — voir `deploiement.md`.
+- `DB_VERSION` (entier, **3** depuis v0.13.0, **2** de v0.12.0 à v0.12.20) dans `io.js` ; `onupgradeneeded` crée les stores **manquants** et, sur un store existant, les **index manquants** de `SCHEMA` — **à condition d'incrémenter `DB_VERSION` dans le même geste** : sans montée de version, `onupgradeneeded` ne se déclenche pas et l'index n'existe sur aucune base déjà ouverte (migration additive, décision D009 — jamais de suppression ni de transformation ; v0.12.12, D-11). Une future migration non additive imposerait un `switch (oldVersion)` et l'export JSON automatique préalable (BIBLE). ⚠ Ne jamais redéployer une version dont le `DB_VERSION` est inférieur à celui déjà ouvert sur les appareils (`indexedDB.open` échouerait en `VersionError`) — voir `deploiement.md`.
 
 ## Stores (schéma v1)
 
@@ -114,3 +114,12 @@ Store **`observations`** (schéma v2), index `eleveId`. Notes de suivi terrain.
 | Durée | Année scolaire ; purge guidée à chaque rentrée |
 | Suppression | Purge totale (Plus → Sauvegarde) ; suppressions unitaires en cascade documentées ci-dessus (avec annulation 8 s) |
 | Limites | Pas de chiffrement fort sans clé utilisateur → verrouillage de session obligatoire (voir README) |
+
+## Grilles d’évaluation — schéma 3 (v0.13.0)
+
+- **Store `grilles`** : `{ id, titre, apsa, archivee, dateCreation, niveaux: [{ cle, libelle, points, minimum?, couleur? }], criteres: [{ id, libelle, description, poids }], arrondi ("exact"|"0.25"|"0.5"|"1"), nonEvalue ("ignorer"|"zero"), pointsAjustables?, pasPoints? (1|0.5|0.25) }`. Ajouté par migration additive, sans transformer les stores existants.
+- **Évaluation `type: "grille"`** : `grilleId` et `grille` (instantané COMPLET du modèle au moment de la création), `bareme` et `coef` habituels. Le barème est figé à la création.
+- **Note d’une évaluation par grille** : `detail: { critereId: cleNiveau | { niveau, points } }` et `valeur` = note calculée sur le barème, ou code ABS/DISP/NN (le détail est alors conservé pour la reprise).
+- **Calcul** (`app/js/grilles-calcul.js`) : brut = Σ points × poids des critères évalués ; maximum = Σ points max × poids des critères évalués (ou de tous, si `nonEvalue = "zero"`) ; note = brut / maximum × barème, arrondie selon `arrondi` ; aucun critère évalué = aucune note.
+- **Validation** : une note ÉCRITE est contrôlée dans la transaction (`mettreAJourEvaluation`), sa valeur chiffrée devant être exactement celle que calculent ses critères. À l’import, seules les notes d’une évaluation par grille sont contrôlées ; les notes des autres évaluations sont acceptées telles quelles, pour qu’un historique antérieur aux gardes actuelles reste restaurable.
+

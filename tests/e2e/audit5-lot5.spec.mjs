@@ -67,7 +67,7 @@ test.describe('D-09 — date de sauvegarde en heure locale', () => {
   });
 });
 
-test('D-11 / C30 — montée de schéma v1 → v2 : store « observations » créé, index manquant ajouté, données conservées', async ({ page }) => {
+test('D-11 / C30 — montée de schéma v1 → v3 : store « observations » créé, index manquant ajouté, données conservées', async ({ page }) => {
   const res = await page.evaluate(async () => {
     const io = await import('/js/io.js');
     await io.ouvrirDB();
@@ -95,12 +95,12 @@ test('D-11 / C30 — montée de schéma v1 → v2 : store « observations » cr�
       r.onerror = () => ko(r.error);
     });
     try {
-      const db = await io.ouvrirDB(); // montée v1 → v2 par l'app
+      const db = await io.ouvrirDB(); // montée v1 → v3 par l'app
       const idx = db.transaction('eleves').objectStore('eleves').indexNames.contains('classeId');
       return { version: db.version, observations: db.objectStoreNames.contains('observations'), idx, lus: (await io.parIndex('eleves', 'classeId', 'c1')).length, eleve: (await io.lire('eleves', 'e1'))?.nom };
     } catch (e) { return { erreur: e.name + ': ' + e.message }; }
   });
-  expect(res).toEqual({ version: 2, observations: true, idx: true, lus: 1, eleve: 'A' }); // avant : idx false, parIndex → NotFoundError
+  expect(res).toEqual({ version: 3, observations: true, idx: true, lus: 1, eleve: 'A' }); // avant : idx false, parIndex → NotFoundError
 });
 
 test('C03 / B37 — CSV : UTF-16 avec BOM décodé, « � » légitime conservé, Windows-1252 en repli, caractères de contrôle retirés', async ({ page }) => {
@@ -562,7 +562,7 @@ test('B51 — Sauvegarde : base illisible → « Comptage impossible » au lieu 
   await page.evaluate(() => {
     const original = IDBDatabase.prototype.transaction;
     IDBDatabase.prototype.transaction = function (stores, mode, ...rest) {
-      if (mode === 'readonly' && [].concat(stores).length === 14) throw new DOMException('Base indisponible', 'InvalidStateError'); // compterTout (14 stores)
+      if (mode === 'readonly' && [].concat(stores).length === 15) throw new DOMException('Base indisponible', 'InvalidStateError'); // compterTout (14 stores)
       return original.call(this, stores, mode, ...rest);
     };
   });
@@ -639,7 +639,7 @@ test('C57 / C59 — la documentation suit le code : restrictions, champs EDT, pr
   expect(readme).toContain('app.localhost'); // avant : « [::1] » alors que le code essaie app.localhost en premier
   // Comptes dérivés des SIX specs (tests imbriqués dans un describe compris), par fichier et au total (revue du lot 5).
   const specs = readdirSync(new URL('./', import.meta.url)).filter((f) => f.endsWith('.spec.mjs'));
-  expect(specs.length).toBe(13);
+  expect(specs.length).toBe(15);
   let total = 0;
   for (const f of specs) {
     const n = (lire('./' + f).match(/^\s*test\(/gm) || []).length;
