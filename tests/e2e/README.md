@@ -127,7 +127,15 @@ un barème à 0, une note au-dessus du barème, la note d'un élève supprimé e
 restaurable** en schéma 3 — la copie la refusait en bloc, ce qu'une mutation rend rouge — tandis qu'une note de grille
 incohérente avec ses critères est refusée avant toute écriture.
 
-Total de la suite : **243 tests** (+ 51 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs` et `grilles-robustesse.spec.mjs`).
+**`bareme-partielles.spec.mjs` (8)** — deux finitions avant la mise en ligne des grilles. **V3-B3** : changer le barème d'une
+évaluation déjà notée pose la question — convertir, où 8/10 devient 16/20, garder les points, ou annuler — ; les codes ne
+bougent pas, la conversion non entière est arrondie au centième et marque la publication à refaire, garder des points au-dessus
+du nouveau barème reste refusé, et sans note chiffrée aucune question n'est posée. **Notes partielles** : une note de grille
+calculée sur une partie des critères est listée dans le récapitulatif de copie, avec un libellé propre à chaque règle de calcul.
+Les tests existants qui changeaient le barème d'une évaluation notée répondent désormais « Garder les points », ce qui préserve
+le scénario qu'ils prouvaient ; une mutation qui retire la sérialisation des changements de barème les rend rouges.
+
+Total de la suite : **251 tests** (+ 51 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs` et `grilles-robustesse.spec.mjs`).
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse

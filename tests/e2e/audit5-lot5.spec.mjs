@@ -639,7 +639,7 @@ test('C57 / C59 — la documentation suit le code : restrictions, champs EDT, pr
   expect(readme).toContain('app.localhost'); // avant : « [::1] » alors que le code essaie app.localhost en premier
   // Comptes dérivés des SIX specs (tests imbriqués dans un describe compris), par fichier et au total (revue du lot 5).
   const specs = readdirSync(new URL('./', import.meta.url)).filter((f) => f.endsWith('.spec.mjs'));
-  expect(specs.length).toBe(15);
+  expect(specs.length).toBe(16);
   let total = 0;
   for (const f of specs) {
     const n = (lire('./' + f).match(/^\s*test\(/gm) || []).length;
@@ -713,6 +713,7 @@ test('C15 (groupe 4) — barème modifiable après création : accepté 1..200, 
   // (une note à 15, refusée sous /10, est désormais acceptée pour un autre élève).
   await page.locator('#ge-bareme').fill('20');
   await page.locator('#ge-bareme').dispatchEvent('change');
+  await page.getByRole('button', { name: 'Garder les points', exact: true }).click(); // question du changement de barème (V3-B3)
   await expect(page.locator('#vue')).toContainText('noté /20');
   expect(await page.evaluate(async () => (await (await import('/js/io.js')).lire('evaluations', 'ev')).bareme)).toBe(20);
   await expect(page.getByRole('heading', { name: 'Vers Pronote' })).toBeVisible();
@@ -722,8 +723,8 @@ test('C15 (groupe 4) — barème modifiable après création : accepté 1..200, 
   expect(await page.evaluate(async () => (await (await import('/js/io.js')).lire('notes', 'ev_e2')).valeur)).toBe(15);
 
   // Refus à /5 sous la note de 8 de e1 : « ✗ », toast, valeur restaurée, base inchangée (V2-04).
-  await page.locator('#ge-bareme').fill('5');
-  await page.locator('#ge-bareme').dispatchEvent('change');
+  await page.locator('#ge-bareme').evaluate((c) => { c.value = '5'; c.dispatchEvent(new Event('change', { bubbles: true })); }); // un seul « change » : un refus ne doit pas reposer la question
+  await page.getByRole('button', { name: 'Garder les points', exact: true }).click(); // question du changement de barème (V3-B3)
   await expect(page.locator('.toast').last()).toContainText('Non enregistré');
   await expect(page.locator('.toast').last()).toContainText('dépasse');
   await expect(page.locator('label[for="ge-bareme"] .statut, #ge-bareme ~ .statut, .champ:has(#ge-bareme) .statut').first()).toHaveText('✗');

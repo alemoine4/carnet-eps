@@ -93,6 +93,7 @@ test('V3-03 — changer le barème après publication demande une nouvelle remon
   // Les points bruts sont conservés : 8/10 devient 8/20. Ce qui est parti dans Pronote est FAUX.
   await page.locator('#ge-bareme').fill('20');
   await page.locator('#ge-bareme').dispatchEvent('change');
+  await page.getByRole('button', { name: 'Garder les points', exact: true }).click(); // question du changement de barème (V3-B3)
   await expect(page.locator('.badge')).toContainText('à remettre à jour');
   // La date de publication est CONSERVÉE : elle dit quand la remontée a eu lieu.
   await expect(page.locator('.badge')).toContainText('05/09');
@@ -116,6 +117,7 @@ test('V3-03 — l’alerte de suivi redemande la remontée au lieu de croire l�
   await page.goto('/#/notes/eval/ev');
   await page.locator('#ge-bareme').fill('20');
   await page.locator('#ge-bareme').dispatchEvent('change');
+  await page.getByRole('button', { name: 'Garder les points', exact: true }).click(); // question du changement de barème (V3-B3)
   await expect(page.locator('.badge')).toContainText('à remettre à jour');
   await page.goto('/#/suivi');
   await expect(page.locator('#vue')).toContainText('à remettre à jour');

@@ -49,8 +49,10 @@ test('V3-01 (évaluation) — un barème refusé n’est pas persisté plus tard
   await seedBase(page);
   await page.goto('/#/notes/eval/ev');
   await saboter(page, 'evaluations');
-  await page.locator('#ge-bareme').fill('20');
-  await page.locator('#ge-bareme').dispatchEvent('change');
+  // UN seul « change » : depuis V3-B3 le changement de barème d'une évaluation notée pose une question,
+  // et un second événement la reposerait après l'échec, bloquant le reste du test.
+  await page.locator('#ge-bareme').evaluate((c) => { c.value = '20'; c.dispatchEvent(new Event('change', { bubbles: true })); });
+  await page.getByRole('dialog').getByRole('button', { name: 'Garder les points' }).click(); // question du changement de barème (V3-B3)
   await expect(page.locator('.toast').last()).toContainText('Non enregistré');
   await expect(page.locator('#ge-bareme')).toHaveValue('10'); // le champ est restauré (contrat V2-04)
   expect((await lire(page, 'evaluations', 'ev')).bareme).toBe(10);

@@ -119,7 +119,10 @@ test('AUD-001 — un barème abaissé pendant une saisie en vol attend la note, 
     };
   });
   await saisir(page.locator('.input-note').first(), '18');
-  await saisir(page.locator('#ge-bareme'), '10');
+  await page.locator('#ge-bareme').evaluate((c) => { c.value = '10'; c.dispatchEvent(new Event('change', { bubbles: true })); }); // un seul « change » : un refus ne doit pas reposer la question
+  // La question n'apparaît qu'une fois la note en vol écrite : c'est elle qui prouve l'attente.
+  await expect(page.getByRole('dialog')).toContainText('1 note déjà saisie');
+  await page.getByRole('button', { name: 'Garder les points', exact: true }).click(); // question du changement de barème (V3-B3)
   await expect(page.locator('.toasts')).toContainText(/dépasse/);
   expect(await page.evaluate(async () => (await (await import('/js/io.js')).lire('evaluations', 'v')).bareme)).toBe(20);
   expect(await noteEnBase(page, 'v_e')).toBe(18);

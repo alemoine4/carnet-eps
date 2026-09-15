@@ -43,6 +43,7 @@ Le poids multiplie les points après le choix : 8 avec un poids de 2 donne 16 po
 - **Bilan de la classe** donne, pour chaque critère, le nombre d’élèves observés et la réussite moyenne. ABS/DISP/NN en sont exclus.
 - **Imprimer** produit la fiche de l’élève sélectionné, ou le bilan affiché ; les contrôles de saisie disparaissent à l’impression.
 - **Notes et export Pronote** ouvre la grille de notes habituelle. Copier ou exporter le CSV ; les valeurs sont sur le barème choisi. Les codes ne deviennent pas des zéros et la copie rappelle les cases à compléter manuellement.
+- Une note calculée sur une **partie** des critères est signalée dans le récapitulatif de copie : elle part dans Pronote comme une note complète, à vous de décider s'il faut la compléter.
 - Une modification après publication indique que la remontée Pronote est à refaire.
 
 ## Conserver et transférer
