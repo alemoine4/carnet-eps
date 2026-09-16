@@ -5,7 +5,7 @@
    ⚠ Incrémenter VERSION à chaque déploiement (synchroniser avec VERSION_APP de state.js).
    Non enregistré sur localhost (voir main.js, décision D008). */
 
-const VERSION = '0.12.21';
+const VERSION = '0.12.22';
 const CACHE = `carnet-eps-${VERSION}`;
 const ASSETS = [
   './',
@@ -16,6 +16,7 @@ const ASSETS = [
   './css/responsive.css',
   './js/main.js',
   './js/state.js',
+  './js/demenagement.js',
   './js/ui.js',
   './js/io.js',
   './js/metier.js',

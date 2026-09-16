@@ -123,7 +123,12 @@ avant), au moins 18 entre deux statuts quelconques, lettre ≥ 4,5:1 et bordure 
 que l'appel. Cinq mutants (ancienne palette claire, ancienne palette sombre automatique, pastille du retard, les deux
 pastilles de la fiche élève) rendent ces tests rouges.
 
-Total de la suite : **220 tests** (+ 24 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs`, sauf le test de position des toasts, propre au PC).
+**`demenagement.spec.mjs` (5)** — bandeau de l'ancienne adresse lors de la migration vers une origine dédiée (A01). L'adresse est
+vide dans le dépôt et fournie par les tests en interceptant `app/js/demenagement.js`. Absent sans adresse ; présent avec une
+adresse HTTPS, avec un lien vers l'export et un vers la nouvelle installation ; compact sur téléphone ; absent à l'impression ;
+ignoré si l'adresse n'est pas en HTTPS, ce qu'une mutation retirant ce contrôle rend rouge.
+
+Total de la suite : **225 tests** (+ 24 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs`, sauf le test de position des toasts, propre au PC).
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse

@@ -4,6 +4,14 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-16 — v0.12.22 : bandeau « Carnet EPS a déménagé » (préparée, non déployée)
+
+Dernière version prévue pour l'ANCIENNE adresse, préparée sur la branche `demenagement`. Elle ne sert qu'au moment de la migration vers une origine dédiée (audit A01) : `alemoine4.github.io` est partagée avec d'autres applications, qui pourraient lire les données des élèves conservées par le navigateur pour cette origine.
+
+- **Une seule ligne à renseigner au déploiement** : l'adresse HTTPS de la nouvelle installation, dans `app/js/demenagement.js`. Vide, rien ne change.
+- **Renseignée, un bandeau permanent** dit de ne plus rien saisir ici, propose d'exporter une sauvegarde et ouvre la nouvelle adresse. Il vit dans l'en-tête, reste visible au défilement, reste compact sur téléphone et disparaît à l'impression.
+- **Seule une adresse HTTPS est acceptée.**
+
 ## 2026-09-16 — v0.12.21 : statuts d'appel distinguables (retour de terrain)
 
 Report sur l'adresse de production de la palette validée sur l'adresse d'essai (v0.13.2), sans rien d'autre de la v0.13 : ni grilles, ni schéma 3, ni bandeau d'essai. Version réversible.
