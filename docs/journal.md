@@ -14,6 +14,39 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-16 (41) — avis « carnet de classe à onglets » (référence iDoceo)
+
+Demande : « ce ne serait pas mieux de fonctionner avec des onglets en partant d'une classe (onglet pour ajouter des info, des
+notes...) », précisée ensuite par la référence iDoceo (onglets créés par « + », nommés, colorés, jusqu'à 99, appui long pour
+renommer, masquer, copier, déplacer). BIBLE règle 6 : changement structurant → avis avant tout code.
+
+**Fait** (aucun code modifié) :
+- `docs/avis/AVIS_PAGE_CLASSE_ONGLETS.md`, produit par un workflow : 5 lectures indépendantes du code ; recherche sur la
+  documentation officielle d'iDoceo (24 pages lues, chaque fait avec son URL, points non confirmés signalés) ; 4 propositions
+  (hub de liens, page de classe complète, navigation réorganisée, carnet à onglets personnalisables) notées par 2 juges sur
+  8 critères → option « en deux temps » en tête chez les deux (33/40), enrichie d'idées des trois autres.
+- **Vérification adversariale** de l'avis rédigé : 5 lentilles (code, iDoceo, données, terrain, cohérence), 79 constats, 2
+  réfutateurs par lentille → 11 réfutés, 68 retenus (67 appliqués, 1 écarté avec preuve) ; contre-relecture de la révision :
+  6 constats (4 appliqués par une seconde révision, 2 à la main). **Contrôle final** des passages révisés : 4 contrôleurs,
+  265 références ouvertes, 13 constats confirmés, tous appliqués.
+- Corrections de fond apportées par ces passes : un appel passé ouvert depuis le carnet s'ouvre **en consultation** (un toucher
+  y écrit aujourd'hui, et « Terminer » passe les restants en présent) ; onglets du carnet nommés **Classe · Présences ·
+  Évaluations** pour ne pas doubler « Élèves » et « Notes » de la barre du bas ; totaux en feuilles à part (3 colonnes utiles à
+  320 px) ; règles des évaluations et séquences sans date ; en v0.15, écritures d'une classe relues dans une seule transaction
+  (`sauverClasse`, « Restaurer », « Annuler » d'une suppression recopient un objet lu au rendu) ; onglets personnels effacés par
+  la purge de rentrée et remplacés par l'import d'une sauvegarde (PC ↔ téléphone) ; retour arrière uniquement sur la nouvelle
+  adresse (jamais `origin gh-pages` depuis cette branche) ; données de santé : lettres I et D visibles → question explicite.
+
+**Pièges rencontrés** : une révision est du texte neuf — la contre-relecture puis le contrôle final ont encore trouvé 6 puis 13
+défauts introduits ou laissés par les révisions ; un constat « réfuté » n'est pas une preuve que l'avis a raison (le compte de
+tests de la page de classe, réfuté une première fois, était bien faux : 14 et non 11) ; un contraste « lettre ≥ 4,5:1 » ne
+prouve pas la pastille (une lettre rouge sans pastille passe sur le fond sombre de la page) → égalité du couple fond/lettre.
+
+**Décidé** : rien — 14 questions fermées en §12, chacune avec sa recommandation.
+
+**Prochaine étape** : résultat de l'essai téléphone de la v0.13.2 ; réponses aux 14 questions ; mise en service puis migration ;
+alors seulement, v0.14.0.
+
 ## 2026-09-16 (39) — v0.13.2 : retours de l'essai téléphone (couleurs de statut, écran des grilles)
 
 Demande : trois retours après l'essai de la v0.13.1 — « retard, tenue et absent sont pratiquement de la même couleur », « votre
