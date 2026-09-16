@@ -1,4 +1,4 @@
-# Fiche d'essai téléphone — nouvelle adresse (v0.13.1, ~15 min)
+# Fiche d'essai téléphone — nouvelle adresse (v0.13.2, ~15 min)
 
 > **Adresse d'essai : https://carnet-eps.github.io/** — ouvrir dans un **onglet Chrome**, sans installer.
 > L'en-tête affiche un bandeau ambre « Version d'essai — n'y saisissez que des données fictives » : c'est normal, il disparaîtra à la mise en service.
@@ -12,7 +12,7 @@
 ## 0. Ouverture (~1 min)
 
 - [ ] L'adresse s'ouvre, le bandeau **« Version d'essai »** est visible dans l'en-tête et le reste quand on fait défiler
-- [ ] Plus → Réglages → ligne **Version : v0.13.1**
+- [ ] Plus → Réglages → ligne **Version : v0.13.2** *(si tu vois encore v0.13.1 : fermer l'onglet, le rouvrir, attendre le message « Nouvelle version installée »)*
 - [ ] L'écran est vide (première ouverture) : aucune donnée de l'ancienne adresse ne doit apparaître ici
 
 ## 1. Une classe fictive (~3 min)
@@ -27,11 +27,12 @@
 
 - [ ] Onglet **Appel** : la ligne `HH:MM · 6ESSAI · Badminton` propose « **Créer la séance + appel** » *(ou, si la séance a été ajoutée depuis la séquence, la carte « Séances récentes »)*
 - [ ] Taper deux absents, « **Terminer l'appel** » : les autres passent présents
-- [ ] Rien de plus à vérifier ici : cet écran n'a pas changé depuis la v0.12.20 que tu utilises déjà
+- [ ] **Couleurs revues en v0.13.2** (ton premier retour) : mettre un élève absent, un en retard, un en oubli de tenue (appui long ou « ⋯ ») — les trois se distinguent-ils au premier coup d'œil, en plein jour, et en mode sombre si ton téléphone l'utilise ?
 
 ## 3. Grille d'évaluation — le cœur de l'essai (~6 min)
 
-- [ ] Plus → **Grilles d'évaluation** → « **Nouvelle grille** » : garder les 4 niveaux et 4 critères proposés → **Enregistrer la grille**
+- [ ] Plus → **Grilles d'évaluation** : l'encadré « Votre première grille » n'est plus collé aux boutons (ton second retour)
+- [ ] « **Nouvelle grille** » : garder les 4 niveaux et 4 critères proposés → **Enregistrer la grille**
 - [ ] Onglet **Notes** → « **+ Nouvelle évaluation** » : séquence de `6ESSAI`, **Titre** (obligatoire, par ex. `Essai grille`), type **Grille d'évaluation EPS**, **Grille à utiliser** = la grille, barème 20 → « **Créer et saisir les notes** » : l'écran de saisie par grille s'ouvre directement *(pour y revenir plus tard : l'évaluation → « Saisir les critères / voir le détail »)*
 - [ ] Au-dessus des cases, la consigne « Touchez une case pour choisir le niveau. Retoucher le niveau sélectionné efface ce critère. » est affichée
 - [ ] **Mode « Par élève »** : pour un élève, toucher un niveau sur chacun des 4 critères. La case choisie s'allume **dès le toucher** et la note (par ex. « 15/20 ») se met à jour
