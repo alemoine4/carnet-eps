@@ -4,6 +4,16 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-16 — v0.13.2 : retours de l'essai téléphone — statuts d'appel distinguables, écran des grilles aéré (origine d'essai seulement)
+
+Premiers retours de l'essai sur téléphone de la v0.13.1.
+
+- **« Retard, tenue et absent sont pratiquement de la même couleur. »** Mesuré : trois teintes chaudes voisines, écart perceptuel (ΔE2000) de 15 à 16 entre absent et oubli de tenue, 25 entre absent et retard — sous le seuil où deux couleurs se distinguent d'un coup d'œil sur une petite pastille. Nouvelle palette, cherchée par calcul sous contraintes de lisibilité dans les deux thèmes : **retard en pastille jaune vif à lettre foncée** (bordure ambre sombre), **oubli de tenue en magenta**, **dispense en indigo**, absent en rouge plus franc, infirmerie en gris chaud. Au moins **34** entre présent, absent, retard et oubli de tenue, au moins 18 sur toute la palette (14,5 avant) ; lettre sur la pastille ≥ 4,5:1, bordure de carte ≥ 3:1, en clair comme en sombre. La lettre de la pastille (P, A, R, T…), repère qui ne dépend pas de la couleur, est un peu agrandie.
+- **Même pastille partout** : les compteurs et l'historique de la fiche élève suivent la même règle que l'écran d'appel (le retard y est aussi jaune).
+- **Les couleurs de niveau d'une grille ont leur propre palette** : elles réutilisaient celles des statuts, et changer ces dernières aurait renommé en silence les choix de l'éditeur (« orange » serait devenu jaune, « rose » magenta). Les grilles gardent exactement leurs couleurs.
+- **« Votre première grille » n'est plus collée aux boutons** « Nouvelle grille » / « Créer une évaluation » : même barre d'actions que les autres écrans.
+- Tests : `tests/e2e/essai-terrain.spec.mjs` (5) — écart perceptuel et contrastes mesurés sur les pastilles et bordures **réellement rendues**, dans les deux thèmes ; même pastille dans la fiche élève ; couleurs de grille fidèles à leur nom ; espacement. 6 mutants tués, suite 278 (+ 73 mobile).
+
 ## 2026-09-16 — v0.13.1 : version d'essai marquée, saisie par grille sans tap perdu, CI durcie (origine d'essai seulement)
 
 Premier lot issu de l'**audit indépendant du 2026-09-16** (rapport hors dépôt : 36 constats, 15 vérifications contradictoires, aucun constat invalidé), livré **avant** l'essai téléphone pour que l'essai porte sur la version qui recevra les vraies données. Publiée **uniquement sur l'origine d'essai** https://carnet-eps.github.io/ ; l'ancienne adresse reste en v0.12.20.

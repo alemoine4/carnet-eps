@@ -14,6 +14,37 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-16 (39) — v0.13.2 : retours de l'essai téléphone (couleurs de statut, écran des grilles)
+
+Demande : trois retours après l'essai de la v0.13.1 — « retard, tenue et absent sont pratiquement de la même couleur », « votre
+première grille, la boîte est trop collée à Nouvelle grille / Créer une évaluation », et une question de structure (travailler par
+classe avec des onglets), traitée à part.
+
+**Fait** :
+- **Mesure avant correction** : écart perceptuel CIEDE2000 entre pastilles — absent / oubli de tenue 16,4 (clair) et 14,7 (sombre),
+  absent / retard 25 ; minimum de la palette 14,5 (inapte / infirmerie) et 12,5 en sombre. Le ressenti était juste.
+- **Palette cherchée par calcul** (scripts hors dépôt) sous contraintes : lettre blanche ≥ 4,5:1 en clair, lettre foncée ≥ 4,5:1 et
+  bordure ≥ 3:1 en sombre, MÊME famille de teinte dans les deux thèmes, paires de l'appel pondérées double. Retard : un jaune assez
+  sombre pour une lettre blanche frôlait le vert du « présent » (29,9) → **pastille jaune vif à lettre foncée** (`--stbf-retard`,
+  `--stbt-retard`), bordure ambre sombre. Résultat : ≥ 34 entre présent, absent, retard et oubli de tenue ; ≥ 18 sur la palette.
+- **Forme de règle unique** pour toutes les pastilles : `var(--stbf-x, var(--stb-x))` et `var(--stbt-x, var(--c-sur-accent))`,
+  dans `components.css` ET dans les deux sites de `eleves.js` (compteurs, historique) — sinon la fiche élève aurait gardé un
+  retard olive à lettre blanche.
+- **Couleurs de niveau des grilles découplées** (`--niv-*`, valeurs d'avant) : elles pointaient sur les tokens de statut, et les
+  noms montrés dans l'éditeur (« orange », « rose ») auraient menti.
+- Écran des grilles : `rang-btn` → `barre-actions` (marge sous les boutons, comme partout ailleurs).
+- `tests/e2e/essai-terrain.spec.mjs` (5) ; 6 mutants tués. Suite 278 (+ 73 mobile).
+
+**Pièges rencontrés** : `getPropertyValue('--x')` rend la valeur telle qu'écrite (hexadécimal), pas un rgb → résoudre via un élément
+témoin ; un test qui lit la VARIABLE ne voit pas qu'une règle est rebranchée sur une autre variable (mutant survivant) → mesurer la
+case rendue ; ma première mutation « ancienne palette » ne remettait pas la couleur fautive (oubli de tenue) et survivait — une
+mutation doit restaurer le DÉFAUT signalé, pas une partie ; le navigateur de l'aperçu gardait l'ancien CSS en cache HTTP
+(`fetch(url, { cache: 'reload' })` avant de recharger).
+
+**Décidé** : la production (v0.12.20) garde l'ancienne palette tant qu'on ne décide pas de l'y reporter (proposé, pas fait).
+
+**Prochaine étape** : réponse sur la navigation par classe à onglets ; suite de l'essai téléphone.
+
 ## 2026-09-16 (38) — v0.13.1 : premier lot de l'audit indépendant (essai marqué, grille sans tap perdu, CI durcie)
 
 Demande : « go » sur l'ordre proposé après remise du rapport d'audit indépendant (hors dépôt : 36 constats, 15 vérifications contradictoires, aucun constat invalidé) — petit lot correctif AVANT l'essai téléphone, puis essai, puis migration des vraies données.
