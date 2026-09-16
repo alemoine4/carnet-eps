@@ -12,7 +12,7 @@ Premiers retours de l'essai sur téléphone de la v0.13.1.
 - **Même pastille partout** : les compteurs et l'historique de la fiche élève suivent la même règle que l'écran d'appel (le retard y est aussi jaune).
 - **Les couleurs de niveau d'une grille ont leur propre palette** : elles réutilisaient celles des statuts, et changer ces dernières aurait renommé en silence les choix de l'éditeur (« orange » serait devenu jaune, « rose » magenta). Les grilles gardent exactement leurs couleurs.
 - **« Votre première grille » n'est plus collée aux boutons** « Nouvelle grille » / « Créer une évaluation » : même barre d'actions que les autres écrans.
-- Tests : `tests/e2e/essai-terrain.spec.mjs` (5) — écart perceptuel et contrastes mesurés sur les pastilles et bordures **réellement rendues**, dans les deux thèmes ; même pastille dans la fiche élève ; couleurs de grille fidèles à leur nom ; espacement. 6 mutants tués, suite 278 (+ 73 mobile).
+- Tests : `tests/e2e/essai-terrain.spec.mjs` (6) — écart perceptuel et contrastes mesurés sur les pastilles et bordures **réellement rendues**, en clair, en sombre choisi et en **sombre automatique** (téléphone en mode sombre : bloc de styles distinct, ajouté après coup — un mutant sur ce seul bloc passait) ; même pastille dans la fiche élève ; couleurs de grille fidèles à leur nom ; espacement. 7 mutants tués, suite 279 (+ 73 mobile). La palette est reportée à l’identique sur la production en v0.12.21.
 
 ## 2026-09-16 — v0.13.1 : version d'essai marquée, saisie par grille sans tap perdu, CI durcie (origine d'essai seulement)
 

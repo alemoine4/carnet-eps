@@ -53,7 +53,10 @@ const contraste = (a, b) => {
 // prouverait rien : ce que l'œil compare, ce sont ces trois valeurs, règles de la feuille appliquées.
 const palette = (page, theme) => page.evaluate(async (theme) => {
   const { STATUTS } = await import('/js/metier.js');
-  document.documentElement.dataset.theme = theme;
+  // « auto » : aucun attribut, c'est le bloc @media (prefers-color-scheme: dark) qui s'applique — un bloc
+  // DISTINCT de :root[data-theme="sombre"], qu'un test du seul choix explicite ne voit pas.
+  if (theme === 'auto') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = theme;
   const rgb = (v) => v.match(/[\d.]+/g).slice(0, 3).map(Number);
   const el = (balise, classe, parent) => { const n = document.createElement(balise); n.className = classe; parent.append(n); return n; };
   const hote = el('div', '', document.body);
@@ -77,6 +80,7 @@ const palette = (page, theme) => page.evaluate(async (theme) => {
 // Même vérification dans les deux thèmes ; deux tests écrits en toutes lettres (la garde de cohérence de la
 // documentation compte les tests dans le code source).
 const verifierPalette = async (page, theme) => {
+  if (theme === 'auto') await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto('/#/accueil');
   const { pastille, texte, bordure, surface } = await palette(page, theme);
   // Le trio du tap (présent → absent → tenue) plus le retard : ce sont ceux qu'on lit d'un coup d'œil.
@@ -102,6 +106,7 @@ const verifierPalette = async (page, theme) => {
 };
 test('Appel (clair) — deux statuts ne se ressemblent jamais au point d’être confondus', ({ page }) => verifierPalette(page, 'clair'));
 test('Appel (sombre) — deux statuts ne se ressemblent jamais au point d’être confondus', ({ page }) => verifierPalette(page, 'sombre'));
+test('Appel (sombre automatique, téléphone en mode sombre) — deux statuts ne se ressemblent jamais au point d’être confondus', ({ page }) => verifierPalette(page, 'auto'));
 
 test('Fiche élève — un statut a la même pastille que sur l’écran d’appel (retard en jaune vif)', async ({ page }) => {
   const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

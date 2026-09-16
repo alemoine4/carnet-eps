@@ -154,15 +154,15 @@ en double, visible après passage à l'élève suivant et en message si la vue e
 bloc `permissions` en lecture seule et chaque action épinglée par un SHA de 40 caractères commenté de sa version. **25 mutants** (un par
 promesse) rendent ces tests rouges.
 
-**`essai-terrain.spec.mjs` (5)** — retours de l'**essai sur téléphone du 2026-09-16** (v0.13.1). Couleurs de l'appel : l'écart
+**`essai-terrain.spec.mjs` (6)** — retours de l'**essai sur téléphone du 2026-09-16** (v0.13.1). Couleurs de l'appel : l'écart
 perceptuel (CIEDE2000) est calculé sur les pastilles et bordures **réellement rendues** — carte d'élève témoin, styles calculés —
-dans les deux thèmes : au moins 30 entre présent, absent, retard et oubli de tenue (15 à 16 avant), au moins 18 entre deux statuts
+en thème clair, en sombre choisi et en **sombre automatique** (`prefers-color-scheme`, bloc de styles distinct) : au moins 30 entre présent, absent, retard et oubli de tenue (15 à 16 avant), au moins 18 entre deux statuts
 quelconques, lettre ≥ 4,5:1 et bordure ≥ 3:1. La fiche élève affiche la même pastille que l'appel. Les couleurs de niveau d'une
 grille, mesurées sur une case rendue, ressemblent à leur nom. La première carte de l'écran des grilles n'est plus collée à la barre
-d'actions. Six mutants (ancienne palette, pastille du retard, couleurs de grille rebranchées sur les statuts, espacement, les deux
+d'actions. Sept mutants (ancienne palette claire, ancienne palette sombre automatique, pastille du retard, couleurs de grille rebranchées sur les statuts, espacement, les deux
 pastilles de la fiche élève) rendent ces tests rouges.
 
-Total de la suite : **278 tests** (+ 73 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs`, `grilles-robustesse.spec.mjs` et `audit-independant.spec.mjs`).
+Total de la suite : **279 tests** (+ 73 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs`, `grilles-robustesse.spec.mjs` et `audit-independant.spec.mjs`).
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse

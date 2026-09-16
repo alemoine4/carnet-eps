@@ -43,6 +43,11 @@ mutation doit restaurer le DÉFAUT signalé, pas une partie ; le navigateur de l
 
 **Décidé** : la production (v0.12.20) garde l'ancienne palette tant qu'on ne décide pas de l'y reporter (proposé, pas fait).
 
+**Complément (même jour)** : palette reportée sur la production en **v0.12.21** (entrée 40, branche `main`). En chemin, un mutant a
+survécu : les tests ne vérifiaient le sombre que par le choix explicite des Réglages, pas le bloc `@media (prefers-color-scheme: dark)`
+utilisé en mode « Auto » — le cas probable d'un téléphone en mode sombre. Test du sombre automatique ajouté ici aussi (mutant tué),
+suite 279. La branche `demenagement`, rebasée sur la v0.12.21, devient **v0.12.22** (procédure de mise en service renumérotée).
+
 **Prochaine étape** : réponse sur la navigation par classe à onglets ; suite de l'essai téléphone.
 
 ## 2026-09-16 (38) — v0.13.1 : premier lot de l'audit indépendant (essai marqué, grille sans tap perdu, CI durcie)
