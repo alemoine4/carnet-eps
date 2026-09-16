@@ -5,6 +5,7 @@ import { enregistrerVue, afficherVue, carte, el, toast, ligneAlerte } from './ui
 import { etat, abonner, estLocalhost } from './state.js';
 import { ouvrirDB } from './io.js';
 import { collecterAlertes } from './metier.js';
+import { NOUVELLE_ADRESSE } from './demenagement.js';
 import { initialiser as initAccueil } from './modules/accueil.js';
 import { initialiser as initSauvegarde } from './modules/sauvegarde.js';
 import { initialiser as initReglages } from './modules/reglages.js';
@@ -160,6 +161,18 @@ async function naviguer() {
 }
 
 window.addEventListener('hashchange', naviguer);
+
+// ---- Déménagement vers une origine dédiée (A01) ----
+// L'ancienne adresse reste utilisable pour EXPORTER, mais plus rien ne doit s'y saisir : deux carnets
+// qui divergent ne se réconcilient pas. Le bandeau vit dans l'en-tête collant, donc reste visible au
+// défilement, et disparaît à l'impression avec lui. Seule une adresse HTTPS est acceptée.
+if (/^https:\/\//.test(NOUVELLE_ADRESSE)) {
+  document.querySelector('.entete')?.append(el('div', { class: 'demenagement', role: 'region', 'aria-label': 'Carnet EPS a déménagé' },
+    el('p', {}, el('strong', {}, 'Carnet EPS a déménagé.'), ' Ne saisissez plus rien ici : exportez une sauvegarde, puis importez-la sur la nouvelle adresse.'),
+    el('p', { class: 'demenagement-actions' },
+      el('a', { class: 'btn', href: '#/sauvegarde' }, 'Exporter une sauvegarde'),
+      el('a', { class: 'btn btn-principal', href: NOUVELLE_ADRESSE, rel: 'noopener' }, 'Ouvrir la nouvelle adresse'))));
+}
 
 // Lien d'évitement (B36) : le focus va sur la navigation SANS passer par le hash — un hash
 // « #nav-principale » serait pris pour une route et renverrait à l'accueil (revue du lot 3).

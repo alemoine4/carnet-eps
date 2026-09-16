@@ -141,6 +141,28 @@ body {
   text-transform: capitalize;
 }
 
+/* Bandeau de déménagement (A01) : dans l'en-tête collant, contrasté dans les deux thèmes. */
+.demenagement {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 2px solid var(--stb-absent);
+  border-radius: var(--r-carte);
+  background: var(--c-surface);
+  color: var(--c-texte);
+  font-size: 0.9rem;
+}
+
+.demenagement p {
+  margin: 0;
+}
+
+.demenagement-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px !important;
+}
+
 /* ---- Zone de contenu ---- */
 .vue {
   padding: 16px;
