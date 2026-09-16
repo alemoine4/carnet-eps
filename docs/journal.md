@@ -14,6 +14,26 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-16 (40) — v0.12.21 : palette des statuts reportée sur la production
+
+Demande : « go » pour reporter sur l'adresse de production la seule palette des statuts validée en v0.13.2 sur l'adresse
+d'essai (entrées 38 et 39 : branche `grilles-schema3`).
+
+**Fait** :
+- `base.css` (thème clair et les DEUX blocs sombres), `components.css` (forme de règle unique des pastilles, lettre agrandie),
+  `eleves.js` (compteurs et historique) : valeurs et règles identiques octet pour octet à la branche d'essai (vérifié par diff).
+- `tests/e2e/palette-statuts.spec.mjs` (4). **Mutant survivant trouvé en chemin** : l'ancienne palette remise dans le seul bloc
+  `@media (prefers-color-scheme: dark)` passait tous les tests, qui ne testaient le sombre que par le choix explicite des Réglages
+  (`:root[data-theme="sombre"]`). Or « Auto » avec un téléphone en mode sombre est le cas le plus probable sur le terrain → test du
+  sombre automatique ajouté (`emulateMedia` + attribut de thème retiré), mutant tué. Même trou sur la branche d'essai, à corriger.
+- Vérifié à l'écran sur la version de production : appel en clair, appel en sombre automatique sur 375 px, fiche élève.
+- Suite 220 (+ 24 mobile).
+
+**Décidé** : la branche `demenagement` (bandeau « a déménagé », jamais publiée) prenait le numéro v0.12.21 : elle est rebasée sur
+cette version et devient v0.12.22.
+
+**Prochaine étape** : essai téléphone de la v0.13.2 ; avis « page de classe à onglets » après la migration.
+
 ## 2026-09-09 (37) — v0.12.15 : lot V3-A (mutation après écriture validée)
 
 Demande : « go » sur la stratégie de l'audit V3 (V3-A d'abord, seul).

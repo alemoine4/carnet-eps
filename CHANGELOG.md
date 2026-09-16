@@ -4,6 +4,14 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-16 — v0.12.21 : statuts d'appel distinguables (retour de terrain)
+
+Report sur l'adresse de production de la palette validée sur l'adresse d'essai (v0.13.2), sans rien d'autre de la v0.13 : ni grilles, ni schéma 3, ni bandeau d'essai. Version réversible.
+
+- **« Retard, tenue et absent sont pratiquement de la même couleur. »** Mesuré : trois teintes chaudes voisines, écart perceptuel (ΔE2000) de 15 à 16 entre absent et oubli de tenue, 25 entre absent et retard. Nouvelle palette, calculée sous contraintes de lisibilité dans les deux thèmes : **retard en pastille jaune vif à lettre foncée** (bordure ambre sombre), **oubli de tenue en magenta**, **dispense en indigo**, absent en rouge plus franc, infirmerie en gris chaud. Au moins **34** entre présent, absent, retard et oubli de tenue, au moins 18 sur toute la palette (14,5 avant) ; lettre sur la pastille ≥ 4,5:1, bordure de carte ≥ 3:1. La lettre de la pastille (P, A, R, T…) est un peu agrandie.
+- **Même pastille partout** : les compteurs et l'historique de la fiche élève suivent la même règle que l'écran d'appel.
+- Tests : `tests/e2e/palette-statuts.spec.mjs` (4) — écart perceptuel et contrastes mesurés sur les pastilles et bordures **réellement rendues**, en clair, en sombre choisi dans les Réglages et en **sombre automatique** (téléphone en mode sombre : un bloc de styles distinct, qu'un test du seul choix explicite ne voyait pas) ; même pastille dans la fiche élève. 5 mutants tués, suite 220 (+ 24 mobile).
+
 ## 2026-09-15 — v0.12.20 : les quatre derniers constats de l'audit V3, repris de la copie de travail de Codex
 
 Codex a travaillé plusieurs jours sur une copie complète du dépôt (`copie-codex/`, non déployée), jusqu'à une v0.13.3 qui ajoute les grilles d'évaluation et passe la base en schéma 3. Cette version n'en reprend **que les corrections des constats V3 encore ouverts**, sans les grilles et **sans changer de schéma** : elle reste réversible. Les grilles feront l'objet d'une étape à part.

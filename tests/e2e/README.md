@@ -115,7 +115,15 @@ arbitrages de la v0.12.18 disparaissent, absorbés par elle. Un témoin garde le
 les libellés de tiers sans colonne sûre en face, ainsi que les pluriels (« Prénoms », « Prénom(s) ») qui
 n'étaient reconnus par rien.
 
-Total de la suite : **216 tests** (+ 24 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs`, sauf le test de position des toasts, propre au PC).
+**`palette-statuts.spec.mjs` (4)** — couleurs des statuts d'appel (retour de terrain du 2026-09-16 : « retard, tenue et
+absent sont pratiquement de la même couleur »). L'écart perceptuel (CIEDE2000) est calculé sur les pastilles et bordures
+**réellement rendues** — carte d'élève témoin, styles calculés — en thème clair, en sombre choisi et en **sombre automatique**
+(`prefers-color-scheme`, bloc de styles distinct) : au moins 30 entre présent, absent, retard et oubli de tenue (15 à 16
+avant), au moins 18 entre deux statuts quelconques, lettre ≥ 4,5:1 et bordure ≥ 3:1. La fiche élève affiche la même pastille
+que l'appel. Cinq mutants (ancienne palette claire, ancienne palette sombre automatique, pastille du retard, les deux
+pastilles de la fiche élève) rendent ces tests rouges.
+
+Total de la suite : **220 tests** (+ 24 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs`, sauf le test de position des toasts, propre au PC).
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse
