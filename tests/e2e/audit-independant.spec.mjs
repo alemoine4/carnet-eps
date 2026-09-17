@@ -336,7 +336,7 @@ test('FON-05 — une erreur au milieu d’une rafale n’est pas recouverte par 
   await expect(case_(page, 1, 2)).toHaveAttribute('aria-pressed', 'true');
   // Vue affichée : l'échec se voit dans la barre, sous le pouce (la ligne d'état du haut peut être hors de l'écran), et
   // aucun message ne recouvre « Élève suivant » ni ne double l'annonce (revue et contre-revue v0.13.4).
-  await expect(page.locator('.grille-barre .grille-echec')).toHaveText(`Non enregistré : FICTIF Alice · ${g.criteres[0].libelle} — Disque plein (test)`);
+  await expect(page.locator('.grille-barre .grille-echec')).toHaveText(`Non enregistré — Disque plein (test) : FICTIF Alice · ${g.criteres[0].libelle}`);
   await expect(page.locator('.toast')).toHaveCount(0);
 });
 
@@ -350,7 +350,7 @@ test('FON-05 — statut ABS refusé : le sélecteur revient à l’état enregis
   // Sans la remise à jour sur place, le sélecteur restait sur ABS alors que la base n'a aucune note.
   await expect(selecteur).toHaveValue('');
   // Sous le pouce, l'échec dit QUOI ressaisir : le statut ABS (v0.13.4, troisième revue).
-  await expect(page.locator('.grille-barre .grille-echec')).toHaveText('Non enregistré : FICTIF Alice · statut ABS — Disque plein (test)');
+  await expect(page.locator('.grille-barre .grille-echec')).toHaveText('Non enregistré — Disque plein (test) : FICTIF Alice · statut ABS');
   expect(await detailEnBase(page, 'v_a')).toBeNull();
 });
 
@@ -366,7 +366,7 @@ test('FON-05 — par critère, chaque élève en échec est nommé avec SA cause
   await expect(message).toContainText('SECOND Bob (Cause un (test))');
   await expect(message).toContainText('FICTIF Alice (Cause deux (test))');
   // Et sous le pouce, en mode « Par critère » aussi : les deux choix à ressaisir.
-  await expect(page.locator('.grille-barre .grille-echec')).toHaveText(`Non enregistré : SECOND Bob · ${g.criteres[0].libelle}, FICTIF Alice · ${g.criteres[0].libelle} — plusieurs causes`);
+  await expect(page.locator('.grille-barre .grille-echec')).toHaveText(`Non enregistré — plusieurs causes : SECOND Bob · ${g.criteres[0].libelle}, FICTIF Alice · ${g.criteres[0].libelle}`);
 });
 
 test('FON-05 — passé à l’élève suivant pendant une écriture refusée : l’erreur nomme l’élève en échec', async ({ page }) => {

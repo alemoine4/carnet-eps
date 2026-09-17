@@ -34,6 +34,21 @@ Demande : « l'ergonomie évaluation 1 élève à la fois, c'est pas top », pui
   n'avait plus d'intégration continue).
 - Mesures à 375 × 812 : page d'un élève 1 218 px (2 053 avant), élève entier visible après « Élève suivant », barre à 687 px à
   l'ouverture, en bas de page et après « Élève suivant » ; mode « Par critère » 112 px par élève (environ 270).
+- **Vérification finale** (2 lentilles, juste avant publication) : 8 constats sur 8, dont un **BLOQUANT que j'avais
+  introduit au tour précédent** — le `scrollIntoView` qui ramenait le focus en vue (correctif 2.4.11) n'avait aucune borne :
+  il se déclenchait pour un élément hors écran, pour un focus pris AU DOIGT, et à chaque `resize`. Mesuré : l'écran sautait
+  de 735 à 877 px sous le doigt, et le tap suivant écrivait « 20/20 » pour un autre élève avec « Enregistré ✓ ». Corrigé par
+  trois gardes (focus clavier `:focus-visible`, case encore à l'écran, case réellement recouverte par la barre).
+  Les sept autres : la cause de l'erreur était coupée par la limite de deux lignes (cause en tête, noms résumés au-delà de
+  deux, détail complet en infobulle) ; la bascule de la barre en cours de saisie était muette (annonce + marge de 13 %) ;
+  cinq preuves manquantes (défilement sous le doigt, ligne d'erreur non recouverte, porteur de `--h-barre-grille`, palier
+  minimal, rotation inverse, statut refusé au rechargement) et un compte faux dans le README des tests.
+- **Campagne de mutants finale** : cinq mutants ne mutaient plus (ancres devenues fausses après les correctifs) et deux
+  SURVIVAIENT — ceux du défaut bloquant. Ma preuve « l'écran ne bouge pas sous le doigt » était VIDE trois fois : le focus
+  était resté sur un bouton de la barre (donc écarté par la garde), le tap de l'échec était programmatique (un `click()` en
+  script ne déplace pas le focus), et la ligne d'erreur était DÉJÀ affichée — la barre ne grandissait donc pas et
+  l'observateur ne se déclenchait jamais. Le tap sous la barre est devenu un test à lui seul, qui vérifie d'abord ses
+  propres prémisses (focus sur la case touchée, focus non clavier, case recouverte, barre qui a bien grandi).
 - **Troisième revue** (3 lentilles : barre fixe et mesures, erreurs et élargissement, preuves) : 14 constats sur 14, tous
   corrigés — un VRAI message d'erreur (conflit « autre onglet », stockage plein) faisait passer la barre ENTIÈRE au-dessus de
   15 % : elle quittait le pouce et le tap suivant écrivait un niveau pour un autre élève (le seuil se mesure désormais sur la
@@ -49,11 +64,23 @@ Demande : « l'ergonomie évaluation 1 élève à la fois, c'est pas top », pui
   barre avalait « Élève suivant » (les niveaux suivants s'écrivaient sur l'élève précédent) et doublait l'annonce ; la barre
   collante « immobile » ne l'était qu'en partant du haut de page ; la garde `:focus-visible` rendait le retour en haut inopérant
   au doigt (vraie sur un `<select>` touché dans Chromium), et le test passait par `selectOption` sans focus. Tous corrigés.
-- 10 tests dans `grilles.spec.mjs` (rejoués sur mobile), 1 dans `terrain.spec.mjs`, assertions FON-05 ajustées ; 38 mutants
-  tués sur 40 construits (2 équivalents retirés : la règle « paysage » doublait celle des 15 %, et un mutant d'annonce laissait
+- 11 tests dans `grilles.spec.mjs` (rejoués sur mobile), 1 dans `terrain.spec.mjs`, assertions FON-05 ajustées ; 45 mutants
+  tués sur 45 gardés (2 équivalents retirés : la règle « paysage » doublait celle des 15 %, et un mutant d'annonce laissait
   l'affectation correcte s'exécuter après lui).
 
 **Pièges rencontrés** :
+- Un correctif d'accessibilité peut créer un défaut de saisie : ramener le focus en vue est juste au CLAVIER et faux au
+  DOIGT, où l'écran bouge sous la main. Toute action automatique sur le défilement doit dire de quelle modalité elle vient,
+  et se borner à ce qu'elle prétend corriger (élément visible, réellement recouvert).
+- Une preuve peut être vide sans qu'aucun test ne rougisse : il faut mettre en scène la PRÉMISSE (ici le focus au doigt sur
+  la case, glissée sous la barre, et une barre qui grandit vraiment) et l'affirmer dans le test. Sans cela on mesure un
+  écran qui ne bouge pas… parce que rien ne pouvait le faire bouger.
+- Un `element.click()` en script ne donne pas le focus (contrairement à un vrai tap) : pratique pour ne pas le déplacer,
+  trompeur quand c'est le focus qu'on veut éprouver.
+- Un test qui déclenche l'échec par un conflit écrit en base peut, selon l'état de la vue, ne pas échouer : pour une preuve,
+  préférer la panne d'écriture, déterministe.
+- Deux assertions dans le mauvais ordre suffisent à créer une course : lire un attribut (sans réessai) avant l'assertion
+  qui attend l'état.
 - Une barre COLLANTE ne peut pas rester à la même place : en bas de page, elle suit la fin de son conteneur. « Immobile » exige
   `position: fixed` et une réserve mesurée — et un test qui compare la position depuis le haut ET depuis le bas.
 - Un message temporaire posé sur la zone du pouce avale le geste suivant : une erreur de saisie doit vivre DANS l'interface qu'elle

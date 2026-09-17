@@ -505,14 +505,20 @@ test('Grilles texte agrandi (320 px, 200 %) et paysage : rien ne déborde, et la
   const barre=() => page.evaluate(() => ({hauteur:document.querySelector('.grille-barre').getBoundingClientRect().height,position:getComputedStyle(document.querySelector('.grille-barre')).position}));
   await expect.poll(async () => (await barre()).hauteur>0).toBe(true);
   const h=(await barre()).hauteur;
-  const grand=Math.ceil(h/0.15)+120, petit=Math.floor(h/0.15)-60;
+  const grand=Math.ceil(h/0.13)+120, petit=Math.floor(h/0.15)-60;
   expect(petit,'la barre doit être assez haute pour que la règle joue au-dessus de 481 px').toBeGreaterThanOrEqual(481);
   await page.setViewportSize({width:412,height:grand});
   await expect.poll(async () => (await barre()).position,`412×${grand} (barre de ${Math.round(h)} px)`).toBe('fixed');
   await page.setViewportSize({width:412,height:petit});
   await expect.poll(async () => (await barre()).position,`412×${petit}`).toBe('static');
+  // Bascule en cours de saisie : elle est annoncée aux lecteurs d'écran, et une marge (13 %) évite les allers-retours.
+  const region=page.locator('#vue > p.sr-only[role="status"]');
+  await expect(region).toContainText('passent à la fin de la saisie');
+  await page.setViewportSize({width:412,height:Math.round(h/0.14)});
+  await expect.poll(async () => (await barre()).position,`412×${Math.round(h/0.14)} : marge de bascule`).toBe('static');
   await page.setViewportSize({width:412,height:grand});
   await expect.poll(async () => (await barre()).position,`412×${grand} au retour`).toBe('fixed');
+  await expect(region).toContainText('de nouveau en bas de l’écran');
   await page.evaluate(() => { document.documentElement.style.fontSize=''; });
   // Paysage : au milieu de la saisie, la barre ne recouvre rien.
   await page.setViewportSize({width:800,height:360});
@@ -536,7 +542,7 @@ test('Grilles téléphone : une écriture refusée reste affichée dans la barre
   });
   await page.locator('.grille-critere').nth(1).getByRole('button',{name:/^Acquis/}).click();
   const echec=page.locator('.grille-barre .grille-echec');
-  const texteEchec='Non enregistré : ELEVE02 Fictif · Maîtrise technique — Panne test';
+  const texteEchec='Non enregistré — Panne test : ELEVE02 Fictif · Maîtrise technique';
   await expect(echec).toHaveText(texteEchec);
   await expect(page.locator('.grille-critere').nth(1).locator('.grille-niveaux button[data-niveau-cle]').nth(2)).toHaveAttribute('aria-pressed','false');
   // Au premier plan, sans rien recouvrir ; un seul message, et une seule annonce pour les lecteurs d'écran.
@@ -576,13 +582,35 @@ test('Grilles téléphone : une écriture refusée reste affichée dans la barre
   await page.reload();
   await expect(page.getByRole('heading',{level:2,name:'ELEVE01 Fictif',exact:true})).toBeVisible();
   await expect(echec).toBeHidden();
+  // Un statut refusé survit lui aussi au rechargement, et ne disparaît que si la base porte CE statut.
+  await page.getByLabel('Élève à évaluer').selectOption('3');
+  await expect(page.getByRole('heading',{level:2,name:'ELEVE04 Fictif',exact:true})).toBeVisible();
+  await page.evaluate(() => {
+    const put=IDBObjectStore.prototype.put;window.__panne=true;
+    IDBObjectStore.prototype.put=function(...a){if(this.name==='notes'&&window.__panne){window.__panne=false;throw new DOMException('Panne test','QuotaExceededError');}return put.apply(this,a);};
+  });
+  await page.getByLabel('Statut de l’élève').selectOption('ABS');
+  await expect(echec).toContainText('ELEVE04 Fictif · statut ABS');
+  await page.reload();
+  await expect(page.getByRole('heading',{level:2,name:'ELEVE01 Fictif',exact:true})).toBeVisible();
+  await expect(echec).toContainText('ELEVE04 Fictif · statut ABS');
+  // Un AUTRE statut en base ne rattrape rien : la ligne reste.
+  await page.evaluate(async () => {const io=await import('/js/io.js');await io.enregistrer('notes',{id:'v_e4',evaluationId:'v',eleveId:'e4',valeur:'DISP',detail:{},commentaire:''});});
+  await page.reload();
+  await expect(page.getByRole('heading',{level:2,name:'ELEVE01 Fictif',exact:true})).toBeVisible();
+  await expect(echec).toContainText('ELEVE04 Fictif · statut ABS');
+  // Le bon statut en base, lui, l'efface.
+  await page.evaluate(async () => {const io=await import('/js/io.js');await io.enregistrer('notes',{id:'v_e4',evaluationId:'v',eleveId:'e4',valeur:'ABS',detail:{},commentaire:''});});
+  await page.reload();
+  await expect(page.getByRole('heading',{level:2,name:'ELEVE01 Fictif',exact:true})).toBeVisible();
+  await expect(echec).toBeHidden();
   // Un échec rattrapé AILLEURS (l'autre onglet a écrit le même niveau) n'est plus signalé à la réouverture.
   await page.evaluate(() => {
     const put=IDBObjectStore.prototype.put;window.__panne=true;
     IDBObjectStore.prototype.put=function(...a){if(this.name==='notes'&&window.__panne){window.__panne=false;throw new DOMException('Panne test','QuotaExceededError');}return put.apply(this,a);};
   });
   await page.locator('.grille-critere').nth(0).getByRole('button',{name:/^Fragile/}).click();
-  await expect(echec).toHaveText('Non enregistré : ELEVE01 Fictif · Efficacité — Panne test');
+  await expect(echec).toHaveText('Non enregistré — Panne test : ELEVE01 Fictif · Efficacité');
   await page.evaluate(async () => {
     const io=await import('/js/io.js');const ev=await io.lire('evaluations','v');
     await io.enregistrer('notes',{id:'v_e1',evaluationId:'v',eleveId:'e1',valeur:5,detail:{[ev.grille.criteres[0].id]:ev.grille.niveaux[1].cle},commentaire:''});
@@ -612,7 +640,7 @@ test('Grilles téléphone : avec un vrai conflit d’écriture, la barre garde s
     expect(avant.boutons.every(x => x.atteint),`${taille} : messages au-dessus de la barre`).toBe(true);
     await conflit('e2');
     await page.locator('.grille-critere').nth(3).getByRole('button',{name:/^Expert/}).click();
-    await expect(page.locator('.grille-barre .grille-echec')).toContainText('Non enregistré : ELEVE02 NOM COMPOSÉ Prénom-Composé · Rôle social — note modifiée dans un autre onglet');
+    await expect(page.locator('.grille-barre .grille-echec')).toContainText('Non enregistré — note modifiée dans un autre onglet : rechargez la page avant de réessayer : ELEVE02 NOM COMPOSÉ Prénom-Composé · Rôle social');
     const apres=await barreAuPouce(page);
     // La ligne d'erreur est bornée à deux lignes : un long message ne fait pas grandir la barre sans fin.
     expect(await page.locator('.grille-barre .grille-echec').evaluate(e => e.getBoundingClientRect().height<=parseFloat(getComputedStyle(e).fontSize)*3),taille).toBe(true);
@@ -639,8 +667,87 @@ test('Grilles téléphone : avec un vrai conflit d’écriture, la barre garde s
     await expect(page.locator('.grille-barre .grille-echec')).toBeInViewport({ratio:1});
     await page.locator('.grille-barre').getByRole('button',{name:'Critère suivant',exact:true}).click();
     await expect(page.locator('.grille-saisie > h2')).toHaveText('Maîtrise technique');
+    await page.locator('.grille-critere').nth(17).getByRole('button',{name:/^Expert/}).click();
+    await expect(page.locator('#vue > .statut')).toHaveText('Enregistré ✓');
+    // Panne d'écriture (déterministe) pour le troisième échec : la ligne doit alors résumer, sans faire défiler l'écran.
+    await page.evaluate(() => {
+      const put=IDBObjectStore.prototype.put;window.__panne=true;
+      IDBObjectStore.prototype.put=function(...a){if(this.name==='notes'&&window.__panne){window.__panne=false;throw new DOMException('Mémoire pleine (test)','QuotaExceededError');}return put.apply(this,a);};
+    });
+    await page.evaluate(() => window.scrollTo(0,150));
+    const avantEchec=await page.evaluate(() => scrollY);
+    await page.evaluate(() => document.querySelectorAll('.grille-critere')[9].querySelectorAll('.grille-niveaux button[data-niveau-cle]')[3].click());
+    await expect(page.locator('#vue > .statut')).toContainText('ELEVE10 Fictif');
+    await expect(page.locator('.grille-barre .grille-echec')).toContainText('et 1 autre'); // au-delà de deux, la ligne résume
+    expect(await page.locator('.grille-barre .grille-echec').getAttribute('title'),taille).toContain('ELEVE10 Fictif'); // le détail vit dans l'infobulle
+    expect(Math.abs(await page.evaluate(() => scrollY)-avantEchec),`${taille} : l'écran ne bouge pas quand la ligne s'allonge`).toBeLessThanOrEqual(2);
+    // …ni quand la fenêtre change de hauteur (barre d'adresse Android, écran partagé).
+    await page.evaluate(() => window.scrollTo(0,600));
+    const avantResize=await page.evaluate(() => scrollY);
+    await page.setViewportSize({width:largeur,height:hauteur-115});
+    await expect.poll(() => page.evaluate(() => innerHeight),`${taille} : nouvelle hauteur appliquée`).toBe(hauteur-115);
+    expect(Math.abs(await page.evaluate(() => scrollY)-avantResize),`${taille} : l'écran ne bouge pas au redimensionnement`).toBeLessThanOrEqual(60);
+    await page.setViewportSize({width:largeur,height:hauteur});
+    // La cause est lisible EN PREMIER (la ligne tient en deux lignes, ce sont les noms qui sont résumés), et le détail
+    // complet reste dans l'infobulle ; rien ne recouvre la ligne.
+    const ligne=await page.evaluate(() => {
+      const e=document.querySelector('.grille-echec'), r=e.getBoundingClientRect();
+      const points=[];for(let y=r.top+3;y<r.bottom-3;y+=3)points.push(Boolean(document.elementFromPoint(r.left+8,y)?.closest('.grille-echec')));
+      return {texte:e.textContent,titre:e.getAttribute('title'),recouverte:points.filter(x => !x).length,
+        variable:getComputedStyle(document.documentElement).getPropertyValue('--h-barre-grille'),
+        barre:Math.ceil(document.querySelector('.grille-barre').getBoundingClientRect().height)};
+    });
+    expect(ligne.texte,taille).toMatch(/^Non enregistré — plusieurs causes : /); // la CAUSE en premier, jamais coupée
+    expect(ligne.titre,taille).toContain('ELEVE10 Fictif');
+    expect(ligne.recouverte,`${taille} : ligne d'erreur recouverte`).toBe(0);
+    expect(ligne.variable.trim(),taille).toBe(`${ligne.barre}px`);
     await page.evaluate(async () => {for(const t of document.querySelectorAll('.toast'))t.remove();const io=await import('/js/io.js');await io.supprimer('notes','v_e2');await io.supprimer('notes','v_e15');});
   }
+});
+
+test('Grilles téléphone : un tap ne fait jamais défiler l’écran, même quand la barre grandit sous le doigt',async({page})=>{
+  // Le défaut bloquant de la v0.13.4 : la case touchée ramenée en vue faisait sauter l'écran de plusieurs centaines de
+  // pixels, et le tap suivant écrivait une note pour un AUTRE élève. Le tap doit être RÉEL : un clic programmatique ne
+  // déplace pas le focus, et la preuve serait vide.
+  await seedClasse(page);
+  await page.setViewportSize({width:412,height:839});
+  await page.goto('/#/accueil');await page.goto('/#/grilles/saisie/v');
+  await page.getByLabel('Mode de saisie').selectOption('critere');
+  await expect(page.locator('.grille-critere')).toHaveCount(24);
+  await expect(page.locator('.grille-barre .grille-echec')).toBeHidden(); // aucune erreur encore : la barre va GRANDIR
+  await page.evaluate(() => window.scrollTo(0,900));
+  const cible=await page.evaluate(() => [...document.querySelectorAll('.grille-critere')]
+    .findIndex((r,i) => i!==9 && r.getBoundingClientRect().top>60 && r.getBoundingClientRect().top<220));
+  expect(cible,'une rangée à toucher en haut de l’écran').toBeGreaterThanOrEqual(0);
+  await page.locator('.grille-critere').nth(cible).getByRole('button',{name:/^Expert/}).click();
+  await expect(page.locator('#vue > .statut')).toHaveText('Enregistré ✓');
+  // La case touchée glisse sous la barre : encore à l'écran, mais recouverte, et sans focus CLAVIER (c'est un tap).
+  const pose=await page.evaluate(() => {
+    window.scrollBy(0,document.activeElement.getBoundingClientRect().top-(innerHeight-30));
+    const f=document.activeElement, r=f.getBoundingClientRect(), b=document.querySelector('.grille-barre').getBoundingClientRect();
+    return {saisie:Boolean(f.closest('.grille-critere')),clavier:f.matches(':focus-visible'),
+      ecran:r.top<innerHeight && r.bottom>0,sousBarre:r.bottom>b.top,y:scrollY,barre:b.height};
+  });
+  expect(pose.saisie,'le focus est resté sur la case touchée').toBe(true);
+  expect(pose.clavier,'un tap ne donne pas le focus clavier').toBe(false);
+  expect(pose.ecran && pose.sousBarre,'la case touchée est à l’écran et recouverte par la barre').toBe(true);
+  // Panne d'écriture déterministe sur un AUTRE élève : la ligne d'erreur apparaît et la barre grandit, le doigt étant
+  // encore sur sa case. Le clic est programmatique exprès : il ne doit pas déplacer le focus.
+  await page.evaluate(() => {
+    const put=IDBObjectStore.prototype.put;window.__panne=true;
+    IDBObjectStore.prototype.put=function(...a){if(this.name==='notes'&&window.__panne){window.__panne=false;throw new DOMException('Mémoire pleine (test)','QuotaExceededError');}return put.apply(this,a);};
+  });
+  await page.evaluate(() => document.querySelectorAll('.grille-critere')[9].querySelectorAll('.grille-niveaux button[data-niveau-cle]')[3].click());
+  await expect(page.locator('.grille-barre .grille-echec')).toContainText('ELEVE10 Fictif');
+  const apres=await page.evaluate(() => ({y:scrollY,barre:document.querySelector('.grille-barre').getBoundingClientRect().height,
+    saisie:Boolean(document.activeElement.closest('.grille-critere'))}));
+  expect(apres.barre,'la barre a bien grandi (sans quoi la preuve serait vide)').toBeGreaterThan(pose.barre);
+  expect(apres.saisie,'le focus est toujours sur la case touchée').toBe(true);
+  expect(Math.abs(apres.y-pose.y),'l’écran ne bouge pas sous le doigt').toBeLessThanOrEqual(2);
+  // …ni quand la fenêtre change de hauteur (barre d'adresse Android, écran partagé) alors que la case est hors champ.
+  await page.setViewportSize({width:412,height:724});
+  await expect.poll(() => page.evaluate(() => innerHeight),'nouvelle hauteur appliquée').toBe(724);
+  expect(Math.abs(await page.evaluate(() => scrollY)-apres.y),'l’écran ne bouge pas au redimensionnement').toBeLessThanOrEqual(2);
 });
 
 test('Grilles clavier : une case atteinte avec Tab n’est jamais cachée sous la barre (2.4.11), même en texte agrandi ou quand la barre grandit',async({page})=>{
@@ -663,7 +770,9 @@ test('Grilles clavier : une case atteinte avec Tab n’est jamais cachée sous l
   // La case focalisée juste au-dessus de la barre, une écriture refusée l'agrandit : la case reste entièrement visible.
   await ouvrirClasse(page,375,812);
   const derniere=page.locator('.grille-critere').nth(3).locator('.grille-niveaux button[data-niveau-cle]').first();
-  await derniere.focus();
+  await page.locator('.grille-niveaux button[data-niveau-cle]').first().focus();
+  for(let i=0;i<12;i++)await page.keyboard.press('Tab'); // clavier : le focus est « visible », seul cas où l'écran suit
+  await expect(derniere).toBeFocused();
   await page.evaluate(() => {
     const put=IDBObjectStore.prototype.put;
     IDBObjectStore.prototype.put=function(...a){if(this.name==='notes')throw new DOMException('Le stockage de l’appareil est plein : exportez une sauvegarde, puis libérez de l’espace','QuotaExceededError');return put.apply(this,a);};
@@ -727,9 +836,24 @@ test('Grilles téléphone : des libellés de niveau longs ne sont jamais coupés
   // Précaution pour les écrans étroits : la police des cases diminue un peu à 360 px (sans descendre sous 0,7 rem).
   expect(tailles[360]).toBeLessThan(tailles[412]);
   expect(tailles[360]).toBeGreaterThanOrEqual(11.2);
-  // Rotation sans changer d'écran (paysage puis portrait) : les cases se réajustent seules.
+  // Le palier posé est le PLUS FAIBLE qui ne coupe rien : en retirer le dernier fait déborder une case.
+  await ouvrirClasse(page,360,800);
+  expect(await page.evaluate(() => {
+    const saisie=document.querySelector('.grille-saisie');
+    const paliers=['grille-niveaux-coupe','grille-niveaux-seule','grille-niveaux-larges'].filter(p => saisie.classList.contains(p));
+    if(!paliers.length)return 'aucun palier posé';
+    saisie.classList.remove(paliers[0]);
+    const deborde=[...document.querySelectorAll('.grille-niveaux button[data-niveau-cle]')].some(b => b.scrollWidth>b.clientWidth+1);
+    saisie.classList.add(paliers[0]);
+    return deborde ? 'minimal' : `palier ${paliers[0]} inutile`;
+  })).toBe('minimal');
+  // Rotation sans changer d'écran (paysage puis portrait, puis retour) : les cases se réajustent dans les DEUX sens.
   await ouvrirClasse(page,850,412);
+  const paliersPoses=() => page.evaluate(() => [...document.querySelector('.grille-saisie').classList].filter(x => x.startsWith('grille-niveaux-')));
   await page.setViewportSize({width:412,height:850});
   await expect.poll(() => motsCoupes(page)).toEqual([]);
   await expect.poll(colonnes).toBeLessThan(4);
+  await page.setViewportSize({width:850,height:412});
+  await expect.poll(paliersPoses,'retour au paysage : les paliers redescendent').toEqual([]);
+  await expect.poll(() => motsCoupes(page)).toEqual([]);
 });

@@ -116,11 +116,11 @@ arbitrages de la v0.12.18 disparaissent, absorbés par elle. Un témoin garde le
 les libellés de tiers sans colonne sûre en face, ainsi que les pluriels (« Prénoms », « Prénom(s) ») qui
 n'étaient reconnus par rien.
 
-**`grilles.spec.mjs` (31)** — module des grilles d'évaluation, **repris de la copie de travail de Codex** (v0.13.3) : calcul
+**`grilles.spec.mjs` (32)** — module des grilles d'évaluation, **repris de la copie de travail de Codex** (v0.13.3) : calcul
 (18 sur 24 donne 15 sur 20, poids, critère non évalué distinct de zéro, arrondis), bibliothèque de modèles, parcours complet
 jusqu'à la copie Pronote, grille figée, saisie par critère, statuts ABS/DISP/NN, points ajustables au clavier et à l'appui long,
 panne et écriture concurrente, sauvegarde et rendu mobile. Seule adaptation : le message de conflit attendu est celui de la
-v0.12.20 (« autre onglet »). Neuf tests de la v0.13.4 (retour de l’essai téléphone, revue puis contre-revue) mesurent la
+v0.12.20 (« autre onglet »). Onze tests de la v0.13.4 (retour de l’essai téléphone, revue puis contre-revue) mesurent la
 saisie « un élève à la fois » au pouce : après « Élève suivant », les 16 cases, le nom et le rang sont visibles entre l’en-tête et
 la barre — le toucher au centre de chaque case arrive sur la case elle-même —, la barre reste à la même place depuis le haut ET
 depuis le bas de page, et la bande sous la barre ne touche rien d’autre, à 360 × 800, 375 × 812 et 412 × 915 ; première rangée
@@ -133,8 +133,10 @@ et « Élève suivant » comme « Critère suivant » restent atteignables, sans
 jamais sous la barre (2.4.11, aussi à 200 % et quand la barre grandit) ; élève choisi dans la liste au doigt montré en entier, liste
 gardée à l’écran au clavier, dans les deux ordres de gestes ; annonce exacte du nouvel élève et du nouveau critère ; libellés de
 niveau longs jamais coupés au milieu d’un mot, mesure au caractère (cases élargies, puis une seule colonne), rotation comprise. Les
-tests d’écran utilisent des libellés de niveau courts, pour ne pas dépendre de la police installée. Trente-huit mutants rendent ces
-tests rouges.
+tests d’écran utilisent des libellés de niveau courts, pour ne pas dépendre de la police installée. Un tap ne fait défiler l’écran ni quand la ligne d’erreur apparaît, ni quand la fenêtre change de hauteur, même si la case
+touchée est passée sous la barre (seul le focus CLAVIER est ramené en vue) : le test pose d’abord ses prémisses (focus sur la
+case touchée, focus non clavier, case recouverte) et vérifie que la barre a bien grandi. Quarante-cinq mutants rendent ces
+tests, ceux de `terrain.spec.mjs` et les assertions FON-05 rouges.
 
 **`grilles-robustesse.spec.mjs` (6)** — quatre tests de concurrence et de clavier repris de la copie de Codex (AUD-002, AUD-006),
 et deux tests propres à l'intégration qui fixent la frontière de la validation des sauvegardes : une sauvegarde ancienne portant
@@ -177,7 +179,7 @@ grille, mesurées sur une case rendue, ressemblent à leur nom. La première car
 d'actions. Sept mutants (ancienne palette claire, ancienne palette sombre automatique, pastille du retard, couleurs de grille rebranchées sur les statuts, espacement, les deux
 pastilles de la fiche élève) rendent ces tests rouges.
 
-Total de la suite : **290 tests** (+ 83 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs`, `grilles-robustesse.spec.mjs` et `audit-independant.spec.mjs`).
+Total de la suite : **291 tests** (+ 84 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs`, `grilles-robustesse.spec.mjs` et `audit-independant.spec.mjs`).
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse
