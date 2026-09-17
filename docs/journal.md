@@ -14,6 +14,27 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-17 (42) — v0.13.3 et v0.12.22 : mise en service de la nouvelle adresse
+
+Demande : retour de l'essai téléphone de la v0.13.2 — « version ok, couleurs ok, grille ok, sauv ok » — plus une remarque sur la
+saisie par grille (« un élève à la fois, c'est pas top », puis « un élève à la fois c'est bien ») ; « fait au mieux ».
+
+**Fait** :
+- Branche `grilles-schema3` : `MODE_ESSAI = false`, manifeste « Carnet EPS », v0.13.3 ; guide d'installation (section
+  « Déménagement »), README, procédure de déploiement et TODO pointent vers la nouvelle adresse. Publiée sur
+  https://carnet-eps.github.io/ selon la procédure de la période à deux adresses.
+- Branche `demenagement` : `NOUVELLE_ADRESSE` renseignée, v0.12.22 publiée sur l'ancienne adresse (bandeau « a déménagé »).
+
+**Décidé** (délégation) : mise en service tout de suite, puisque l'essai est vert et que les vraies données sur l'origine partagée
+sont le premier risque de l'audit (SEC-01) ; la saisie par grille compactée (un élève à la fois, tout sur un écran) suit en v0.13.4 —
+elle ne touche que l'écran, pas le format des données.
+
+**Mesure à l'origine de la v0.13.4** (375 × 812, grille par défaut 4 × 4) : en mode « Par élève », aucune case au premier écran
+(première à 982 px), « Élève suivant » à 1 921 px, plus de deux écrans par élève ; en mode « Par critère », 237 px par élève,
+7 938 px pour 24 élèves.
+
+**Prochaine étape** : migration des données sur chaque appareil (à faire par l'enseignant) ; v0.13.4.
+
 ## 2026-09-16 (41) — avis « carnet de classe à onglets » (référence iDoceo)
 
 Demande : « ce ne serait pas mieux de fonctionner avec des onglets en partant d'une classe (onglet pour ajouter des info, des

@@ -4,6 +4,16 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-17 — v0.13.3 : mise en service de la nouvelle adresse https://carnet-eps.github.io/
+
+L'essai sur téléphone de la v0.13.2 est validé (version, couleurs des statuts, écran des grilles, sauvegarde : tout est vert).
+
+- **Fin du mode essai** : `MODE_ESSAI` passe à `false` ; le bandeau « Version d'essai · données fictives » et le titre « ESSAI — » disparaissent, et le manifeste reprend le nom **Carnet EPS** (nom long et nom court), comme l'exige la garde de cohérence FON-01.
+- **La nouvelle adresse devient l'adresse de l'application.** L'ancienne (https://alemoine4.github.io/carnet-eps/) passe en même temps en **v0.12.22**, avec un bandeau « Carnet EPS a déménagé » qui invite à sauvegarder puis importer ici.
+- **Migration des vraies données** : sur chaque appareil, sauvegarde complète depuis l'ancienne adresse, puis import sur la nouvelle (`docs/guide-installation.md`, « Déménagement »).
+- Documentation : guide d'installation, README et procédure de déploiement pointent vers la nouvelle adresse.
+- Aucun autre changement de comportement ; schéma 3 inchangé.
+
 ## 2026-09-16 — v0.13.2 : retours de l'essai téléphone — statuts d'appel distinguables, écran des grilles aéré (origine d'essai seulement)
 
 Premiers retours de l'essai sur téléphone de la v0.13.1.

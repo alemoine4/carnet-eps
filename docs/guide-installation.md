@@ -2,7 +2,18 @@
 
 > L'application s'installe depuis son adresse web (HTTPS) comme une vraie app, puis fonctionne **entièrement hors ligne**. Le code est public, **vos données ne quittent jamais l'appareil**.
 >
-> **Adresse de l'application : `https://alemoine4.github.io/carnet-eps/`**
+> **Adresse de l'application : `https://carnet-eps.github.io/`** (depuis le 17 septembre 2026)
+
+## 🚚 Déménagement de septembre 2026 : à faire une fois sur chaque appareil
+
+L'application a changé d'adresse : l'ancienne (`https://alemoine4.github.io/carnet-eps/`) partageait son stockage avec d'autres sites du même hébergement. **Vos données ne suivent pas toutes seules** : elles sont rangées par adresse.
+
+1. Ouvrir l'**ancienne** adresse (ou l'ancienne icône) → **Plus → Sauvegarde → Télécharger la sauvegarde**. Ne plus rien saisir ensuite sur l'ancienne adresse.
+2. Ouvrir la **nouvelle** adresse `https://carnet-eps.github.io/` → **Plus → Sauvegarde → Importer** → choisir le fichier. L'import **remplace** ce qu'il y avait sur la nouvelle adresse (par exemple des données d'essai) ; une sauvegarde de sécurité est téléchargée avant.
+3. Vérifier : classes, élèves, appels, notes.
+4. Installer l'application depuis la nouvelle adresse (ci-dessous), puis supprimer l'ancienne icône.
+
+Faire le PC et le téléphone **séparément** : chaque appareil a ses propres données.
 
 ## 📱 Sur Android (téléphone ou tablette)
 
