@@ -4,7 +4,7 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
-## 2026-09-16 — v0.12.22 : bandeau « Carnet EPS a déménagé » (préparée, non déployée)
+## 2026-09-17 — v0.12.22 : bandeau « Carnet EPS a déménagé » (déployée le 2026-09-17, nouvelle adresse https://carnet-eps.github.io/)
 
 Dernière version prévue pour l'ANCIENNE adresse, préparée sur la branche `demenagement`. Elle ne sert qu'au moment de la migration vers une origine dédiée (audit A01) : `alemoine4.github.io` est partagée avec d'autres applications, qui pourraient lire les données des élèves conservées par le navigateur pour cette origine.
 
