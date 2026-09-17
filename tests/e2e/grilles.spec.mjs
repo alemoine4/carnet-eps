@@ -836,9 +836,10 @@ test('Grilles téléphone : des libellés de niveau longs ne sont jamais coupés
   // Précaution pour les écrans étroits : la police des cases diminue un peu à 360 px (sans descendre sous 0,7 rem).
   expect(tailles[360]).toBeLessThan(tailles[412]);
   expect(tailles[360]).toBeGreaterThanOrEqual(11.2);
-  // Le palier posé est le PLUS FAIBLE qui ne coupe rien : en retirer le dernier fait déborder une case.
-  await ouvrirClasse(page,360,800);
-  expect(await page.evaluate(() => {
+  // Le palier posé est le PLUS FAIBLE qui ne coupe rien : en retirer le dernier fait déborder une case. On mesure la
+  // RÈGLE, pas un résultat : « aucun palier » ou « trois paliers » dépendent de la police installée (Segoe ici, DejaVu,
+  // plus large, en intégration continue).
+  const palierMinimal=() => page.evaluate(() => {
     const saisie=document.querySelector('.grille-saisie');
     const paliers=['grille-niveaux-coupe','grille-niveaux-seule','grille-niveaux-larges'].filter(p => saisie.classList.contains(p));
     if(!paliers.length)return 'aucun palier posé';
@@ -846,14 +847,21 @@ test('Grilles téléphone : des libellés de niveau longs ne sont jamais coupés
     const deborde=[...document.querySelectorAll('.grille-niveaux button[data-niveau-cle]')].some(b => b.scrollWidth>b.clientWidth+1);
     saisie.classList.add(paliers[0]);
     return deborde ? 'minimal' : `palier ${paliers[0]} inutile`;
-  })).toBe('minimal');
-  // Rotation sans changer d'écran (paysage puis portrait, puis retour) : les cases se réajustent dans les DEUX sens.
+  });
+  await ouvrirClasse(page,360,800);
+  expect(await palierMinimal(),'360×800 : un écran étroit exige au moins un palier, et le plus faible qui suffise').toBe('minimal');
+  // Rotation sans changer d'écran (paysage puis portrait, puis retour) : les cases se réajustent dans les DEUX sens, et
+  // le palier reste le plus faible qui ne coupe rien — au retour au paysage, il ne reste donc jamais celui du portrait.
   await ouvrirClasse(page,850,412);
   const paliersPoses=() => page.evaluate(() => [...document.querySelector('.grille-saisie').classList].filter(x => x.startsWith('grille-niveaux-')));
+  const enPaysage=(await paliersPoses()).length;
   await page.setViewportSize({width:412,height:850});
   await expect.poll(() => motsCoupes(page)).toEqual([]);
   await expect.poll(colonnes).toBeLessThan(4);
+  const enPortrait=(await paliersPoses()).length;
+  expect(enPortrait,'portrait : au moins autant de paliers qu’en paysage').toBeGreaterThanOrEqual(enPaysage);
   await page.setViewportSize({width:850,height:412});
-  await expect.poll(paliersPoses,'retour au paysage : les paliers redescendent').toEqual([]);
+  await expect.poll(async () => (await paliersPoses()).length,'retour au paysage : les paliers redescendent').toBe(enPaysage);
+  expect(await palierMinimal(),'retour au paysage : le palier posé reste le plus faible qui suffise').toMatch(/^(minimal|aucun palier posé)$/);
   await expect.poll(() => motsCoupes(page)).toEqual([]);
 });

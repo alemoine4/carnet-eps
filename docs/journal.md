@@ -91,6 +91,9 @@ Demande : « l'ergonomie évaluation 1 élève à la fois, c'est pas top », pui
   `pointerdown`) le fait. Un test qui choisit par `selectOption` sans focus épouse la garde qu'il devait prouver.
 - La place d'un mot dépend de la police installée (Segoe ici, DejaVu en intégration continue) : les tests d'écran utilisent des
   libellés courts, et les libellés longs sont prouvés par des invariants (pas de mot coupé, rien qui déborde, cases élargies).
+  La CI Linux m'a pris DEUX FOIS au même piège : « barre fixe à 412 × 915 en 200 % », puis « aucun palier au retour au paysage »
+  sont des RÉSULTATS, vrais avec Segoe et faux avec DejaVu. Ce qui se mesure sans dépendre de la police, c'est la RÈGLE — seuil
+  déduit de la barre réellement rendue, palier le plus faible qui ne coupe rien, comptes relevés puis comparés entre eux.
 - Deux mutants survivants étaient ÉQUIVALENTS, pas des trous : le vérifier avant d'ajouter un test (règle redondante, mutant mal
   construit). Trois autres ne survivaient que parce que la MESURE du test était trop douce : message d'erreur court là où les vrais
   sont longs, mot de test trop court pour saturer trois colonnes, test hors du filtre de la campagne. Un mutant qui survit dit
