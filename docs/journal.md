@@ -14,6 +14,54 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-17 (43) — v0.13.4 : saisie par grille « un élève à la fois » sur un seul écran
+
+Demande : « l'ergonomie évaluation 1 élève à la fois, c'est pas top », puis « tu as raison un élève à la fois c'est bien » et
+« fait au mieux » : garder le principe, refaire l'écran pour le pouce.
+
+**Fait** :
+- `grilles.js` (saisir) : actions de bureau sous la saisie ; en-tête d'élève compact (nom, rang « 2 / 24 », note) ; statut
+  ABS/DISP/NN après les critères ; cases étiquetées nom + points (nom accessible « Nom · points » par `aria-label`, `<span>` en
+  `pointer-events: none`) ; barre « Élève précédent / suivant » et « Critère suivant » (`.grille-barre`) avec ligne d'erreur
+  `.grille-echec` ; échecs non rattrapés tenus par élève ET critère (`echecs`, clé `eleve|critère`) ; hauteur de la barre mesurée
+  par ResizeObserver (`--h-barre-grille`, réserve sous la page ; classe `grille-barre-libre` au-delà de 15 % de la hauteur) ;
+  retour en haut au changement d'élève ou de critère, et au choix dans une liste sauf si le dernier geste sur la liste était une
+  touche ; région d'annonce permanente ; élargissement des cases (`grille-niveaux-larges`) mesuré quand un nom déborde.
+- `components.css` : niveaux sur une rangée, barre FIXE sur téléphone en portrait (`max-width: 899px` et hauteur suffisante),
+  zone `::after` qui capte le toucher sous `.grille-barre` et `.barre-appel`, noms de niveau coupés aux seuls espaces, marge de
+  focus au-dessus de la barre (valeur mesurée).
+- `.github/workflows/tests.yml` : la suite tourne aussi sur `grilles-schema3` (branche de production depuis la v0.13.3 — elle
+  n'avait plus d'intégration continue).
+- Mesures à 375 × 812 : page d'un élève 1 218 px (2 053 avant), élève entier visible après « Élève suivant », barre à 687 px à
+  l'ouverture, en bas de page et après « Élève suivant » ; mode « Par critère » 112 px par élève (environ 270).
+- **Revue adversariale** (4 lentilles, 2 réfutateurs chacune) : 14 constats sur 15. **Contre-revue des correctifs** (3 lentilles) :
+  19 constats sur 20, dont trois défauts que J'AVAIS introduits en corrigeant — le message « Non enregistré » de 8 s posé sur la
+  barre avalait « Élève suivant » (les niveaux suivants s'écrivaient sur l'élève précédent) et doublait l'annonce ; la barre
+  collante « immobile » ne l'était qu'en partant du haut de page ; la garde `:focus-visible` rendait le retour en haut inopérant
+  au doigt (vraie sur un `<select>` touché dans Chromium), et le test passait par `selectOption` sans focus. Tous corrigés.
+- 9 tests dans `grilles.spec.mjs` (rejoués sur mobile), 1 dans `terrain.spec.mjs`, assertions FON-05 ajustées ; 29 mutants
+  tués sur 31 construits (2 équivalents retirés : la règle « paysage » doublait celle des 15 %, et un mutant d'annonce laissait
+  l'affectation correcte s'exécuter après lui).
+
+**Pièges rencontrés** :
+- Une barre COLLANTE ne peut pas rester à la même place : en bas de page, elle suit la fin de son conteneur. « Immobile » exige
+  `position: fixed` et une réserve mesurée — et un test qui compare la position depuis le haut ET depuis le bas.
+- Un message temporaire posé sur la zone du pouce avale le geste suivant : une erreur de saisie doit vivre DANS l'interface qu'elle
+  concerne, persister tant que la donnée manque, et n'être annoncée qu'une fois.
+- Effacer une erreur au premier succès « du même élève » est faux : le niveau refusé manque toujours. La clé est la donnée perdue
+  (élève + critère), pas la personne.
+- `:focus-visible` sur un `<select>` ne distingue pas le doigt du clavier dans Chromium ; le dernier geste (`keydown` /
+  `pointerdown`) le fait. Un test qui choisit par `selectOption` sans focus épouse la garde qu'il devait prouver.
+- La place d'un mot dépend de la police installée (Segoe ici, DejaVu en intégration continue) : les tests d'écran utilisent des
+  libellés courts, et les libellés longs sont prouvés par des invariants (pas de mot coupé, rien qui déborde, cases élargies).
+- Deux mutants survivants étaient ÉQUIVALENTS, pas des trous : le vérifier avant d'ajouter un test (règle redondante, mutant mal
+  construit).
+- Pendant le premier tour : revenir à la même adresse avec `goto` ne redessine pas la vue ; un commentaire inséré par script en fin
+  de ligne a avalé l'assertion suivante ; `innerText` renvoie une ligne par élément flex même côte à côte ; `sed -i` de Git Bash
+  réécrit en fins de ligne LF (sans effet pour git).
+
+**Prochaine étape** : migration des données sur chaque appareil ; réponses aux 14 questions de l'avis des onglets.
+
 ## 2026-09-17 (42) — v0.13.3 et v0.12.22 : mise en service de la nouvelle adresse
 
 Demande : retour de l'essai téléphone de la v0.13.2 — « version ok, couleurs ok, grille ok, sauv ok » — plus une remarque sur la

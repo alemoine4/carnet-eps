@@ -54,7 +54,7 @@ les tests de `audit5-lot4` marqués « service-worker réel » se jouent sur `ap
 de défauts V3-01 — un champ dont l’écriture est refusée ne doit jamais être persisté ensuite par la modification
 d’un champ voisin du même objet (évaluation, séquence, fiche élève, inaptitude, classe).
 
-**`terrain.spec.mjs` (13)** — les trois constats du **test de terrain du 2026-09-09** (première séance sur un Android réel) :
+**`terrain.spec.mjs` (14)** — les trois constats du **test de terrain du 2026-09-09** (première séance sur un Android réel) :
 l'export « Élèves » de Pronote met le nom et le prénom dans une seule colonne et laisse « Classe de rattachement » vide
 quand on exporte une seule classe ; et « Terminer l'appel », placé sous la grille, sortait de l'écran dès une vingtaine
 d'élèves. Les **six autres viennent de la revue adversariale** de ce correctif, chacun rouge avant sa
@@ -66,7 +66,8 @@ la première de la liste (le deuxième export Pronote y versait la classe entiè
 « colonne Classe vide » suit le remappage manuel au lieu de mentir ; et le découpage de la colonne unique est
 **montré avant l'import**, les cas devinés en tête et comptés dans le bilan comme les homonymes (un nom à
 particule ne donne aucune majuscule pour trancher : « de La Fontaine Apolline » devient nom « de »). Un test appelle directement `scinderNomPrenom` pour couvrir son repli, que le parcours
-d'écran n'atteint pas.
+d'écran n'atteint pas. Un test de la v0.13.4 balaie la bande de 8 px entre « Terminer l'appel » et la navigation, page défilée : le
+toucher y reste à la barre, sans atteindre une carte d'élève cachée dessous.
 ⚠ Les jeux d'essai reprennent la **structure** de cet export réel avec des **noms inventés** : aucune donnée
 nominative dans le dépôt.
 
@@ -115,11 +116,21 @@ arbitrages de la v0.12.18 disparaissent, absorbés par elle. Un témoin garde le
 les libellés de tiers sans colonne sûre en face, ainsi que les pluriels (« Prénoms », « Prénom(s) ») qui
 n'étaient reconnus par rien.
 
-**`grilles.spec.mjs` (21)** — module des grilles d'évaluation, **repris de la copie de travail de Codex** (v0.13.3) : calcul
+**`grilles.spec.mjs` (30)** — module des grilles d'évaluation, **repris de la copie de travail de Codex** (v0.13.3) : calcul
 (18 sur 24 donne 15 sur 20, poids, critère non évalué distinct de zéro, arrondis), bibliothèque de modèles, parcours complet
 jusqu'à la copie Pronote, grille figée, saisie par critère, statuts ABS/DISP/NN, points ajustables au clavier et à l'appui long,
 panne et écriture concurrente, sauvegarde et rendu mobile. Seule adaptation : le message de conflit attendu est celui de la
-v0.12.20 (« autre onglet »).
+v0.12.20 (« autre onglet »). Neuf tests de la v0.13.4 (retour de l’essai téléphone, revue puis contre-revue) mesurent la
+saisie « un élève à la fois » au pouce : après « Élève suivant », les 16 cases, le nom et le rang sont visibles entre l’en-tête et
+la barre — le toucher au centre de chaque case arrive sur la case elle-même —, la barre reste à la même place depuis le haut ET
+depuis le bas de page, et la bande sous la barre ne touche rien d’autre, à 360 × 800, 375 × 812 et 412 × 915 ; première rangée
+visible à l’ouverture, actions de bureau au-dessus de la barre en bas de page et visibles sans défiler sur PC ; au plus 120 px par
+élève en mode « Par critère », choix du critère dans la liste ramené en haut ; texte agrandi à 320 et 360 px avec un nom de famille
+long (barre ≤ 15 % de la hauteur ou décrochée) et paysage ; écriture refusée affichée dans la barre sans rien recouvrir, une seule
+annonce, effacée seulement quand CE niveau est réécrit ; case atteinte au clavier jamais sous la barre (2.4.11, aussi à 200 %) ;
+élève choisi dans la liste au doigt montré en entier, liste gardée à l’écran au clavier ; annonce exacte du nouvel élève et du
+nouveau critère ; libellés de niveau longs jamais coupés au milieu d’un mot (cases élargies). Les tests d’écran utilisent des
+libellés de niveau courts, pour ne pas dépendre de la police installée. Vingt-neuf mutants rendent ces tests rouges.
 
 **`grilles-robustesse.spec.mjs` (6)** — quatre tests de concurrence et de clavier repris de la copie de Codex (AUD-002, AUD-006),
 et deux tests propres à l'intégration qui fixent la frontière de la validation des sauvegardes : une sauvegarde ancienne portant
@@ -162,7 +173,7 @@ grille, mesurées sur une case rendue, ressemblent à leur nom. La première car
 d'actions. Sept mutants (ancienne palette claire, ancienne palette sombre automatique, pastille du retard, couleurs de grille rebranchées sur les statuts, espacement, les deux
 pastilles de la fiche élève) rendent ces tests rouges.
 
-Total de la suite : **279 tests** (+ 73 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs`, `grilles-robustesse.spec.mjs` et `audit-independant.spec.mjs`).
+Total de la suite : **289 tests** (+ 82 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs`, `grilles-robustesse.spec.mjs` et `audit-independant.spec.mjs`).
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse

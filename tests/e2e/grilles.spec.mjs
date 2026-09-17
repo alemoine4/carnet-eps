@@ -343,3 +343,263 @@ test('Grilles hors ligne : création et relecture avec service-worker réel',asy
     await page.reload();await expect(page.locator('.grille-total')).toContainText('8/10 points → 16/20');
   } finally {await context.setOffline(false);}
 });
+
+// ---- Saisie au téléphone (essai du 2026-09-17, v0.13.4) : « un élève à la fois », mais sur UN écran. Avant : première
+// case à 982 px sur 812, « Élève suivant » à 1 921 px, 237 px par élève en mode « Par critère ». Classe de 24 élèves
+// fictifs, grille par défaut (4 niveaux × 4 critères). Complétés après la revue et la contre-revue de la v0.13.4.
+// Libellés de niveau COURTS par défaut : la place d'un mot dépend de la police installée (Segoe sous Windows, DejaVu
+// sous Linux en intégration continue) ; les libellés longs ont leur propre test, fondé sur des invariants.
+const seedClasse = async (page,niveaux=['Non acquis','Fragile','Acquis','Expert']) => {
+  await page.goto('/');
+  await page.evaluate(async niveaux => {
+    const io=await import('/js/io.js'); await io.viderTout();
+    const {nouvelleGrille}=await import('/js/grilles-calcul.js'); const g=nouvelleGrille();g.id='g';g.titre='Badminton test';
+    if(niveaux)g.niveaux=g.niveaux.map((n,i) => ({...n,libelle:niveaux[i]}));
+    const eleves=Array.from({length:24},(_,i) => ({id:`e${i+1}`,classeId:'c',nom:`ELEVE${String(i+1).padStart(2,'0')}`,prenom:'Fictif',actif:true}));
+    await io.restaurer({grilles:[g],classes:[{id:'c',nom:'6TEST',archivee:false}],eleves,sequences:[{id:'s',classeId:'c',apsa:'Badminton',dateDebut:'2026-09-01',dateFin:'2027-07-01'}],evaluations:[{id:'v',sequenceId:'s',titre:'Grille test',date:'2026-09-10',type:'grille',bareme:20,coef:1,grilleId:'g',grille:structuredClone(g),publieePronote:null}]});
+  },niveaux);
+};
+// Ouvre (ou rouvre) la saisie sur le premier élève : revenir à la même adresse ne redessine pas la vue.
+const ouvrirClasse = async (page,largeur,hauteur) => {
+  await page.setViewportSize({width:largeur,height:hauteur});
+  await page.goto('/#/accueil');await page.goto('/#/grilles/saisie/v');
+  await expect(page.getByRole('heading',{level:2,name:'ELEVE01 Fictif',exact:true})).toBeVisible();
+  await expect(page.locator('.grille-critere')).toHaveCount(4);
+};
+// Ce que voit et touche le pouce : une case est visible si elle est entre l'en-tête et la barre et si le toucher en son
+// centre arrive sur ELLE (pas sur un <span> que la fin de rafale remplace, ni sur ce qui la recouvre) ; nom et rang de
+// l'élève visibles ; entre la barre et la nav, le toucher reste à la barre.
+const ecranEleve = page => page.evaluate(() => {
+  const haut=document.querySelector('.entete').getBoundingClientRect().bottom, barre=document.querySelector('.grille-barre').getBoundingClientRect();
+  const nav=document.querySelector('.nav').getBoundingClientRect().top;
+  const visible=x => {const r=x.getBoundingClientRect();return r.top>=haut && r.bottom<=barre.top && document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)===x;};
+  const cases=[...document.querySelectorAll('.grille-niveaux button[data-niveau-cle]')];
+  return {cases:cases.length,cachees:cases.filter(b => !visible(b)).length,
+    nomVisible:visible(document.querySelector('.grille-entete-eleve h2')) && visible(document.querySelector('.grille-rang')),
+    bande:Boolean(document.elementFromPoint(innerWidth/2,(barre.bottom+nav)/2)?.closest('.grille-barre'))};
+});
+// Un nom de niveau ne se coupe qu'aux espaces : jamais plus de lignes que de mots, et rien ne déborde de la case.
+const motsCoupes = page => page.evaluate(() => [...document.querySelectorAll('.grille-niveaux button[data-niveau-cle]')].filter(b => {
+  const nom=b.querySelector('.grille-niveau-nom'), r=document.createRange();r.selectNodeContents(nom);
+  const lignes=new Set([...r.getClientRects()].map(x => Math.round(x.top))).size;
+  return lignes>nom.textContent.trim().split(/\s+/).length || b.scrollWidth>b.clientWidth+1;
+}).map(b => b.getAttribute('aria-label')));
+
+test('Grilles téléphone : un élève tient sur un écran, « Élève suivant » reste sous le pouce et ramène le suivant en haut',async({page})=>{
+  await seedClasse(page);
+  for(const [largeur,hauteur] of [[360,800],[375,812],[412,915]]) {
+    const taille=`${largeur}×${hauteur}`;
+    await ouvrirClasse(page,largeur,hauteur);
+    const suivant=page.locator('.grille-barre').getByRole('button',{name:'Élève suivant',exact:true});
+    await expect(suivant,`${taille} à l’ouverture`).toBeInViewport({ratio:1});
+    const place=async () => Math.round((await suivant.boundingBox()).y);
+    const aLouverture=await place();
+    // Depuis l'ouverture : la barre ne change pas de place (un double tap ne tombe pas à côté).
+    await suivant.click();
+    await expect(page.getByRole('heading',{level:2,name:'ELEVE02 Fictif',exact:true})).toBeVisible();
+    expect(Math.abs(await place()-aLouverture),taille).toBeLessThanOrEqual(2);
+    expect(await ecranEleve(page),taille).toEqual({cases:16,cachees:0,nomVisible:true,bande:true});
+    // Depuis le bas de page, où l'on finit un élève : la barre est à la même place, le suivant revient en haut.
+    await page.evaluate(() => window.scrollTo(0,document.documentElement.scrollHeight));
+    expect(Math.abs(await place()-aLouverture),`${taille} en bas de page`).toBeLessThanOrEqual(2);
+    await suivant.click();
+    await expect(page.getByRole('heading',{level:2,name:'ELEVE03 Fictif',exact:true})).toBeVisible();
+    expect(Math.abs(await place()-aLouverture),`${taille} après le bas de page`).toBeLessThanOrEqual(2);
+    expect(await ecranEleve(page),taille).toEqual({cases:16,cachees:0,nomVisible:true,bande:true});
+    // Nom du niveau au-dessus de ses points, sans mot coupé (la grille par défaut tient sur 4 colonnes).
+    expect(await page.evaluate(() => [...document.querySelectorAll('.grille-niveaux button[data-niveau-cle]')]
+      .filter(b => b.querySelector('.grille-niveau-points').getBoundingClientRect().top<b.querySelector('.grille-niveau-nom').getBoundingClientRect().bottom-1).length),taille).toBe(0);
+    expect(await motsCoupes(page),taille).toEqual([]);
+  }
+  await expect(page.locator('.grille-critere').first().locator('.grille-niveaux button[data-niveau-cle]').nth(2)).toHaveAccessibleName('Acquis · 4 pt');
+});
+
+test('Grilles téléphone : dès l’ouverture, la première rangée est visible, et sur PC les actions de bureau aussi',async({page})=>{
+  await seedClasse(page);
+  await ouvrirClasse(page,375,812);
+  const rangee=await page.evaluate(() => {
+    const barre=document.querySelector('.grille-barre').getBoundingClientRect().top;
+    return [...document.querySelector('.grille-critere').querySelectorAll('.grille-niveaux button[data-niveau-cle]')].map(b => b.getBoundingClientRect().bottom<=barre);
+  });
+  expect(rangee).toEqual([true,true,true,true]);
+  // En bas de page, les actions de bureau passent au-dessus de la barre fixe, pas dessous.
+  await page.evaluate(() => window.scrollTo(0,document.documentElement.scrollHeight));
+  expect(await page.evaluate(() => document.querySelector('.grille-outils').getBoundingClientRect().bottom<=document.querySelector('.grille-barre').getBoundingClientRect().top)).toBe(true);
+  // Grand écran de bureau : pas de vide réservé, « Notes et export Pronote » visible sans défiler.
+  await ouvrirClasse(page,1920,1080);
+  await expect(page.locator('.grille-outils').getByRole('link',{name:'Notes et export Pronote',exact:true})).toBeInViewport({ratio:1});
+});
+
+test('Grilles téléphone : en mode « Par critère », une ligne compacte par élève, « Critère suivant » sous le pouce et choix du critère dans la liste',async({page})=>{
+  await seedClasse(page);
+  await ouvrirClasse(page,375,812);
+  await page.getByLabel('Mode de saisie').selectOption('critere');
+  await expect(page.locator('.grille-critere')).toHaveCount(24);
+  const parEleve=await page.evaluate(() => {
+    const blocs=document.querySelectorAll('.grille-critere'), scores=document.querySelectorAll('[data-score-eleve]');
+    return (scores[scores.length-1].getBoundingClientRect().bottom-blocs[0].getBoundingClientRect().top)/24;
+  });
+  expect(parEleve).toBeLessThanOrEqual(120); // 112 mesurés ; environ 270 avant
+  const titreEnHaut=() => page.evaluate(() => {
+    const t=document.querySelector('.grille-saisie > h2'), h=t.getBoundingClientRect(), haut=document.querySelector('.entete').getBoundingClientRect().bottom;
+    return {sousEntete:h.top>=haut,procheDuHaut:h.top<haut+120,touchable:document.elementFromPoint(h.left+10,h.top+h.height/2)===t};
+  });
+  await page.evaluate(() => window.scrollTo(0,document.documentElement.scrollHeight/2));
+  const suivant=page.locator('.grille-barre').getByRole('button',{name:'Critère suivant',exact:true});
+  await expect(suivant).toBeInViewport({ratio:1});
+  await suivant.click();
+  const criteres=await page.evaluate(async () => (await (await import('/js/io.js')).lire('evaluations','v')).grille.criteres.map(c => c.id));
+  await expect(page.getByLabel('Critère à évaluer')).toHaveValue(criteres[1]);
+  expect(await titreEnHaut()).toEqual({sousEntete:true,procheDuHaut:true,touchable:true});
+  // Choix dans la liste, au doigt ou à la souris : le critère choisi commence aussi en haut.
+  await page.evaluate(() => window.scrollTo(0,document.documentElement.scrollHeight/2));
+  const liste=page.getByLabel('Critère à évaluer');
+  await liste.dispatchEvent('pointerdown');await liste.selectOption(criteres[2]);
+  expect(await titreEnHaut()).toEqual({sousEntete:true,procheDuHaut:true,touchable:true});
+});
+
+test('Grilles texte agrandi (320 px, 200 %) et paysage : rien ne déborde, et la barre ne prend pas l’écran',async({page})=>{
+  await seedClasse(page);
+  // Un vrai nom de famille peut être long : un seul mot de 22 capitales, dernier dans l'ordre alphabétique.
+  await page.evaluate(async () => {const io=await import('/js/io.js');const e=await io.lire('eleves','e1');await io.enregistrer('eleves',{...e,nom:'ELEVEAUNOMTRESTRESLONG'});});
+  for(const [largeur,hauteur] of [[320,640],[360,780]]) {
+    const taille=`${largeur}×${hauteur} à 200 %`;
+    await page.setViewportSize({width:largeur,height:hauteur});
+    await page.goto('/#/accueil');await page.goto('/#/grilles/saisie/v');await expect(page.locator('.grille-critere')).toHaveCount(4);
+    await page.getByLabel('Élève à évaluer').selectOption({label:'ELEVEAUNOMTRESTRESLONG Fictif'});
+    await expect(page.getByRole('heading',{level:2,name:'ELEVEAUNOMTRESTRESLONG Fictif',exact:true})).toBeVisible();
+    await page.evaluate(() => { document.documentElement.style.fontSize='200%'; });
+    // La barre ne garde sa place fixe que si elle coûte peu (≤ 15 % de la hauteur) ; sinon elle redevient un bloc.
+    await expect.poll(() => page.evaluate(() => {const b=document.querySelector('.grille-barre');return getComputedStyle(b).position==='static' || b.getBoundingClientRect().height<=innerHeight*0.15;}),taille).toBe(true);
+    const m=await page.evaluate(() => {
+      const cases=[...document.querySelectorAll('.grille-niveaux button[data-niveau-cle]')], barre=[...document.querySelectorAll('.grille-barre .btn')];
+      const deborde=b => b.scrollWidth>b.clientWidth+1 || b.scrollHeight>b.clientHeight+1;
+      return {page:document.documentElement.scrollWidth>document.documentElement.clientWidth,cases:cases.filter(deborde).length,barre:barre.filter(deborde).length,
+        petite:cases.some(b => b.getBoundingClientRect().height<44 || b.getBoundingClientRect().width<44)};
+    });
+    expect(m,taille).toEqual({page:false,cases:0,barre:0,petite:false});
+    await page.evaluate(() => { document.documentElement.style.fontSize=''; });
+  }
+  // Paysage : au milieu de la saisie, la barre ne recouvre rien.
+  await page.setViewportSize({width:800,height:360});
+  await page.evaluate(() => window.scrollTo(0,(document.documentElement.scrollHeight-innerHeight)/2));
+  const paysage=await page.evaluate(() => {
+    const barre=document.querySelector('.grille-barre').getBoundingClientRect();
+    const haut=document.querySelector('.entete').getBoundingClientRect().bottom, nav=document.querySelector('.nav').getBoundingClientRect().top;
+    return barre.bottom<=haut || barre.top>=nav;
+  });
+  expect(paysage).toBe(true);
+});
+
+test('Grilles téléphone : une écriture refusée reste affichée dans la barre sans la recouvrir, jusqu’à ce que la note de l’élève soit enregistrée',async({page})=>{
+  await seedClasse(page);
+  await ouvrirClasse(page,375,812);
+  const suivant=page.locator('.grille-barre').getByRole('button',{name:'Élève suivant',exact:true});
+  await suivant.click();
+  await expect(page.getByRole('heading',{level:2,name:'ELEVE02 Fictif',exact:true})).toBeVisible();
+  await page.evaluate(() => {
+    const put=IDBObjectStore.prototype.put;window.__panne=true;
+    IDBObjectStore.prototype.put=function(...a){if(this.name==='notes'&&window.__panne){window.__panne=false;throw new DOMException('Panne test','QuotaExceededError');}return put.apply(this,a);};
+  });
+  await page.locator('.grille-critere').nth(1).getByRole('button',{name:/^Acquis/}).click();
+  const echec=page.locator('.grille-barre .grille-echec');
+  const texteEchec='Non enregistré : ELEVE02 Fictif · Maîtrise technique (Panne test)';
+  await expect(echec).toHaveText(texteEchec);
+  await expect(page.locator('.grille-critere').nth(1).locator('.grille-niveaux button[data-niveau-cle]').nth(2)).toHaveAttribute('aria-pressed','false');
+  // Au premier plan, sans rien recouvrir ; un seul message, et une seule annonce pour les lecteurs d'écran.
+  const plan=() => page.evaluate(() => {
+    const au=x => {const r=x.getBoundingClientRect();return document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)===x;};
+    const e=document.querySelector('.grille-echec'), boutons=[...document.querySelectorAll('.grille-barre button')];
+    return {echec:au(e) || e.contains(document.elementFromPoint(e.getBoundingClientRect().left+8,e.getBoundingClientRect().top+e.getBoundingClientRect().height/2)),
+      boutons:boutons.every(au),toasts:document.querySelectorAll('.toast').length,
+      annonces:[...document.querySelectorAll('[role="status"],[aria-live]')].filter(x => x.textContent.includes('Non enregistré')).length};
+  });
+  expect(await plan()).toEqual({echec:true,boutons:true,toasts:0,annonces:1});
+  // La barre agrandie par la ligne d'erreur réserve toujours sa place : en bas de page, rien ne passe dessous.
+  await page.evaluate(() => window.scrollTo(0,document.documentElement.scrollHeight));
+  expect(await page.evaluate(() => document.querySelector('.grille-outils').getBoundingClientRect().bottom<=document.querySelector('.grille-barre').getBoundingClientRect().top)).toBe(true);
+  // Ni le succès d'un AUTRE critère du même élève, ni celui d'un autre élève ne l'effacent : le niveau refusé manque toujours.
+  await page.locator('.grille-critere').nth(0).getByRole('button',{name:/^Fragile/}).click();
+  await expect(page.locator('#vue > .statut')).toHaveText('Enregistré ✓');
+  await expect(echec).toHaveText(texteEchec);
+  await suivant.click();
+  await expect(page.getByRole('heading',{level:2,name:'ELEVE03 Fictif',exact:true})).toBeVisible();
+  await page.locator('.grille-critere').nth(0).getByRole('button',{name:/^Expert/}).click();
+  await expect(page.locator('#vue > .statut')).toHaveText('Enregistré ✓');
+  await expect(echec).toHaveText(texteEchec);
+  await expect(echec).toBeInViewport({ratio:1});
+  // « Élève suivant » a bien fonctionné pendant l'affichage (tap non avalé) ; le niveau réécrit pour ELEVE02 l'efface.
+  await page.locator('.grille-barre').getByRole('button',{name:'Élève précédent',exact:true}).click();
+  await expect(page.getByRole('heading',{level:2,name:'ELEVE02 Fictif',exact:true})).toBeVisible();
+  await page.locator('.grille-critere').nth(1).getByRole('button',{name:/^Acquis/}).click();
+  await expect(page.locator('#vue > .statut')).toHaveText('Enregistré ✓');
+  await expect(echec).toBeHidden();
+});
+
+test('Grilles clavier : une case atteinte avec Tab n’est jamais cachée sous la barre (2.4.11), même en texte agrandi',async({page})=>{
+  await seedClasse(page);
+  for(const [largeur,hauteur,police] of [[375,812,''],[320,640,'200%']]) {
+    await ouvrirClasse(page,largeur,hauteur);
+    await page.evaluate(p => { document.documentElement.style.fontSize=p; },police);
+    await page.locator('.grille-niveaux button[data-niveau-cle]').first().focus();
+    for(let i=0;i<16;i++) {
+      if(i)await page.keyboard.press('Tab');
+      const r=await page.evaluate(() => {
+        const b=document.activeElement, q=b.getBoundingClientRect(), barre=document.querySelector('.grille-barre');
+        const fixe=getComputedStyle(barre).position==='fixed';
+        return {case:b.matches('.grille-niveaux button[data-niveau-cle]'),dessus:!fixe || q.bottom<=barre.getBoundingClientRect().top,touchable:document.elementFromPoint(q.left+q.width/2,q.top+q.height/2)===b};
+      });
+      expect(r,`${largeur}×${hauteur} ${police||'100 %'}, case ${i+1}`).toEqual({case:true,dessus:true,touchable:true});
+    }
+    await page.evaluate(() => { document.documentElement.style.fontSize=''; });
+  }
+});
+
+test('Grilles téléphone : choisir un élève dans la liste le montre en entier, sans faire fuir la liste au clavier',async({page})=>{
+  await seedClasse(page);
+  await ouvrirClasse(page,375,812);
+  // Le geste réel : le doigt ou la souris touche la liste (pointerdown) avant de choisir.
+  const liste=page.getByLabel('Élève à évaluer');
+  await liste.dispatchEvent('pointerdown');await liste.focus();await liste.selectOption('11');
+  await expect(page.getByRole('heading',{level:2,name:'ELEVE12 Fictif',exact:true})).toBeVisible();
+  expect(await ecranEleve(page)).toEqual({cases:16,cachees:0,nomVisible:true,bande:true});
+  // Au clavier, chaque flèche change d'élève : la liste focalisée reste à l'écran.
+  if(test.info().project.name==='chromium') {
+    await page.evaluate(() => window.scrollTo(0,0));
+    await liste.focus();await page.keyboard.press('ArrowDown');
+    await expect(page.getByRole('heading',{level:2,name:'ELEVE13 Fictif',exact:true})).toBeAttached();
+    await expect(liste).toBeFocused();
+    await expect(liste).toBeInViewport({ratio:1});
+  }
+});
+
+test('Grilles lecteur d’écran : « Élève suivant » et « Critère suivant » annoncent ce qui est affiché, dans une région qui existait déjà',async({page})=>{
+  await seedClasse(page);
+  await ouvrirClasse(page,375,812);
+  const region=await page.locator('#vue > p.sr-only[role="status"]').elementHandle();
+  expect(await region.textContent()).toBe('');
+  const suivant=page.locator('.grille-barre').getByRole('button',{name:'Élève suivant',exact:true});
+  await suivant.focus();await page.keyboard.press('Enter');
+  await expect(suivant).toBeFocused();
+  expect(await region.evaluate(x => x.isConnected)).toBe(true);
+  await expect.poll(() => region.textContent()).toBe('ELEVE02 Fictif, élève 2 sur 24');
+  await page.getByLabel('Mode de saisie').selectOption('critere');
+  await page.locator('.grille-barre').getByRole('button',{name:'Critère suivant',exact:true}).click();
+  await expect(page.locator('.grille-saisie > h2')).toHaveText('Maîtrise technique');
+  await expect.poll(() => region.textContent()).toBe('Critère : Maîtrise technique');
+});
+
+test('Grilles téléphone : des libellés de niveau longs ne sont jamais coupés au milieu d’un mot, les cases s’élargissent',async({page})=>{
+  // « Exceptionnellement » (18 lettres) ne tient dans aucune case de 4 colonnes, quelle que soit la police.
+  await seedClasse(page,['Maîtrise insuffisante','Maîtrise satisfaisante','Très bonne maîtrise','Exceptionnellement maîtrisé']);
+  const tailles={};
+  for(const [largeur,hauteur] of [[360,800],[412,915]]) {
+    await ouvrirClasse(page,largeur,hauteur);
+    expect(await motsCoupes(page),`${largeur}×${hauteur}`).toEqual([]);
+    expect(await page.evaluate(() => new Set([...document.querySelector('.grille-critere').querySelectorAll('.grille-niveaux button[data-niveau-cle]')].map(b => Math.round(b.getBoundingClientRect().left))).size),`${largeur}×${hauteur} : cases élargies`).toBeLessThan(4);
+    tailles[largeur]=await page.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.grille-niveau-nom')).fontSize));
+  }
+  // Précaution pour les écrans étroits : la police des cases diminue un peu à 360 px (sans descendre sous 0,7 rem).
+  expect(tailles[360]).toBeLessThan(tailles[412]);
+  expect(tailles[360]).toBeGreaterThanOrEqual(11.2);
+});

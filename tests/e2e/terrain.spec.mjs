@@ -100,6 +100,27 @@ test('terrain — appel d’une classe de 28 : « Terminer l’appel » est atte
   await expect(page.locator('#vue')).toContainText('Appel complet ✓ (28/28)');
 });
 
+test('terrain (revue v0.13.4) — sous « Terminer l’appel », la bande avant la navigation ne touche aucune carte cachée', async ({ page }) => {
+  await semerAppel(page, 28);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/#/appel/se');
+  await expect(page.locator('.btn-eleve')).toHaveCount(28);
+  // Page un peu défilée, barre collée : des cartes d'élève passent sous la barre et sous la bande de 8 px qui la sépare de
+  // la navigation (en bas de page, la barre n'est plus collée et la bande n'existe pas).
+  await page.evaluate(() => window.scrollTo(0, 150));
+  const bande = await page.evaluate(() => {
+    const barre = document.querySelector('.barre-appel').getBoundingClientRect(), nav = document.querySelector('.nav').getBoundingClientRect().top;
+    const fuites = [];
+    for (let y = Math.ceil(barre.bottom); y < nav; y += 2) for (const f of [0.25, 0.5, 0.75]) {
+      if (!document.elementFromPoint(innerWidth * f, y)?.closest('.barre-appel')) fuites.push(`${Math.round(innerWidth * f)},${y}`);
+    }
+    return { hauteur: Math.round(nav - barre.bottom), fuites };
+  });
+  expect(bande.hauteur).toBeGreaterThan(0); // témoin : la bande existe…
+  expect(bande.hauteur).toBeLessThanOrEqual(12); // …et la barre est bien collée au-dessus de la nav
+  expect(bande.fuites).toEqual([]);
+});
+
 test('terrain — la barre collante ne vole pas la ligne d’état à l’impression', async ({ page }) => {
   await semerAppel(page, 6);
   await page.goto('/#/appel/se');

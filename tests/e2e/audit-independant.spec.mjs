@@ -191,6 +191,8 @@ test('FON-05 — même geste, même résultat : retoucher une case l’efface, q
   await expect(statut(page)).toHaveText('Enregistré ✓');
   expect(await detailEnBase(page, 'v_a')).toBeNull();
   await expect(page.locator('.grille-critere').nth(0).locator('.grille-selection')).toHaveText('Non évalué');
+  // Ce que l'on VOIT : la ligne « niveau choisi » est masquée à l'écran depuis la v0.13.4, la case fait foi.
+  await expect(case_(page, 0, 3)).toHaveAttribute('aria-pressed', 'false');
   // Après : le second tap attend la fin de la première écriture (rythme d'un double tap humain sur un appareil rapide).
   await case_(page, 0, 3).click();
   await expect(statut(page)).toHaveText('Enregistré ✓');
@@ -198,6 +200,7 @@ test('FON-05 — même geste, même résultat : retoucher une case l’efface, q
   await expect(statut(page)).toHaveText('Enregistré ✓');
   expect(await detailEnBase(page, 'v_a')).toBeNull();
   await expect(page.locator('.grille-critere').nth(0).locator('.grille-selection')).toHaveText('Non évalué');
+  await expect(case_(page, 0, 3)).toHaveAttribute('aria-pressed', 'false');
 });
 
 test('FON-05 — changer d’avis dans la même rafale : niveau 1 choisi, puis 2, puis de nouveau 1 → le niveau 1 reste', async ({ page }) => {
@@ -329,8 +332,12 @@ test('FON-05 — une erreur au milieu d’une rafale n’est pas recouverte par 
   // Le tap refusé n'est pas réécrit en douce par l'écriture suivante, et l'écran mis à jour montre la base.
   expect(await detailEnBase(page, 'v_a')).toEqual({ [g.criteres[1].id]: g.niveaux[2].cle });
   await expect(page.locator('.grille-critere').nth(0).locator('.grille-selection')).toHaveText('Non évalué');
+  await expect(case_(page, 0, 1)).toHaveAttribute('aria-pressed', 'false'); // la case refusée ne reste pas pleine
   await expect(case_(page, 1, 2)).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('.toast')).toHaveCount(0); // vue affichée : le statut suffit, pas de message en double
+  // Vue affichée : l'échec se voit dans la barre, sous le pouce (la ligne d'état du haut peut être hors de l'écran), et
+  // aucun message ne recouvre « Élève suivant » ni ne double l'annonce (revue et contre-revue v0.13.4).
+  await expect(page.locator('.grille-barre .grille-echec')).toHaveText(`Non enregistré : FICTIF Alice · ${g.criteres[0].libelle} (Disque plein (test))`);
+  await expect(page.locator('.toast')).toHaveCount(0);
 });
 
 test('FON-05 — statut ABS refusé : le sélecteur revient à l’état enregistré en fin de rafale', async ({ page }) => {

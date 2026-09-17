@@ -6,7 +6,8 @@ name: Tests
 
 on:
   push:
-    branches: [main]
+    # grilles-schema3 publie la PRODUCTION depuis la mise en service du 2026-09-17 (https://carnet-eps.github.io/).
+    branches: [main, grilles-schema3]
   pull_request:
     branches: [main]
   workflow_dispatch: # relance à la main depuis l'onglet Actions

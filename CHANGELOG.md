@@ -4,6 +4,22 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-17 — v0.13.4 : saisie par grille « un élève à la fois » sur un seul écran de téléphone
+
+Retour de l'essai téléphone : « l'ergonomie évaluation 1 élève à la fois, c'est pas top », puis « un élève à la fois c'est bien ». Le principe reste ; l'écran est refait pour le pouce. Mesuré avant sur 375 × 812 (grille 4 niveaux × 4 critères) : **aucune case au premier écran** (première à 982 px), « Élève suivant » à 1 921 px, plus de deux écrans par élève ; en mode « Par critère », environ 270 px par élève.
+
+- **Un élève tient sur un écran** : les niveaux d'un critère sur **une rangée**, cadres resserrés, nom du niveau puis ses points en dessous ; la ligne « niveau choisi » ne reste que pour les lecteurs d'écran et l'impression (la case pleine le montre). Page d'un élève : 1 218 px au lieu de 2 053.
+- **Un nom de niveau n'est jamais coupé au milieu d'un mot** : si un mot ne tient pas dans sa case (libellé long, grande police, police plus large du téléphone), les cases s'élargissent sur moins de colonnes. La mesure se fait sur l'écran réel.
+- **« Élève précédent / Élève suivant » dans une barre FIXE sous le pouce**, au-dessus de la navigation, **toujours à la même place** quel que soit le défilement : un double tap ne tombe plus sur une case de l'élève suivant. Passer à l'élève suivant, ou en choisir un dans la liste (au doigt ou à la souris), ramène son nom **en haut de l'écran** ; au clavier, la liste reste visible. Même chose pour « Critère suivant ». Quand la barre prendrait plus de 15 % de la hauteur (texte agrandi, paysage), elle redevient un bloc ordinaire en fin de saisie.
+- **Une écriture refusée reste affichée dans la barre** (« Non enregistré : NOM Prénom · critère (cause) ») tant que CE niveau n'a pas été réécrit avec succès : ni un autre critère, ni un autre élève ne l'effacent, et rien ne recouvre les boutons. Avant, l'erreur restait au-dessus de la saisie, hors de l'écran dès le deuxième élève, et le succès suivant l'écrasait. Une seule annonce pour les lecteurs d'écran.
+- **Ordre de l'écran** : le statut ABS / DISP / NN vient après les critères ; Imprimer / Notes et export Pronote / Réutiliser la grille descendent **sous** la saisie (visibles sans défiler sur un écran de PC). Choix du mode et de l'élève côte à côte.
+- **Mode « Par critère »** : 112 px par élève au lieu d'environ 270, soit une classe de 24 en moins de 4 écrans au lieu de 10.
+- **Plus de toucher perdu autour de la barre** : la bande de 8 px entre la barre et la navigation ne touche plus une case cachée, **écran d'appel compris** (sous « Terminer l'appel ») ; un clic de souris commencé sur le texte d'une case n'est plus perdu quand une série d'écritures se termine.
+- Accessibilité : nom accessible des cases inchangé (« Acquis · 4 pt »), focus clavier conservé et **nouvel élève ou nouveau critère annoncé** aux lecteurs d'écran, case atteinte au clavier jamais cachée sous la barre (WCAG 2.4.11), nom de famille long sans débordement au texte agrandi. Aucun changement de données.
+- **Intégration continue** : la suite tourne aussi sur la branche `grilles-schema3`, qui publie la production depuis la mise en service.
+- **Revue adversariale** (4 lentilles, 2 réfutateurs par lentille : 14 constats retenus sur 15) puis **contre-revue des correctifs** (3 lentilles : 19 constats retenus sur 20 — mes correctifs avaient posé un message de 8 s sur la barre, laissé la barre bouger depuis le bas de page, et un retour en haut sans effet au doigt) : tous corrigés.
+- Tests : 9 dans `tests/e2e/grilles.spec.mjs` (aussi rejoués sur le profil mobile), 1 dans `tests/e2e/terrain.spec.mjs` (bande sous « Terminer l'appel »), assertions FON-05 portées sur l'état des cases et la ligne d'erreur de la barre. Libellés de niveau courts dans les tests d'écran, pour ne pas dépendre de la police installée. 29 mutants tués.
+
 ## 2026-09-17 — v0.13.3 : mise en service de la nouvelle adresse https://carnet-eps.github.io/
 
 L'essai sur téléphone de la v0.13.2 est validé (version, couleurs des statuts, écran des grilles, sauvegarde : tout est vert).
