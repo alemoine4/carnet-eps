@@ -498,14 +498,21 @@ test('Grilles texte agrandi (320 px, 200 %) et paysage : rien ne déborde, et la
     expect(m,taille).toEqual({page:false,cases:0,barre:0,petite:false});
     await page.evaluate(() => { document.documentElement.style.fontSize=''; });
   }
-  // La hauteur de la fenêtre change seule (écran partagé) : la règle des 15 % suit, dans les deux sens.
+  // La hauteur de la fenêtre change seule (écran partagé) : la règle des 15 % suit, dans les deux sens. Les hauteurs
+  // d'écran sont DÉDUITES de la barre réellement rendue : sa hauteur dépend de la police installée (DejaVu en CI).
   await page.setViewportSize({width:412,height:915});
   await page.evaluate(() => { document.documentElement.style.fontSize='200%'; });
-  await expect.poll(() => page.evaluate(() => getComputedStyle(document.querySelector('.grille-barre')).position)).toBe('fixed');
-  await page.setViewportSize({width:412,height:520});
-  await expect.poll(() => page.evaluate(() => getComputedStyle(document.querySelector('.grille-barre')).position)).toBe('static');
-  await page.setViewportSize({width:412,height:915});
-  await expect.poll(() => page.evaluate(() => getComputedStyle(document.querySelector('.grille-barre')).position)).toBe('fixed');
+  const barre=() => page.evaluate(() => ({hauteur:document.querySelector('.grille-barre').getBoundingClientRect().height,position:getComputedStyle(document.querySelector('.grille-barre')).position}));
+  await expect.poll(async () => (await barre()).hauteur>0).toBe(true);
+  const h=(await barre()).hauteur;
+  const grand=Math.ceil(h/0.15)+120, petit=Math.floor(h/0.15)-60;
+  expect(petit,'la barre doit être assez haute pour que la règle joue au-dessus de 481 px').toBeGreaterThanOrEqual(481);
+  await page.setViewportSize({width:412,height:grand});
+  await expect.poll(async () => (await barre()).position,`412×${grand} (barre de ${Math.round(h)} px)`).toBe('fixed');
+  await page.setViewportSize({width:412,height:petit});
+  await expect.poll(async () => (await barre()).position,`412×${petit}`).toBe('static');
+  await page.setViewportSize({width:412,height:grand});
+  await expect.poll(async () => (await barre()).position,`412×${grand} au retour`).toBe('fixed');
   await page.evaluate(() => { document.documentElement.style.fontSize=''; });
   // Paysage : au milieu de la saisie, la barre ne recouvre rien.
   await page.setViewportSize({width:800,height:360});
