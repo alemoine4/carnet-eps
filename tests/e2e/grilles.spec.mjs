@@ -346,7 +346,7 @@ test('Grilles hors ligne : création et relecture avec service-worker réel',asy
 
 // ---- Saisie au téléphone (essai du 2026-09-17, v0.13.4) : « un élève à la fois », mais sur UN écran. Avant : première
 // case à 982 px sur 812, « Élève suivant » à 1 921 px, 237 px par élève en mode « Par critère ». Classe de 24 élèves
-// fictifs, grille par défaut (4 niveaux × 4 critères). Complétés après la revue et la contre-revue de la v0.13.4.
+// fictifs, grille par défaut (4 niveaux × 4 critères). Complétés après la revue, la contre-revue et la troisième revue.
 // Libellés de niveau COURTS par défaut : la place d'un mot dépend de la police installée (Segoe sous Windows, DejaVu
 // sous Linux en intégration continue) ; les libellés longs ont leur propre test, fondé sur des invariants.
 const seedClasse = async (page,niveaux=['Non acquis','Fragile','Acquis','Expert']) => {
@@ -378,12 +378,21 @@ const ecranEleve = page => page.evaluate(() => {
     nomVisible:visible(document.querySelector('.grille-entete-eleve h2')) && visible(document.querySelector('.grille-rang')),
     bande:Boolean(document.elementFromPoint(innerWidth/2,(barre.bottom+nav)/2)?.closest('.grille-barre'))};
 });
-// Un nom de niveau ne se coupe qu'aux espaces : jamais plus de lignes que de mots, et rien ne déborde de la case.
+// Un nom de niveau ne se coupe qu'aux espaces : les caractères de chaque MOT sont sur une seule ligne, et rien ne
+// déborde de la case. (Compter les lignes ne suffit pas : « Exceptionnelleme | nt maîtrisé » fait 2 lignes pour 2 mots.)
 const motsCoupes = page => page.evaluate(() => [...document.querySelectorAll('.grille-niveaux button[data-niveau-cle]')].filter(b => {
-  const nom=b.querySelector('.grille-niveau-nom'), r=document.createRange();r.selectNodeContents(nom);
-  const lignes=new Set([...r.getClientRects()].map(x => Math.round(x.top))).size;
-  return lignes>nom.textContent.trim().split(/\s+/).length || b.scrollWidth>b.clientWidth+1;
+  const nom=b.querySelector('.grille-niveau-nom'), texte=nom.firstChild, r=document.createRange();
+  for(const m of texte.textContent.matchAll(/\S+/g)) {
+    r.setStart(texte,m.index);r.setEnd(texte,m.index+m[0].length);
+    if(new Set([...r.getClientRects()].filter(x => x.width>0).map(x => Math.round(x.top))).size>1)return true;
+  }
+  return b.scrollWidth>b.clientWidth+1;
 }).map(b => b.getAttribute('aria-label')));
+// Barre fixe : même place (±2 px), toujours fixe, et un vrai clic au centre de ses boutons les atteint.
+const barreAuPouce = page => page.evaluate(() => {
+  const b=document.querySelector('.grille-barre'), boutons=[...b.querySelectorAll('button')];
+  return {position:getComputedStyle(b).position,boutons:boutons.map(x => {const r=x.getBoundingClientRect();return {y:Math.round(r.top),atteint:document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)===x};})};
+});
 
 test('Grilles téléphone : un élève tient sur un écran, « Élève suivant » reste sous le pouce et ramène le suivant en haut',async({page})=>{
   await seedClasse(page);
@@ -424,7 +433,7 @@ test('Grilles téléphone : dès l’ouverture, la première rangée est visible
   expect(rangee).toEqual([true,true,true,true]);
   // En bas de page, les actions de bureau passent au-dessus de la barre fixe, pas dessous.
   await page.evaluate(() => window.scrollTo(0,document.documentElement.scrollHeight));
-  expect(await page.evaluate(() => document.querySelector('.grille-outils').getBoundingClientRect().bottom<=document.querySelector('.grille-barre').getBoundingClientRect().top)).toBe(true);
+  await expect.poll(() => page.evaluate(() => document.querySelector('.grille-outils').getBoundingClientRect().bottom<=document.querySelector('.grille-barre').getBoundingClientRect().top)).toBe(true);
   // Grand écran de bureau : pas de vide réservé, « Notes et export Pronote » visible sans défiler.
   await ouvrirClasse(page,1920,1080);
   await expect(page.locator('.grille-outils').getByRole('link',{name:'Notes et export Pronote',exact:true})).toBeInViewport({ratio:1});
@@ -449,19 +458,28 @@ test('Grilles téléphone : en mode « Par critère », une ligne compacte par �
   await expect(suivant).toBeInViewport({ratio:1});
   await suivant.click();
   const criteres=await page.evaluate(async () => (await (await import('/js/io.js')).lire('evaluations','v')).grille.criteres.map(c => c.id));
-  await expect(page.getByLabel('Critère à évaluer')).toHaveValue(criteres[1]);
+  const liste=page.getByLabel('Critère à évaluer');
+  await expect(liste).toHaveValue(criteres[1]);
   expect(await titreEnHaut()).toEqual({sousEntete:true,procheDuHaut:true,touchable:true});
   // Choix dans la liste, au doigt ou à la souris : le critère choisi commence aussi en haut.
   await page.evaluate(() => window.scrollTo(0,document.documentElement.scrollHeight/2));
-  const liste=page.getByLabel('Critère à évaluer');
   await liste.dispatchEvent('pointerdown');await liste.selectOption(criteres[2]);
   expect(await titreEnHaut()).toEqual({sousEntete:true,procheDuHaut:true,touchable:true});
+  // Au clavier, chaque flèche change de critère : la liste focalisée reste à l'écran.
+  if(test.info().project.name==='chromium') {
+    await page.evaluate(() => window.scrollTo(0,0));
+    await liste.focus();await page.keyboard.press('ArrowDown');
+    await expect(liste).toHaveValue(criteres[3]);
+    await expect(liste).toBeFocused();
+    await expect(liste).toBeInViewport({ratio:1});
+  }
 });
 
 test('Grilles texte agrandi (320 px, 200 %) et paysage : rien ne déborde, et la barre ne prend pas l’écran',async({page})=>{
   await seedClasse(page);
   // Un vrai nom de famille peut être long : un seul mot de 22 capitales, dernier dans l'ordre alphabétique.
   await page.evaluate(async () => {const io=await import('/js/io.js');const e=await io.lire('eleves','e1');await io.enregistrer('eleves',{...e,nom:'ELEVEAUNOMTRESTRESLONG'});});
+  const barreLegere=() => page.evaluate(() => {const b=document.querySelector('.grille-barre');return getComputedStyle(b).position==='static' || b.getBoundingClientRect().height<=innerHeight*0.15;});
   for(const [largeur,hauteur] of [[320,640],[360,780]]) {
     const taille=`${largeur}×${hauteur} à 200 %`;
     await page.setViewportSize({width:largeur,height:hauteur});
@@ -470,7 +488,7 @@ test('Grilles texte agrandi (320 px, 200 %) et paysage : rien ne déborde, et la
     await expect(page.getByRole('heading',{level:2,name:'ELEVEAUNOMTRESTRESLONG Fictif',exact:true})).toBeVisible();
     await page.evaluate(() => { document.documentElement.style.fontSize='200%'; });
     // La barre ne garde sa place fixe que si elle coûte peu (≤ 15 % de la hauteur) ; sinon elle redevient un bloc.
-    await expect.poll(() => page.evaluate(() => {const b=document.querySelector('.grille-barre');return getComputedStyle(b).position==='static' || b.getBoundingClientRect().height<=innerHeight*0.15;}),taille).toBe(true);
+    await expect.poll(barreLegere,taille).toBe(true);
     const m=await page.evaluate(() => {
       const cases=[...document.querySelectorAll('.grille-niveaux button[data-niveau-cle]')], barre=[...document.querySelectorAll('.grille-barre .btn')];
       const deborde=b => b.scrollWidth>b.clientWidth+1 || b.scrollHeight>b.clientHeight+1;
@@ -480,18 +498,26 @@ test('Grilles texte agrandi (320 px, 200 %) et paysage : rien ne déborde, et la
     expect(m,taille).toEqual({page:false,cases:0,barre:0,petite:false});
     await page.evaluate(() => { document.documentElement.style.fontSize=''; });
   }
+  // La hauteur de la fenêtre change seule (écran partagé) : la règle des 15 % suit, dans les deux sens.
+  await page.setViewportSize({width:412,height:915});
+  await page.evaluate(() => { document.documentElement.style.fontSize='200%'; });
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.querySelector('.grille-barre')).position)).toBe('fixed');
+  await page.setViewportSize({width:412,height:520});
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.querySelector('.grille-barre')).position)).toBe('static');
+  await page.setViewportSize({width:412,height:915});
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.querySelector('.grille-barre')).position)).toBe('fixed');
+  await page.evaluate(() => { document.documentElement.style.fontSize=''; });
   // Paysage : au milieu de la saisie, la barre ne recouvre rien.
   await page.setViewportSize({width:800,height:360});
-  await page.evaluate(() => window.scrollTo(0,(document.documentElement.scrollHeight-innerHeight)/2));
-  const paysage=await page.evaluate(() => {
+  await expect.poll(() => page.evaluate(() => {
+    window.scrollTo(0,(document.documentElement.scrollHeight-innerHeight)/2);
     const barre=document.querySelector('.grille-barre').getBoundingClientRect();
     const haut=document.querySelector('.entete').getBoundingClientRect().bottom, nav=document.querySelector('.nav').getBoundingClientRect().top;
     return barre.bottom<=haut || barre.top>=nav;
-  });
-  expect(paysage).toBe(true);
+  })).toBe(true);
 });
 
-test('Grilles téléphone : une écriture refusée reste affichée dans la barre sans la recouvrir, jusqu’à ce que la note de l’élève soit enregistrée',async({page})=>{
+test('Grilles téléphone : une écriture refusée reste affichée dans la barre sans la recouvrir, jusqu’à ce que ce niveau soit enregistré, même après rechargement',async({page})=>{
   await seedClasse(page);
   await ouvrirClasse(page,375,812);
   const suivant=page.locator('.grille-barre').getByRole('button',{name:'Élève suivant',exact:true});
@@ -503,40 +529,114 @@ test('Grilles téléphone : une écriture refusée reste affichée dans la barre
   });
   await page.locator('.grille-critere').nth(1).getByRole('button',{name:/^Acquis/}).click();
   const echec=page.locator('.grille-barre .grille-echec');
-  const texteEchec='Non enregistré : ELEVE02 Fictif · Maîtrise technique (Panne test)';
+  const texteEchec='Non enregistré : ELEVE02 Fictif · Maîtrise technique — Panne test';
   await expect(echec).toHaveText(texteEchec);
   await expect(page.locator('.grille-critere').nth(1).locator('.grille-niveaux button[data-niveau-cle]').nth(2)).toHaveAttribute('aria-pressed','false');
   // Au premier plan, sans rien recouvrir ; un seul message, et une seule annonce pour les lecteurs d'écran.
   const plan=() => page.evaluate(() => {
     const au=x => {const r=x.getBoundingClientRect();return document.elementFromPoint(r.left+r.width/2,r.top+r.height/2)===x;};
     const e=document.querySelector('.grille-echec'), boutons=[...document.querySelectorAll('.grille-barre button')];
-    return {echec:au(e) || e.contains(document.elementFromPoint(e.getBoundingClientRect().left+8,e.getBoundingClientRect().top+e.getBoundingClientRect().height/2)),
+    return {echec:e.contains(document.elementFromPoint(e.getBoundingClientRect().left+8,e.getBoundingClientRect().top+8)),
       boutons:boutons.every(au),toasts:document.querySelectorAll('.toast').length,
       annonces:[...document.querySelectorAll('[role="status"],[aria-live]')].filter(x => x.textContent.includes('Non enregistré')).length};
   });
   expect(await plan()).toEqual({echec:true,boutons:true,toasts:0,annonces:1});
   // La barre agrandie par la ligne d'erreur réserve toujours sa place : en bas de page, rien ne passe dessous.
   await page.evaluate(() => window.scrollTo(0,document.documentElement.scrollHeight));
-  expect(await page.evaluate(() => document.querySelector('.grille-outils').getBoundingClientRect().bottom<=document.querySelector('.grille-barre').getBoundingClientRect().top)).toBe(true);
-  // Ni le succès d'un AUTRE critère du même élève, ni celui d'un autre élève ne l'effacent : le niveau refusé manque toujours.
+  await expect.poll(() => page.evaluate(() => document.querySelector('.grille-outils').getBoundingClientRect().bottom<=document.querySelector('.grille-barre').getBoundingClientRect().top)).toBe(true);
+  // Le succès d'un AUTRE critère du même élève ne l'efface pas : le niveau refusé manque toujours.
   await page.locator('.grille-critere').nth(0).getByRole('button',{name:/^Fragile/}).click();
   await expect(page.locator('#vue > .statut')).toHaveText('Enregistré ✓');
   await expect(echec).toHaveText(texteEchec);
+  // Changer d'élève ne la cache pas (vérifié AVANT tout toucher), et le même critère réussi pour un AUTRE élève non plus.
   await suivant.click();
   await expect(page.getByRole('heading',{level:2,name:'ELEVE03 Fictif',exact:true})).toBeVisible();
-  await page.locator('.grille-critere').nth(0).getByRole('button',{name:/^Expert/}).click();
-  await expect(page.locator('#vue > .statut')).toHaveText('Enregistré ✓');
   await expect(echec).toHaveText(texteEchec);
   await expect(echec).toBeInViewport({ratio:1});
-  // « Élève suivant » a bien fonctionné pendant l'affichage (tap non avalé) ; le niveau réécrit pour ELEVE02 l'efface.
-  await page.locator('.grille-barre').getByRole('button',{name:'Élève précédent',exact:true}).click();
+  await page.locator('.grille-critere').nth(1).getByRole('button',{name:/^Expert/}).click();
+  await expect(page.locator('#vue > .statut')).toHaveText('Enregistré ✓');
+  await expect(echec).toHaveText(texteEchec);
+  // Le message de conflit demande de recharger : la liste survit au rechargement.
+  await page.reload();
+  await expect(page.getByRole('heading',{level:2,name:'ELEVE01 Fictif',exact:true})).toBeVisible();
+  await expect(echec).toHaveText(texteEchec);
+  // Le niveau réécrit pour ELEVE02 l'efface, ici et pour la session.
+  await page.getByLabel('Élève à évaluer').selectOption('1');
   await expect(page.getByRole('heading',{level:2,name:'ELEVE02 Fictif',exact:true})).toBeVisible();
   await page.locator('.grille-critere').nth(1).getByRole('button',{name:/^Acquis/}).click();
   await expect(page.locator('#vue > .statut')).toHaveText('Enregistré ✓');
   await expect(echec).toBeHidden();
+  await page.reload();
+  await expect(page.getByRole('heading',{level:2,name:'ELEVE01 Fictif',exact:true})).toBeVisible();
+  await expect(echec).toBeHidden();
+  // Un échec rattrapé AILLEURS (l'autre onglet a écrit le même niveau) n'est plus signalé à la réouverture.
+  await page.evaluate(() => {
+    const put=IDBObjectStore.prototype.put;window.__panne=true;
+    IDBObjectStore.prototype.put=function(...a){if(this.name==='notes'&&window.__panne){window.__panne=false;throw new DOMException('Panne test','QuotaExceededError');}return put.apply(this,a);};
+  });
+  await page.locator('.grille-critere').nth(0).getByRole('button',{name:/^Fragile/}).click();
+  await expect(echec).toHaveText('Non enregistré : ELEVE01 Fictif · Efficacité — Panne test');
+  await page.evaluate(async () => {
+    const io=await import('/js/io.js');const ev=await io.lire('evaluations','v');
+    await io.enregistrer('notes',{id:'v_e1',evaluationId:'v',eleveId:'e1',valeur:5,detail:{[ev.grille.criteres[0].id]:ev.grille.niveaux[1].cle},commentaire:''});
+  });
+  await page.reload();
+  await expect(page.getByRole('heading',{level:2,name:'ELEVE01 Fictif',exact:true})).toBeVisible();
+  await expect(echec).toBeHidden();
 });
 
-test('Grilles clavier : une case atteinte avec Tab n’est jamais cachée sous la barre (2.4.11), même en texte agrandi',async({page})=>{
+test('Grilles téléphone : avec un vrai conflit d’écriture, la barre garde sa place et « Élève suivant » ou « Critère suivant » fonctionnent',async({page})=>{
+  await seedClasse(page);
+  // Un nom composé et le vrai message de conflit (note écrite derrière la vue, comme depuis un autre onglet).
+  await page.evaluate(async () => {const io=await import('/js/io.js');const e=await io.lire('eleves','e2');await io.enregistrer('eleves',{...e,nom:'ELEVE02 NOM COMPOSÉ',prenom:'Prénom-Composé'});});
+  const conflit=eleve => page.evaluate(async eleve => {const io=await import('/js/io.js');await io.enregistrer('notes',{id:`v_${eleve}`,evaluationId:'v',eleveId:eleve,valeur:'NN',detail:{},commentaire:''});},eleve);
+  // 360 × 680 : la ligne d'erreur ferait passer la barre ENTIÈRE au-dessus de 15 %, pas la rangée de boutons.
+  for(const [largeur,hauteur] of [[360,680],[412,839]]) {
+    const taille=`${largeur}×${hauteur}`;
+    await page.evaluate(() => { try { sessionStorage.clear(); } catch {} });
+    await page.setViewportSize({width:largeur,height:hauteur});
+    await page.goto('/#/accueil');await page.goto('/#/grilles/saisie/v');
+    await page.getByLabel('Élève à évaluer').selectOption('1');
+    await expect(page.getByRole('heading',{level:2,name:'ELEVE02 NOM COMPOSÉ Prénom-Composé',exact:true})).toBeVisible();
+    // Toucher une toast persistante et une toast « Annuler » : elles passent au-dessus de la barre, pas dessus.
+    await page.evaluate(async () => {const {toast}=await import('/js/ui.js');toast('Nouvelle version installée',{action:() => {},libelleAction:'Recharger',duree:Infinity});toast('Élève supprimé',{action:() => {}});});
+    const avant=await barreAuPouce(page);
+    expect(avant.position,taille).toBe('fixed');
+    expect(avant.boutons.every(x => x.atteint),`${taille} : messages au-dessus de la barre`).toBe(true);
+    await conflit('e2');
+    await page.locator('.grille-critere').nth(3).getByRole('button',{name:/^Expert/}).click();
+    await expect(page.locator('.grille-barre .grille-echec')).toContainText('Non enregistré : ELEVE02 NOM COMPOSÉ Prénom-Composé · Rôle social — note modifiée dans un autre onglet');
+    const apres=await barreAuPouce(page);
+    // La ligne d'erreur est bornée à deux lignes : un long message ne fait pas grandir la barre sans fin.
+    expect(await page.locator('.grille-barre .grille-echec').evaluate(e => e.getBoundingClientRect().height<=parseFloat(getComputedStyle(e).fontSize)*3),taille).toBe(true);
+    expect(apres.position,taille).toBe('fixed');
+    expect(Math.abs(apres.boutons[1].y-avant.boutons[1].y),taille).toBeLessThanOrEqual(2);
+    expect(apres.boutons.every(x => x.atteint),taille).toBe(true);
+    await expect(page.locator('.grille-barre .grille-echec')).toBeInViewport({ratio:1});
+    // Le tap à la place habituelle change d'élève, et n'écrit rien pour personne.
+    const notesAvant=await page.evaluate(async () => (await (await import('/js/io.js')).tous('notes')).length);
+    await page.evaluate(() => window.scrollTo(0,document.documentElement.scrollHeight));
+    await page.locator('.grille-barre').getByRole('button',{name:'Élève suivant',exact:true}).click();
+    await expect(page.getByRole('heading',{level:2,name:'ELEVE03 Fictif',exact:true})).toBeVisible();
+    expect(await page.evaluate(async () => (await (await import('/js/io.js')).tous('notes')).length),taille).toBe(notesAvant);
+    // Mode « Par critère », au milieu de la liste : même chose pour « Critère suivant ».
+    await page.getByLabel('Mode de saisie').selectOption('critere');
+    await expect(page.locator('.grille-critere')).toHaveCount(24);
+    await conflit('e15');
+    await page.locator('.grille-critere').nth(14).scrollIntoViewIfNeeded();
+    await page.locator('.grille-critere').nth(14).getByRole('button',{name:/^Expert/}).click();
+    await expect(page.locator('.grille-barre .grille-echec')).toContainText('ELEVE15 Fictif · Efficacité');
+    const critere=await barreAuPouce(page);
+    expect(critere.position,taille).toBe('fixed');
+    expect(critere.boutons.every(x => x.atteint),taille).toBe(true);
+    await expect(page.locator('.grille-barre .grille-echec')).toBeInViewport({ratio:1});
+    await page.locator('.grille-barre').getByRole('button',{name:'Critère suivant',exact:true}).click();
+    await expect(page.locator('.grille-saisie > h2')).toHaveText('Maîtrise technique');
+    await page.evaluate(async () => {for(const t of document.querySelectorAll('.toast'))t.remove();const io=await import('/js/io.js');await io.supprimer('notes','v_e2');await io.supprimer('notes','v_e15');});
+  }
+});
+
+test('Grilles clavier : une case atteinte avec Tab n’est jamais cachée sous la barre (2.4.11), même en texte agrandi ou quand la barre grandit',async({page})=>{
   await seedClasse(page);
   for(const [largeur,hauteur,police] of [[375,812,''],[320,640,'200%']]) {
     await ouvrirClasse(page,largeur,hauteur);
@@ -553,6 +653,18 @@ test('Grilles clavier : une case atteinte avec Tab n’est jamais cachée sous l
     }
     await page.evaluate(() => { document.documentElement.style.fontSize=''; });
   }
+  // La case focalisée juste au-dessus de la barre, une écriture refusée l'agrandit : la case reste entièrement visible.
+  await ouvrirClasse(page,375,812);
+  const derniere=page.locator('.grille-critere').nth(3).locator('.grille-niveaux button[data-niveau-cle]').first();
+  await derniere.focus();
+  await page.evaluate(() => {
+    const put=IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put=function(...a){if(this.name==='notes')throw new DOMException('Le stockage de l’appareil est plein : exportez une sauvegarde, puis libérez de l’espace','QuotaExceededError');return put.apply(this,a);};
+  });
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.grille-barre .grille-echec')).toBeVisible();
+  await expect.poll(() => derniere.evaluate(b => b.getBoundingClientRect().bottom<=document.querySelector('.grille-barre').getBoundingClientRect().top)).toBe(true);
+  await expect(derniere).toBeFocused();
 });
 
 test('Grilles téléphone : choisir un élève dans la liste le montre en entier, sans faire fuir la liste au clavier',async({page})=>{
@@ -563,13 +675,17 @@ test('Grilles téléphone : choisir un élève dans la liste le montre en entier
   await liste.dispatchEvent('pointerdown');await liste.focus();await liste.selectOption('11');
   await expect(page.getByRole('heading',{level:2,name:'ELEVE12 Fictif',exact:true})).toBeVisible();
   expect(await ecranEleve(page)).toEqual({cases:16,cachees:0,nomVisible:true,bande:true});
-  // Au clavier, chaque flèche change d'élève : la liste focalisée reste à l'écran.
   if(test.info().project.name==='chromium') {
+    // Au clavier, chaque flèche change d'élève : la liste focalisée reste à l'écran.
     await page.evaluate(() => window.scrollTo(0,0));
     await liste.focus();await page.keyboard.press('ArrowDown');
     await expect(page.getByRole('heading',{level:2,name:'ELEVE13 Fictif',exact:true})).toBeAttached();
     await expect(liste).toBeFocused();
     await expect(liste).toBeInViewport({ratio:1});
+    // Puis de nouveau au pointeur : le dernier geste fait foi, la saisie remonte.
+    await liste.dispatchEvent('pointerdown');await liste.selectOption('5');
+    await expect(page.getByRole('heading',{level:2,name:'ELEVE06 Fictif',exact:true})).toBeVisible();
+    expect(await ecranEleve(page)).toEqual({cases:16,cachees:0,nomVisible:true,bande:true});
   }
 });
 
@@ -590,16 +706,23 @@ test('Grilles lecteur d’écran : « Élève suivant » et « Critère suivant 
 });
 
 test('Grilles téléphone : des libellés de niveau longs ne sont jamais coupés au milieu d’un mot, les cases s’élargissent',async({page})=>{
-  // « Exceptionnellement » (18 lettres) ne tient dans aucune case de 4 colonnes, quelle que soit la police.
-  await seedClasse(page,['Maîtrise insuffisante','Maîtrise satisfaisante','Très bonne maîtrise','Exceptionnellement maîtrisé']);
+  // « Exceptionnellement » (18 lettres) ne tient dans aucune case de 4 colonnes ; « Anticonstitutionnellement » (25) dans
+  // aucune case de 3 : il faut une seule colonne, jamais un mot coupé.
+  await seedClasse(page,['Maîtrise insuffisante','Maîtrise satisfaisante','Exceptionnellement maîtrisé','Anticonstitutionnellement maîtrisé']);
   const tailles={};
-  for(const [largeur,hauteur] of [[360,800],[412,915]]) {
+  const colonnes=() => page.evaluate(() => new Set([...document.querySelector('.grille-critere').querySelectorAll('.grille-niveaux button[data-niveau-cle]')].map(b => Math.round(b.getBoundingClientRect().left))).size);
+  for(const [largeur,hauteur] of [[360,800],[412,915],[430,932]]) {
     await ouvrirClasse(page,largeur,hauteur);
     expect(await motsCoupes(page),`${largeur}×${hauteur}`).toEqual([]);
-    expect(await page.evaluate(() => new Set([...document.querySelector('.grille-critere').querySelectorAll('.grille-niveaux button[data-niveau-cle]')].map(b => Math.round(b.getBoundingClientRect().left))).size),`${largeur}×${hauteur} : cases élargies`).toBeLessThan(4);
+    expect(await colonnes(),`${largeur}×${hauteur} : cases élargies`).toBeLessThan(4);
     tailles[largeur]=await page.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.grille-niveau-nom')).fontSize));
   }
   // Précaution pour les écrans étroits : la police des cases diminue un peu à 360 px (sans descendre sous 0,7 rem).
   expect(tailles[360]).toBeLessThan(tailles[412]);
   expect(tailles[360]).toBeGreaterThanOrEqual(11.2);
+  // Rotation sans changer d'écran (paysage puis portrait) : les cases se réajustent seules.
+  await ouvrirClasse(page,850,412);
+  await page.setViewportSize({width:412,height:850});
+  await expect.poll(() => motsCoupes(page)).toEqual([]);
+  await expect.poll(colonnes).toBeLessThan(4);
 });

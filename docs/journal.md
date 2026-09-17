@@ -34,13 +34,23 @@ Demande : « l'ergonomie évaluation 1 élève à la fois, c'est pas top », pui
   n'avait plus d'intégration continue).
 - Mesures à 375 × 812 : page d'un élève 1 218 px (2 053 avant), élève entier visible après « Élève suivant », barre à 687 px à
   l'ouverture, en bas de page et après « Élève suivant » ; mode « Par critère » 112 px par élève (environ 270).
+- **Troisième revue** (3 lentilles : barre fixe et mesures, erreurs et élargissement, preuves) : 14 constats sur 14, tous
+  corrigés — un VRAI message d'erreur (conflit « autre onglet », stockage plein) faisait passer la barre ENTIÈRE au-dessus de
+  15 % : elle quittait le pouce et le tap suivant écrivait un niveau pour un autre élève (le seuil se mesure désormais sur la
+  seule rangée de boutons, la ligne d'erreur est bornée à deux lignes) ; les toasts (« Nouvelle version installée », 20 s
+  « Annuler ») se posaient sur la barre fixe ; le focus clavier passait sous la barre agrandie ; la règle des 15 % n'était pas
+  réévaluée quand seule la hauteur changeait (écran partagé) ; un mot restait coupé une fois les cases élargies (palier « une
+  seule colonne » ajouté) ; un statut ABS refusé n'était pas nommé ; la liste des échecs mourait au rechargement que le
+  message réclame (gardée dans la session, par identifiants, et oubliée si la base contient déjà le choix) ; six preuves
+  insuffisantes (invariant de coupure au caractère, place de la barre depuis le bas, gestes réels sur les listes, rotation,
+  attentes au lieu de lectures ponctuelles).
 - **Revue adversariale** (4 lentilles, 2 réfutateurs chacune) : 14 constats sur 15. **Contre-revue des correctifs** (3 lentilles) :
   19 constats sur 20, dont trois défauts que J'AVAIS introduits en corrigeant — le message « Non enregistré » de 8 s posé sur la
   barre avalait « Élève suivant » (les niveaux suivants s'écrivaient sur l'élève précédent) et doublait l'annonce ; la barre
   collante « immobile » ne l'était qu'en partant du haut de page ; la garde `:focus-visible` rendait le retour en haut inopérant
   au doigt (vraie sur un `<select>` touché dans Chromium), et le test passait par `selectOption` sans focus. Tous corrigés.
-- 9 tests dans `grilles.spec.mjs` (rejoués sur mobile), 1 dans `terrain.spec.mjs`, assertions FON-05 ajustées ; 29 mutants
-  tués sur 31 construits (2 équivalents retirés : la règle « paysage » doublait celle des 15 %, et un mutant d'annonce laissait
+- 10 tests dans `grilles.spec.mjs` (rejoués sur mobile), 1 dans `terrain.spec.mjs`, assertions FON-05 ajustées ; 38 mutants
+  tués sur 40 construits (2 équivalents retirés : la règle « paysage » doublait celle des 15 %, et un mutant d'annonce laissait
   l'affectation correcte s'exécuter après lui).
 
 **Pièges rencontrés** :
@@ -55,7 +65,11 @@ Demande : « l'ergonomie évaluation 1 élève à la fois, c'est pas top », pui
 - La place d'un mot dépend de la police installée (Segoe ici, DejaVu en intégration continue) : les tests d'écran utilisent des
   libellés courts, et les libellés longs sont prouvés par des invariants (pas de mot coupé, rien qui déborde, cases élargies).
 - Deux mutants survivants étaient ÉQUIVALENTS, pas des trous : le vérifier avant d'ajouter un test (règle redondante, mutant mal
-  construit).
+  construit). Trois autres ne survivaient que parce que la MESURE du test était trop douce : message d'erreur court là où les vrais
+  sont longs, mot de test trop court pour saturer trois colonnes, test hors du filtre de la campagne. Un mutant qui survit dit
+  d'abord quelque chose du test.
+- Une décision « au-delà de 15 %, la barre se décroche » doit porter sur la partie STABLE de l'élément : mesurée sur la barre
+  entière, elle basculait au premier message d'erreur, c'est-à-dire exactement quand l'enseignant en avait le plus besoin.
 - Pendant le premier tour : revenir à la même adresse avec `goto` ne redessine pas la vue ; un commentaire inséré par script en fin
   de ligne a avalé l'assertion suivante ; `innerText` renvoie une ligne par élément flex même côte à côte ; `sed -i` de Git Bash
   réécrit en fins de ligne LF (sans effet pour git).
