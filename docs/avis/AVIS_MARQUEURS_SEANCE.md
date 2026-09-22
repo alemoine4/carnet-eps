@@ -1,7 +1,7 @@
 # Avis — marqueurs de séance (rôles, comportement, équipes) et informations chiffrées
 
-**Rédigé le 2026-09-17 · révisé le 2026-09-22 après contre-vérification · en attente de décision · aucune ligne de code
-écrite à ce jour**
+**Rédigé le 2026-09-17 · révisé le 2026-09-22 (contre-vérification Codex, puis fait nouveau « aucune donnée ») · en
+attente de décision · aucune ligne de code écrite à ce jour**
 
 Demande : « ET POUR METTRE DES INFOS comme score, groupe etc ? », puis « système de pastilles par exemple pour des
 rôles dans la séance ou pour comportement… ». Référence citée : les badges d'iDoceo.
@@ -30,16 +30,21 @@ références de ligne seront à rafraîchir au moment d'implémenter.
 Deux remarques qui pèsent sur la suite : la saisie compacte « un élève par écran » (v0.13.4) n'existe que pour le type
 **grille** ; et le relevé d'une classe affiche toutes les évaluations de toutes ses séquences, sans filtre de période.
 
-## 2. Avertissement de calendrier — la migration d'abord
+## 2. Calendrier : la fenêtre « zéro donnée »
 
 Restaurer une sauvegarde **remplace tout** : chaque magasin est vidé puis réécrit, sans fusion (vérifié par exécution
 dans la contre-vérification : une classe et un réglage créés sur la destination disparaissent à l'import). Les
 sauvegardes des schémas 2 et 3 restent restaurables.
 
-Donc : **tout ce qui est saisi sur la nouvelle adresse avant l'import de la sauvegarde de l'ancienne est effacé par cet
-import.** Avant ce chantier, il faut pour chaque appareil : l'adresse qui fait foi, une sauvegarde complète conservée,
-l'import vérifié, et l'arrêt des saisies sur l'ancienne adresse. Si deux carnets ont déjà divergé, ne pas en réimporter
-un sur l'autre : il faut une réconciliation explicite, que l'application ne fait pas.
+**Fait nouveau du 2026-09-22 : l'enseignant n'a aucune donnée saisie.** La condition « finir la migration d'abord »
+tombe : il n'y a rien à transférer, donc plus rien à attendre. L'avertissement ci-dessus ne redeviendra vrai qu'une fois
+ses vraies classes saisies — à ce moment-là, ne jamais importer une ancienne sauvegarde par-dessus.
+
+**En échange, une fenêtre s'ouvre, et elle est datée.** Tous les coûts de format que cet avis cherchait à éviter — une
+montée de schéma sans retour arrière, des sauvegardes refusées par les versions installées — se paient **en données
+existantes**. Ils valent zéro aujourd'hui, et le jour où la première classe est saisie, ils reviennent intacts. Tout ce
+qui touche au FORMAT doit donc être décidé et écrit **avant** les premières vraies données, pas au moment de livrer le
+module (voir la question 18).
 
 ## 3. Ce qu'est un marqueur (proposition)
 
@@ -72,6 +77,10 @@ Un champ facultatif sur l'enregistrement d'appel **qui existe déjà**, un par �
 La liste des marqueurs disponibles irait dans le magasin `meta`, comme les autres réglages. **Aucun nouveau magasin ni
 index n'est nécessaire, donc pas de montée du schéma IndexedDB** — une base passée au schéma 4 ne revient plus en
 arrière, et ses sauvegardes seraient refusées par les versions installées.
+
+⚠️ **Ce choix est à rouvrir**, et c'est l'objet de la question 18 : son seul motif est un coût qui se paie en données
+existantes, donc nul tant que rien n'est saisi. Un magasin dédié donnerait au contraire l'écriture atomique et la
+validation que ce modèle-ci doit écrire à la main (§4.2, risque 3).
 
 ### 4.2 Trois risques majeurs que la première version n'avait pas vus
 
@@ -180,54 +189,49 @@ L'avis « carnet de classe à onglets » propose des champs sur `classes`, alors
 
 ## 10. Recommandation
 
-1. **Terminer et vérifier la migration, appareil par appareil.** Aucune nouvelle fonction qui encouragerait à saisir
-   sur des versions différentes.
-2. **Pour le besoin immédiat** : le commentaire d'appel ou les observations existantes — sans pastilles ni comptage,
-   mais sans nouveau format de données.
-3. **Premier module** : marqueurs **de séance**, posés par la feuille `⋯`, sur un élève **déjà appelé** ; mesures
-   hors du module ; pas de mode tampon avant un essai terrain.
-4. Le champ sur `appels` et le vocabulaire dans `meta` sont acceptables **à condition** d'écritures atomiques, de
-   validations compatibles avec les anciennes sauvegardes, d'une règle écrite sur les anciennes versions (§4.2) et de
-   règles d'historique. Aucun nouveau magasin n'est nécessaire.
+1. **Mettre les deux appareils (PC et téléphone) sur la version en ligne aujourd'hui**, et le vérifier sur chacun : la
+   perte silencieuse démontrée par l'audit vient d'un appareil resté sur une ancienne version, pas d'une vieille
+   sauvegarde. C'est gratuit tant qu'il n'y a aucune donnée.
+2. **Décider maintenant tout ce qui touche au FORMAT** (question 18), même si le module est livré plus tard : cette
+   fenêtre se referme à ta première classe saisie.
+3. **Premier module** : marqueurs **de séance**, posés par la feuille `⋯` **et** par un mode tampon (armer un marqueur,
+   taper les élèves), sur un élève **déjà appelé** ; la reprise de la séance précédente comprise ; les mesures hors du
+   module ; aucune sortie (ni impression ni CSV) dans ce premier lot.
+4. **Écritures atomiques obligatoires** (relire l'appel dans la transaction, appliquer « ajouter / retirer une clé »),
+   validation du vocabulaire, règle écrite pour une référence orpheline. Si la question 18 est acceptée, un magasin
+   dédié donne l'atomicité et la validation sans effort ; sinon, il faut les écrire à la main sur `appels` et `meta`.
 5. Ne pas détourner le coefficient 0 en type « information », et ne pas interdire des couleurs par principe.
 
-## 11. Décisions à prendre
+## 11. Décisions à prendre — avec ma réponse recommandée
 
-**Condition préalable** (ce n'est pas une préférence) : la migration de tes données est-elle terminée et vérifiée sur
-chaque appareil ?
+Réponds par numéros (« 1 oui · 2 non… »), ou dis « je te suis » pour prendre toutes les recommandations. Elles ont été
+éprouvées par trois juges indépendants (professeur d'EPS au gymnase, modèle de données, premier lot minimal) ; les
+points où ils m'ont fait changer d'avis sont signalés **↺**.
 
-1. **Portée** : le besoin porte-t-il sur des **rôles de séance** seulement, ou aussi sur des **fonctions
-   permanentes** (délégué, capitaine du cycle) ? *(Une dispense à l'année relève déjà des inaptitudes : ne pas en faire un
-   second système.)*
-2. **Cumul** : un élève peut-il porter **plusieurs rôles et comportements** dans la même séance ? Les équipes sont-elles
-   **exclusives** ? *(Le modèle en découlera : une liste ou plusieurs.)*
-3. **Le geste** : (a) par la feuille de l'élève ; (b) mode tampon ; (c) (a) d'abord, (b) après essai. *(Je recommande c.)*
-4. **Taille du vocabulaire** : combien de marqueurs **affichés en même temps** sur une carte, et combien **au total**
-   dans ta liste ? *(Huit couleurs existent ; au-delà, c'est le code court qui distingue.)*
-5. **Alerte** : trois « À recadrer » sur une période déclenchent-ils un ⚠ ? Si oui : sur quelle période, visible où,
-   désactivable ? *(Pour un premier lot, je recommande la lecture seule.)*
-6. **Équipes** : reposées chaque **séance** (avec reprise de la précédente), stockées pour la **séquence**, ou pour la
-   **classe** ? Un élève peut-il être en même temps dans une équipe ET dans un atelier ?
-7. **Sur la carte d'élève** : les codes courts (« ARB CAP +1 ») ou un simple repère avec le détail dans la feuille ?
-   *(Le nom accessible restera complet dans les deux cas.)*
-8. **Sorties** : les rôles doivent-ils apparaître à l'**impression** ? dans un **CSV de séance** ? Et les
-   **comportements** ? *(Leur public n'est pas le même.)*
-9. **Marqueurs et observations** : le marqueur remplace-t-il le **geste** de saisie d'une observation courte, ou les
-   deux coexistent-ils ? *(Dans tous les cas, les observations existantes ne seront ni converties ni effacées.)*
-10. **Visibilité** : tes élèves voient l'écran. Les marqueurs de **comportement** doivent-ils être visibles sur la grille
-    de classe, ou seulement dans la feuille de l'élève ? *(Un code court n'est pas discret si la classe le connaît.)*
-11. **Mesures** : quelles performances veux-tu garder — temps, distance, répétitions, score de match ? Combien d'essais ?
-    Doivent-elles un jour produire une note ?
-12. **Priorité** : ce chantier passe-t-il **avant** ou **après** le carnet de classe à onglets ?
-13. **Renommage** : renommer un marqueur doit-il changer la lecture de tout l'historique (correction d'une faute), ou
-    faut-il un nouveau marqueur dès que le sens change ?
-14. **Appel** : poser un marqueur peut-il **valider la présence** d'un élève pas encore appelé, ou faut-il d'abord
-    choisir son statut ?
-15. **Occurrences** : faut-il pouvoir compter **plusieurs fois** le même comportement dans une même séance ?
-16. **Conservation** : que doit-il rester d'un marqueur après son **retrait**, l'**archivage** du marqueur, ou la
-    **suppression** de la séance ?
-17. **Appareils** : quelles versions et quels appareils doivent encore pouvoir lire tes sauvegardes pendant la
-    transition ?
+| № | Question | Ma réponse |
+|---|---|---|
+| 1 | **Portée** : rôles de séance seulement, ou aussi fonctions permanentes ? | **Séance seulement.** Une fonction permanente (délégué) et une dispense à l'année relèvent d'autres écrans. |
+| 2 | **Cumul et exclusivité** : plusieurs marqueurs à la fois ? les équipes s'excluent-elles ? | **Cumul libre, et aucune exclusivité automatique dans le premier lot** ↺. Poser « Éq. 2 » n'enlèvera pas « Éq. 1 » : deux équipes affichées se voient et se corrigent. L'exclusivité viendra avec un champ `famille` (un mot libre : équipe, atelier), si l'usage le réclame. |
+| 3 | **Le geste** : feuille de l'élève, mode tampon, ou l'un puis l'autre ? | **Les deux dans le premier lot** ↺. Sans le tampon (armer « Arbitre », taper six élèves), la fonction ne sert pas : par la feuille, six arbitres coûtent une vingtaine de gestes. Le seul risque du mode — un tap qui ne fait plus l'appel — ne coûte aujourd'hui aucune donnée. |
+| 4 | **Combien de marqueurs** affichés, et au total ? | **Deux codes sur la carte puis « +n »** ↺, et une liste courte (6 à 8 vraiment utilisés), les derniers utilisés en tête. Pas de plafond codé en dur. |
+| 5 | **Alerte** : un ⚠ au bout de trois « À recadrer » ? | **Non, lecture seule** pour le premier lot. Un seuil exige une fenêtre de calcul et une règle de visibilité : c'est un chantier à part. |
+| 6 | **Équipes** : séance, séquence ou classe ? | **À la séance, avec « reprendre les marqueurs de la séance précédente » dans le même lot** ↺ — sans la reprise, reposer 30 élèves chaque semaine ne se fait pas. La reprise ne recopie que les groupes et les rôles, jamais un comportement, et seulement pour les élèves déjà appelés. |
+| 7 | **Sur la carte d'élève** : codes courts ou repère discret ? | **Codes courts pour les rôles et les équipes** ; les comportements suivent la règle 10. |
+| 8 | **Sorties** : impression et CSV ? | **Aucune sortie dans le premier lot** ↺ (c'est la première chose qui ne servirait pas). Quand elles viendront : les rôles oui, les comportements non. |
+| 9 | **Marqueurs et observations** | **Ils coexistent**, rien n'est converti. Dit franchement : les observations de comportement serviront moins, le marqueur étant plus rapide. |
+| 10 | **Visibilité des comportements** | **Pas de code sur la carte, mais un repère neutre** ↺ (même forme pour tous, sans couleur parlante) : sinon tu ne sais pas si ton tap a pris. Le sens n'apparaît que dans la feuille de l'élève. |
+| 11 | **Score chiffré** | **Rester sur la colonne « AFL / positionnement » en texte libre** ↺ — pas le barème, qui est une vraie note (moyenne, copie Pronote). Le type « Mesure » reste un chantier distinct, pour sa complexité propre. |
+| 12 | **Priorité** : marqueurs ou carnet à onglets d'abord ? | **Les marqueurs d'abord** ↺. Le carnet à onglets est une fonction de LECTURE : sur un carnet vide, il afficherait des colonnes vides jusqu'en janvier. Les marqueurs écrivent les données qu'il lira. |
+| 13 | **Renommer un marqueur** | Renommer corrige une faute ; changer de sens demande un nouveau marqueur. **C'est une discipline, pas une garantie** : l'application ne peut pas distinguer les deux. |
+| 14 | **Un marqueur peut-il valider une présence ?** | **Non** — mais avec un chemin praticable ↺ : « tous présents » en un geste à l'ouverture de la séance, puis les marqueurs ; et un refus explicite (« pas encore appelé ») plutôt qu'un tap sans effet. |
+| 15 | **Compter plusieurs fois** le même comportement dans une séance ? | **Non dans l'usage**, mais **le format stockera dès le départ de quoi compter** ↺ : sinon, le jour où tu le voudras, il faudra migrer des données existantes. |
+| 16 | **Que reste-t-il** après retrait, archivage, suppression de séance ? | Retrait : disparaît. Archivage du vocabulaire : l'historique reste lisible. Séance supprimée : ses marqueurs partent avec elle (comme les appels). **Et une référence orpheline s'affiche en gris avec son code, sans jamais provoquer d'erreur** ↺. |
+| 17 | **Quelles versions doivent rester compatibles ?** | La règle ne doit pas reposer sur ta mémoire ↺ : **le code doit refuser ou préserver**. La garantie la plus simple est la question 18. En attendant : mettre les deux appareils à jour aujourd'hui. |
+| **18** | **Nouvelle question — profiter de la fenêtre « zéro donnée » ?** Faire les marqueurs dans un **magasin dédié** avec montée du schéma (`DB_VERSION` 4), au lieu d'un champ ajouté sur l'appel et d'un vocabulaire dans les réglages. | **Oui, et seulement si c'est décidé avant ta première classe saisie.** Le magasin dédié donne gratuitement l'écriture atomique et la validation que l'autre solution n'a pas (§4.2), et une version ancienne **refuse d'ouvrir** la base au lieu d'effacer les marqueurs en silence. Le prix — pas de retour en arrière — se paie en données : il vaut zéro aujourd'hui, et redevient cher dès ta première classe. |
+
+**Si tu me suis sur tout** : « je te suis », et je rédige l'avis de format (le contrat d'implémentation) avant d'écrire
+la moindre ligne de code. Les deux seules réponses qui changent vraiment le chantier sont la **12** (par quoi on
+commence) et la **18** (le format, qu'il faut figer maintenant).
 
 ---
 
