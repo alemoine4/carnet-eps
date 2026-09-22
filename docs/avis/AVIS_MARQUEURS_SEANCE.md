@@ -229,9 +229,12 @@ points où ils m'ont fait changer d'avis sont signalés **↺**.
 | 17 | **Quelles versions doivent rester compatibles ?** | La règle ne doit pas reposer sur ta mémoire ↺ : **le code doit refuser ou préserver**. La garantie la plus simple est la question 18. En attendant : mettre les deux appareils à jour aujourd'hui. |
 | **18** | **Nouvelle question — profiter de la fenêtre « zéro donnée » ?** Faire les marqueurs dans un **magasin dédié** avec montée du schéma (`DB_VERSION` 4), au lieu d'un champ ajouté sur l'appel et d'un vocabulaire dans les réglages. | **Oui, et seulement si c'est décidé avant ta première classe saisie.** Le magasin dédié donne gratuitement l'écriture atomique et la validation que l'autre solution n'a pas (§4.2), et une version ancienne **refuse d'ouvrir** la base au lieu d'effacer les marqueurs en silence. Le prix — pas de retour en arrière — se paie en données : il vaut zéro aujourd'hui, et redevient cher dès ta première classe. |
 
-**Si tu me suis sur tout** : « je te suis », et je rédige l'avis de format (le contrat d'implémentation) avant d'écrire
-la moindre ligne de code. Les deux seules réponses qui changent vraiment le chantier sont la **12** (par quoi on
-commence) et la **18** (le format, qu'il faut figer maintenant).
+> ✅ **RÉPONDU LE 2026-09-22 : « je te suis ».** Les 18 réponses ci-dessus sont **actées**. Deux conséquences
+> immédiates : le chantier des marqueurs passe **avant** le carnet à onglets (réponse 12), et le format — magasin dédié,
+> montée du schéma à 4 — doit être **figé avant la première classe saisie** (réponse 18).
+>
+> Le contrat d'implémentation (`docs/avis/AVIS_FORMAT_MARQUEURS.md`) prend le relais : **aucune ligne de code ne sera
+> écrite avant qu'il soit validé à son tour.**
 
 ---
 
