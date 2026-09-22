@@ -380,6 +380,51 @@ const ecranEleve = page => page.evaluate(() => {
 });
 // Un nom de niveau ne se coupe qu'aux espaces : les caractères de chaque MOT sont sur une seule ligne, et rien ne
 // déborde de la case. (Compter les lignes ne suffit pas : « Exceptionnelleme | nt maîtrisé » fait 2 lignes pour 2 mots.)
+// Attendre que l'observateur de taille ait tourné : il s'exécute à l'étape de rendu, APRÈS les requestAnimationFrame de
+// la même image. Deux images suffisent. Sans cette attente, une mesure de défilement peut précéder le saut qu'elle doit
+// détecter, et passer au vert par hasard (découvert par le mutant M49, v0.13.5).
+const deuxImages=page => page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+
+// « Ajuster » au pas de 0,25 (de 0 à 10 points : plus de 21 choix, le dialogue propose un champ numérique), bouton posé
+// juste au-dessus de la barre fixe : quand une erreur l'agrandira, elle le recouvrira. Renvoie la position de départ.
+async function ajusterAuBordDeLaBarre(page) {
+  await page.goto('/');
+  await page.evaluate(async () => {
+    const io=await import('/js/io.js');await io.viderTout();
+    const {nouvelleGrille}=await import('/js/grilles-calcul.js');const g=nouvelleGrille();g.id='g';g.titre='Grille fictive';
+    g.pointsAjustables=true;g.pasPoints=0.25;g.arrondi='exact';
+    g.niveaux=g.niveaux.map((n,i) => ({...n,points:[0,1,2,10][i],minimum:0}));
+    const eleves=Array.from({length:6},(_,i) => ({id:`e${i+1}`,classeId:'c',nom:`ELEVE${i+1}`,prenom:'Fictif',actif:true}));
+    await io.restaurer({grilles:[g],classes:[{id:'c',nom:'6TEST',archivee:false}],eleves,
+      sequences:[{id:'s',classeId:'c',apsa:'Badminton',dateDebut:'2026-09-01',dateFin:'2027-07-01'}],
+      evaluations:[{id:'v',sequenceId:'s',titre:'Eval',date:'2026-09-10',type:'grille',bareme:20,coef:1,grilleId:'g',grille:structuredClone(g),publieePronote:null}]});
+  });
+  await page.setViewportSize({width:412,height:839});
+  await page.goto('/#/accueil');await page.goto('/#/grilles/saisie/v');
+  await expect(page.getByRole('heading',{level:2,name:'ELEVE1 Fictif',exact:true})).toBeVisible();
+  await expect(page.locator('.grille-barre .grille-echec')).toBeHidden(); // aucune erreur encore : la barre va GRANDIR
+  return page.evaluate(() => {
+    const a=[...document.querySelectorAll('.grille-ajuster')].filter(x => /Maîtrisé/.test(x.getAttribute('aria-label')))[1];
+    const b=document.querySelector('.grille-barre');
+    window.scrollBy(0,a.getBoundingClientRect().bottom-(b.getBoundingClientRect().top-8));
+    return {y:scrollY,barre:b.getBoundingClientRect().height};
+  });
+}
+// Après la validation du dialogue : panne d'écriture déjà posée, erreur affichée, rendu suivant attendu. Mesure où est
+// le bouton qui a le focus, et s'il SERAIT recouvert à la position de départ (prémisse indépendante du défilement).
+async function apresAjusterRefuse(page,pose) {
+  await expect(page.locator('.grille-barre .grille-echec')).toBeVisible();
+  await deuxImages(page); // le défilement éventuel arrive au rendu suivant : le laisser se produire avant de mesurer
+  return page.evaluate(yAvant => {
+    const f=document.activeElement, r=f.getBoundingClientRect(), b=document.querySelector('.grille-barre').getBoundingClientRect();
+    return {y:scrollY,barre:b.height,ajuster:f.classList.contains('grille-ajuster'),recouvert:r.bottom+(scrollY-yAvant)>b.top,dessus:r.bottom<=b.top};
+  },pose.y);
+}
+const panneUnique=page => page.evaluate(() => {
+  const put=IDBObjectStore.prototype.put;window.__panne=true;
+  IDBObjectStore.prototype.put=function(...a){if(this.name==='notes'&&window.__panne){window.__panne=false;throw new DOMException('Mémoire pleine (test)','QuotaExceededError');}return put.apply(this,a);};
+});
+
 const motsCoupes = page => page.evaluate(() => [...document.querySelectorAll('.grille-niveaux button[data-niveau-cle]')].filter(b => {
   const nom=b.querySelector('.grille-niveau-nom'), texte=nom.firstChild, r=document.createRange();
   for(const m of texte.textContent.matchAll(/\S+/g)) {
@@ -618,6 +663,34 @@ test('Grilles téléphone : une écriture refusée reste affichée dans la barre
   await page.reload();
   await expect(page.getByRole('heading',{level:2,name:'ELEVE01 Fictif',exact:true})).toBeVisible();
   await expect(echec).toBeHidden();
+  // …et il ne RESSUSCITE pas. La session est réalignée dès l'ouverture ; sans cela, l'échec rattrapé y restait, et une
+  // saisie valide PLUS TARD sur le même critère (un autre niveau) le faisait revenir au rechargement suivant, alors que
+  // la note était bien enregistrée (audit Codex V7-A01).
+  expect(await page.evaluate(() => sessionStorage.getItem('carnet-eps:grille-echecs:v')),'session réalignée dès l’ouverture').toBeNull();
+  await page.locator('.grille-critere').nth(0).getByRole('button',{name:/^Acquis/}).click();
+  await expect(page.locator('#vue > .statut')).toHaveText('Enregistré ✓');
+  await page.reload();
+  await expect(page.getByRole('heading',{level:2,name:'ELEVE01 Fictif',exact:true})).toBeVisible();
+  await expect(echec).toBeHidden();
+  expect(await page.evaluate(async () => {const io=await import('/js/io.js');const ev=await io.lire('evaluations','v');const n=await io.lire('notes','v_e1');return n.detail[ev.grille.criteres[0].id]===ev.grille.niveaux[2].cle;}),'la saisie valide est bien en base').toBe(true);
+  // Réaligner la session n'en retire que les échecs RATTRAPÉS. Celui d'un élève passé « parti » n'est ni affiché ni
+  // perdu : quand il revient dans la classe, la ligne revient, puisque la note manque toujours (revue v0.13.5).
+  await page.evaluate(() => {
+    const put=IDBObjectStore.prototype.put;window.__panne=true;
+    IDBObjectStore.prototype.put=function(...a){if(this.name==='notes'&&window.__panne){window.__panne=false;throw new DOMException('Panne test','QuotaExceededError');}return put.apply(this,a);};
+  });
+  await page.locator('.grille-critere').nth(1).getByRole('button',{name:/^Expert/}).click();
+  await expect(echec).toContainText('ELEVE01 Fictif');
+  const mettreActif=actif => page.evaluate(async actif => {const io=await import('/js/io.js');const e=await io.lire('eleves','e1');await io.enregistrer('eleves',{...e,actif});},actif);
+  await mettreActif(false);
+  await page.reload();
+  await expect(page.getByRole('heading',{level:2,name:'ELEVE02 Fictif',exact:true})).toBeVisible(); // il n'est plus dans la saisie
+  await expect(echec).toBeHidden();
+  expect(await page.evaluate(() => sessionStorage.getItem('carnet-eps:grille-echecs:v')),'son échec est gardé en session').toContain('"e1|');
+  await mettreActif(true);
+  await page.reload();
+  await expect(page.getByRole('heading',{level:2,name:'ELEVE01 Fictif',exact:true})).toBeVisible();
+  await expect(echec).toContainText('ELEVE01 Fictif');
 });
 
 test('Grilles téléphone : avec un vrai conflit d’écriture, la barre garde sa place et « Élève suivant » ou « Critère suivant » fonctionnent',async({page})=>{
@@ -680,12 +753,14 @@ test('Grilles téléphone : avec un vrai conflit d’écriture, la barre garde s
     await expect(page.locator('#vue > .statut')).toContainText('ELEVE10 Fictif');
     await expect(page.locator('.grille-barre .grille-echec')).toContainText('et 1 autre'); // au-delà de deux, la ligne résume
     expect(await page.locator('.grille-barre .grille-echec').getAttribute('title'),taille).toContain('ELEVE10 Fictif'); // le détail vit dans l'infobulle
+    await deuxImages(page);
     expect(Math.abs(await page.evaluate(() => scrollY)-avantEchec),`${taille} : l'écran ne bouge pas quand la ligne s'allonge`).toBeLessThanOrEqual(2);
     // …ni quand la fenêtre change de hauteur (barre d'adresse Android, écran partagé).
     await page.evaluate(() => window.scrollTo(0,600));
     const avantResize=await page.evaluate(() => scrollY);
     await page.setViewportSize({width:largeur,height:hauteur-115});
     await expect.poll(() => page.evaluate(() => innerHeight),`${taille} : nouvelle hauteur appliquée`).toBe(hauteur-115);
+    await deuxImages(page);
     expect(Math.abs(await page.evaluate(() => scrollY)-avantResize),`${taille} : l'écran ne bouge pas au redimensionnement`).toBeLessThanOrEqual(60);
     await page.setViewportSize({width:largeur,height:hauteur});
     // La cause est lisible EN PREMIER (la ligne tient en deux lignes, ce sont les noms qui sont résumés), et le détail
@@ -739,6 +814,7 @@ test('Grilles téléphone : un tap ne fait jamais défiler l’écran, même qua
   });
   await page.evaluate(() => document.querySelectorAll('.grille-critere')[9].querySelectorAll('.grille-niveaux button[data-niveau-cle]')[3].click());
   await expect(page.locator('.grille-barre .grille-echec')).toContainText('ELEVE10 Fictif');
+  await deuxImages(page); // le saut fautif arriverait au rendu suivant : le laisser se produire avant de mesurer
   const apres=await page.evaluate(() => ({y:scrollY,barre:document.querySelector('.grille-barre').getBoundingClientRect().height,
     saisie:Boolean(document.activeElement.closest('.grille-critere'))}));
   expect(apres.barre,'la barre a bien grandi (sans quoi la preuve serait vide)').toBeGreaterThan(pose.barre);
@@ -747,7 +823,83 @@ test('Grilles téléphone : un tap ne fait jamais défiler l’écran, même qua
   // …ni quand la fenêtre change de hauteur (barre d'adresse Android, écran partagé) alors que la case est hors champ.
   await page.setViewportSize({width:412,height:724});
   await expect.poll(() => page.evaluate(() => innerHeight),'nouvelle hauteur appliquée').toBe(724);
+  await deuxImages(page);
   expect(Math.abs(await page.evaluate(() => scrollY)-apres.y),'l’écran ne bouge pas au redimensionnement').toBeLessThanOrEqual(2);
+});
+
+test.describe('écran tactile', () => {
+  test.use({hasTouch:true});
+  test('Grilles téléphone : le statut ABS choisi au doigt ne fait pas défiler l’écran quand la barre grandit',async({page})=>{
+    // Touché au doigt, un <select> passe pour « focus visible » dans Chromium : l'ancienne garde `:focus-visible` laissait
+    // l'écran défiler de 96 px sous le doigt à l'apparition d'une erreur (audit Codex V7-A02). C'est désormais le dernier
+    // geste qui fait foi, pour tous les contrôles de la vue. Un clic de SOURIS ne reproduit pas le piège : ce test
+    // simule un écran tactile, et affirme d'abord que le toucher le produit bien — sans quoi la preuve serait vide.
+    await seedClasse(page);
+    await page.setViewportSize({width:412,height:839});
+    await page.goto('/#/accueil');await page.goto('/#/grilles/saisie/v');
+    await expect(page.getByRole('heading',{level:2,name:'ELEVE01 Fictif',exact:true})).toBeVisible();
+    await expect(page.locator('.grille-barre .grille-echec')).toBeHidden(); // aucune erreur encore : la barre va GRANDIR
+    const statut=page.getByLabel('Statut de l’élève');
+    await statut.tap(); // toucher RÉEL : le sélecteur prend le focus, sans aucune touche du clavier
+    const surStatut=await page.evaluate(() => {
+      const s=document.querySelector('select[data-statut-eleve]');
+      window.scrollBy(0,s.getBoundingClientRect().top-(innerHeight-30));
+      const r=s.getBoundingClientRect(), b=document.querySelector('.grille-barre').getBoundingClientRect();
+      return {focus:document.activeElement===s,piege:s.matches(':focus-visible'),ecran:r.top<innerHeight && r.bottom>0,
+        sousBarre:r.bottom>b.top,y:scrollY,barre:b.height};
+    });
+    expect(surStatut.focus,'le sélecteur de statut a le focus').toBe(true);
+    expect(surStatut.piege,'prémisse : touché au doigt, le sélecteur passe pour « focus visible » (le piège)').toBe(true);
+    expect(surStatut.ecran && surStatut.sousBarre,'le sélecteur est à l’écran et recouvert par la barre').toBe(true);
+    await page.evaluate(() => {
+      const put=IDBObjectStore.prototype.put;window.__panne=true;
+      IDBObjectStore.prototype.put=function(...a){if(this.name==='notes'&&window.__panne){window.__panne=false;throw new DOMException('Mémoire pleine (test)','QuotaExceededError');}return put.apply(this,a);};
+    });
+    await statut.selectOption('ABS'); // choix dans la liste native : aucune touche, le geste reste celui du doigt
+    await expect(page.locator('.grille-barre .grille-echec')).toContainText('statut ABS');
+    await deuxImages(page); // le saut fautif arriverait au rendu suivant : le laisser se produire avant de mesurer
+    const apres=await page.evaluate(() => ({y:scrollY,barre:document.querySelector('.grille-barre').getBoundingClientRect().height,
+      focus:document.activeElement===document.querySelector('select[data-statut-eleve]')}));
+    expect(apres.barre,'la barre a bien grandi (sans quoi la preuve serait vide)').toBeGreaterThan(surStatut.barre);
+    expect(apres.focus,'le focus est toujours sur le sélecteur').toBe(true);
+    expect(Math.abs(apres.y-surStatut.y),'l’écran ne bouge pas sous le doigt').toBeLessThanOrEqual(2);
+  });
+  test('Grilles téléphone : une valeur tapée au clavier virtuel dans « Ajuster » ne fait pas défiler l’écran quand la barre grandit',async({page})=>{
+    // Le « OK » du clavier virtuel d'Android émet des touches : compté comme un geste clavier, il faisait défiler l'écran
+    // de 50 px sous le doigt quand une erreur agrandissait la barre (revue v0.13.5). Une frappe DANS un champ de saisie
+    // ne dit pas comment on se déplace.
+    const pose=await ajusterAuBordDeLaBarre(page);
+    await page.getByRole('button',{name:/^Ajuster Maîtrisé/}).nth(1).tap();
+    await page.getByRole('dialog').getByLabel('Points à attribuer').tap();
+    await page.keyboard.press('Control+A');await page.keyboard.type('7'); // frappes DANS le champ, comme le clavier virtuel
+    await panneUnique(page);
+    await page.keyboard.press('Enter'); // le « OK » du clavier virtuel valide le dialogue
+    const apres=await apresAjusterRefuse(page,pose);
+    expect(apres.ajuster,'le focus est revenu sur « Ajuster »').toBe(true);
+    expect(apres.barre,'la barre a bien grandi (sans quoi la preuve serait vide)').toBeGreaterThan(pose.barre);
+    expect(apres.recouvert,'prémisse : la barre agrandie recouvre le bouton touché').toBe(true);
+    expect(Math.abs(apres.y-pose.y),'l’écran ne bouge pas sous le doigt').toBeLessThanOrEqual(2);
+  });
+});
+
+test.describe('souris et vrai clavier', () => {
+  test.use({hasTouch:false});
+  test('Grilles téléphone (souris et clavier) : Entrée tapée dans « Ajuster » ouvert à la souris garde le bouton visible quand la barre grandit',async({page})=>{
+    // Pendant du test tactile. Après un clic de SOURIS, une frappe dans le champ vient d'un vrai clavier : le bouton
+    // « Ajuster », qui retrouve un focus visible, ne doit pas passer sous la barre qui grandit. Ignorer toute frappe dans
+    // un champ le laissait recouvert à 88 % (revue v0.13.5, second tour).
+    const pose=await ajusterAuBordDeLaBarre(page);
+    await page.getByRole('button',{name:/^Ajuster Maîtrisé/}).nth(1).click();
+    await page.getByRole('dialog').getByLabel('Points à attribuer').click();
+    await page.keyboard.press('Control+A');await page.keyboard.type('7');
+    await panneUnique(page);
+    await page.keyboard.press('Enter');
+    const apres=await apresAjusterRefuse(page,pose);
+    expect(apres.ajuster,'le focus est revenu sur « Ajuster »').toBe(true);
+    expect(apres.barre,'la barre a bien grandi (sans quoi la preuve serait vide)').toBeGreaterThan(pose.barre);
+    expect(apres.recouvert,'prémisse : à la position de départ, la barre agrandie recouvrirait le bouton').toBe(true);
+    expect(apres.dessus,'le bouton qui a le focus clavier reste entièrement au-dessus de la barre').toBe(true);
+  });
 });
 
 test('Grilles clavier : une case atteinte avec Tab n’est jamais cachée sous la barre (2.4.11), même en texte agrandi ou quand la barre grandit',async({page})=>{

@@ -116,7 +116,7 @@ arbitrages de la v0.12.18 disparaissent, absorbés par elle. Un témoin garde le
 les libellés de tiers sans colonne sûre en face, ainsi que les pluriels (« Prénoms », « Prénom(s) ») qui
 n'étaient reconnus par rien.
 
-**`grilles.spec.mjs` (32)** — module des grilles d'évaluation, **repris de la copie de travail de Codex** (v0.13.3) : calcul
+**`grilles.spec.mjs` (35)** — module des grilles d'évaluation, **repris de la copie de travail de Codex** (v0.13.3) : calcul
 (18 sur 24 donne 15 sur 20, poids, critère non évalué distinct de zéro, arrondis), bibliothèque de modèles, parcours complet
 jusqu'à la copie Pronote, grille figée, saisie par critère, statuts ABS/DISP/NN, points ajustables au clavier et à l'appui long,
 panne et écriture concurrente, sauvegarde et rendu mobile. Seule adaptation : le message de conflit attendu est celui de la
@@ -136,7 +136,12 @@ niveau longs jamais coupés au milieu d’un mot, mesure au caractère (cases é
 tests d’écran utilisent des libellés de niveau courts, pour ne pas dépendre de la police installée. Un tap ne fait défiler l’écran ni quand la ligne d’erreur apparaît, ni quand la fenêtre change de hauteur, même si la case
 touchée est passée sous la barre (seul le focus CLAVIER est ramené en vue) : le test pose d’abord ses prémisses (focus sur la
 case touchée, focus non clavier, case recouverte) et vérifie que la barre a bien grandi. Quarante-cinq mutants rendent ces
-tests, ceux de `terrain.spec.mjs` et les assertions FON-05 rouges.
+tests, ceux de `terrain.spec.mjs` et les assertions FON-05 rouges. La v0.13.5 (audit Codex V7) ajoute deux tests en écran
+tactile simulé (`test.use({hasTouch:true})` : un clic de souris ne reproduit pas le piège de `:focus-visible` sur un
+`<select>`, un toucher si) — statut ABS choisi au doigt, valeur tapée au clavier virtuel dans « Ajuster » —, leur pendant à
+la souris avec un vrai clavier (`test.use({hasTouch:false})`), et prolonge le
+test des écritures refusées : un échec rattrapé ne ressuscite pas, celui d’un élève « parti » n’est pas perdu. Toute mesure
+de défilement attend deux images (`deuxImages`) : le ResizeObserver tourne au rendu suivant.
 
 **`grilles-robustesse.spec.mjs` (6)** — quatre tests de concurrence et de clavier repris de la copie de Codex (AUD-002, AUD-006),
 et deux tests propres à l'intégration qui fixent la frontière de la validation des sauvegardes : une sauvegarde ancienne portant
@@ -179,7 +184,7 @@ grille, mesurées sur une case rendue, ressemblent à leur nom. La première car
 d'actions. Sept mutants (ancienne palette claire, ancienne palette sombre automatique, pastille du retard, couleurs de grille rebranchées sur les statuts, espacement, les deux
 pastilles de la fiche élève) rendent ces tests rouges.
 
-Total de la suite : **291 tests** (+ 84 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs`, `grilles-robustesse.spec.mjs` et `audit-independant.spec.mjs`).
+Total de la suite : **294 tests** (+ 87 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs`, `grilles-robustesse.spec.mjs` et `audit-independant.spec.mjs`).
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse

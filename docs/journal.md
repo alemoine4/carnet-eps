@@ -14,6 +14,44 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-22 (44) — v0.13.5 : correctifs de l'audit Codex V7
+
+Demande : « donne le chemin et quoi dire pour vérifier par codex », puis « regarde le dernier audit codex ». Consigne
+écrite dans `audit codex/CONSIGNE_V7.md` ; deux rapports rendus : `AUDIT_V7.md` (code) et `AUDIT_V7_AVIS_MARQUEURS.md`
+(avis, traité par la révision de `docs/avis/AVIS_MARQUEURS_SEANCE.md`, commit `51449dd`).
+
+**Constats de code (reproduits chez moi avant correction)** :
+- V7-A01 : la liste des échecs réconciliée à l'ouverture n'était pas réécrite en session ; un échec rattrapé ressuscitait
+  après la saisie valide suivante du même choix. Corrigé dans la FORME : `sauverEchecs()` à l'ouverture.
+- V7-A02 : sur le sélecteur de statut touché au doigt, `:focus-visible` est vrai dans Chromium ; l'écran défilait de 96 px à
+  l'apparition d'une erreur. C'est le piège déjà rencontré sur les listes d'élève et de critère (contre-revue v0.13.4),
+  corrigé à l'époque contrôle par contrôle — il est revenu sur le contrôle suivant. Corrigé dans la FORME : une seule
+  variable `auClavier` pour la vue, tenue par `keydown`/`pointerdown` sur la fenêtre en capture (auto-retirés quand la vue
+  est quittée), lue par les deux listes et par `evaluerBarre` ; la WeakMap par liste disparaît.
+
+**Revue adversariale (2 tours, 2 réfutateurs par constat)** : premier tour, 3 constats retenus sur 4 — une RÉGRESSION de
+mon correctif A01 (l'échec d'un élève passé « parti » était effacé à la réouverture ; désormais gardé à part, non affiché,
+`horsVue`), le « OK » du clavier virtuel dans « Ajuster » pris pour un geste clavier (une frappe dans un champ de saisie
+ne change plus la modalité ; ce n'était pas une régression, l'ancienne garde se trompait aussi), et les comptes du README
+des tests. Second tour ciblé sur ces deux ajouts : 1 constat sur 1 (2 réfutateurs sur 2), une RÉGRESSION du correctif
+« clavier virtuel » : ignorer toute frappe dans un champ perdait l'Entrée d'un vrai clavier après un clic de souris, et
+« Ajuster », au focus visible, passait à 88 % sous la barre. Seule la frappe qui suit un TOUCHER est désormais ignorée
+(`auDoigt`, type du dernier pointeur). La lentille `horsVue` n'a rien trouvé.
+
+**Pièges rencontrés** :
+- Un correctif « contrôle par contrôle » d'un défaut de CLASSE revient sur le contrôle suivant : la modalité devait avoir
+  une seule source dès la contre-revue v0.13.4.
+- Réaligner une mémoire ne doit retirer que ce qui est résolu : « absent de la vue » n'est pas « rattrapé ».
+- Le mutant qui remettait `:focus-visible` a d'abord SURVÉCU (un clic de souris ne produit pas le piège ; il faut un
+  toucher : `test.use({hasTouch:true})`), puis a été tué… par un autre test que le sien. En cause : le défilement fautif
+  part du ResizeObserver, qui tourne à l'étape de rendu suivante ; une mesure prise juste après l'apparition de l'erreur
+  pouvait le précéder et passer au vert par hasard. Aide `deuxImages` (deux `requestAnimationFrame`) avant toute mesure
+  de défilement ; M49 est depuis tué trois fois sur trois par son propre test.
+- Un mutant tué par un test qui n'est pas le sien est un signal, pas une victoire : vérifier QUEL test rougit.
+- Chaque correctif de revue a été revu à son tour, et le second tour a trouvé la régression du premier. Une règle
+  « ignorer telle frappe » doit dire POUR QUI : après un toucher seulement, pas après un clic de souris.
+- 52 mutants tués sur 52.
+
 ## 2026-09-17 (43) — v0.13.4 : saisie par grille « un élève à la fois » sur un seul écran
 
 Demande : « l'ergonomie évaluation 1 élève à la fois, c'est pas top », puis « tu as raison un élève à la fois c'est bien » et

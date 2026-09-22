@@ -124,16 +124,22 @@ async function saisir(c,id) {
   // hors d'IndexedDB — et écartés à la réouverture quand la base contient déjà le choix voulu (troisième revue).
   const cleSession=`carnet-eps:grille-echecs:${id}`;
   const echecs=new Map();
+  // Échecs d'un élève absent de cette saisie (passé « parti ») : ni affichés, ni perdus — la note manque toujours, et la
+  // ligne revient s'il retourne dans la classe (revue v0.13.5).
+  const horsVue=[];
   try {
     for(const [k,x] of JSON.parse(sessionStorage.getItem(cleSession) || '[]')) {
-      if(!eleves.some(e => e.id===x.eleveId) || (x.critereId && !g.criteres.some(cr => cr.id===x.critereId)))continue;
+      if(!eleves.some(e => e.id===x.eleveId) || (x.critereId && !g.criteres.some(cr => cr.id===x.critereId))) {horsVue.push([k,x]);continue;}
       const n=notes.get(x.eleveId);
       const rattrape=x.critereId ? JSON.stringify(n?.detail?.[x.critereId] ?? null)===JSON.stringify(x.voulu ?? null)
         : (typeof n?.valeur==='string' ? n.valeur : null)===(x.code ?? null);
       if(!rattrape)echecs.set(k,x);
     }
   } catch {/* session indisponible ou illisible : on repart sans liste */}
-  const sauverEchecs=() => {try {if(echecs.size)sessionStorage.setItem(cleSession,JSON.stringify([...echecs]));else sessionStorage.removeItem(cleSession);} catch {/* sans session */}};
+  const sauverEchecs=() => {try {const tous=[...echecs,...horsVue];if(tous.length)sessionStorage.setItem(cleSession,JSON.stringify(tous));else sessionStorage.removeItem(cleSession);} catch {/* sans session */}};
+  // La session est réalignée DÈS l'ouverture, et n'en perd que les échecs RATTRAPÉS : sinon un échec rattrapé ailleurs y
+  // restait, et ressuscitait après la saisie valide suivante du même choix (audit Codex V7-A01).
+  sauverEchecs();
   const libelleEchec=x => {
     const e=eleves.find(y => y.id===x.eleveId), cr=x.critereId && g.criteres.find(y => y.id===x.critereId);
     return `${e ? `${e.nom} ${e.prenom}` : 'Élève'} · ${cr ? cr.libelle : `statut ${x.code || 'Évaluer avec la grille'}`}`;
@@ -163,13 +169,27 @@ async function saisir(c,id) {
   const selEleve=el('select',{'aria-label':'Élève à évaluer'},...eleves.map((e,i) => el('option',{value:String(i)},`${e.nom} ${e.prenom}`)));
   const selCritere=el('select',{'aria-label':'Critère à évaluer'},...g.criteres.map(cr => el('option',{value:cr.id},cr.libelle)));
   const selMode=el('select',{'aria-label':'Mode de saisie'},el('option',{value:'eleve'},'Par élève'),el('option',{value:'critere'},'Par critère'),el('option',{value:'bilan'},'Bilan de la classe'));
+  // Dernier geste dans la vue : clavier, ou pointeur (doigt, souris, stylet). UNE seule source pour toute la vue.
+  // `:focus-visible` ne distingue pas le doigt du clavier sur un <select> touché dans Chromium : il rendait le retour en
+  // haut inopérant au doigt sur les listes (contre-revue v0.13.4), puis faisait défiler l'écran sous le doigt au statut
+  // ABS (audit Codex V7-A02) — corrigé contrôle par contrôle, le défaut revenait sur le suivant. Écouté sur la fenêtre,
+  // en capture, pour voir aussi le Tab qui ENTRE dans la vue ; retiré au premier geste après qu'elle a été quittée.
+  let auClavier=false, auDoigt=false;
+  // Après un TOUCHER, une frappe dans un champ de saisie vient du clavier virtuel (une valeur tapée, son « OK ») : elle ne
+  // dit pas comment on se déplace, et ne doit pas faire défiler l'écran sous le doigt. Après un clic de SOURIS, la même
+  // frappe vient d'un vrai clavier, et le focus qu'elle rend visible doit rester à l'écran (revue v0.13.5, deux tours).
+  const saisieDeTexte=t => t?.isContentEditable || t?.tagName==='TEXTAREA' || (t?.tagName==='INPUT' && /^(text|search|number|tel|email|url|password)$/.test(t.type));
+  const surGeste=ev => {
+    if(!c.isConnected) {removeEventListener('keydown',surGeste,true);removeEventListener('pointerdown',surGeste,true);return;}
+    if(ev.type==='pointerdown') {auClavier=false;auDoigt=ev.pointerType==='touch' || ev.pointerType==='pen';return;}
+    if(auDoigt && saisieDeTexte(ev.target))return;
+    auClavier=true;
+  };
+  addEventListener('keydown',surGeste,true);addEventListener('pointerdown',surGeste,true);
   // Choisir dans une liste ramène la saisie en haut, sauf au clavier : chaque flèche émet « change » et la liste
-  // focalisée sortirait de l'écran. Le dernier geste fait foi — `:focus-visible` est vrai sur un <select> touché
-  // dans Chromium et ne distinguait rien (contre-revue v0.13.4).
-  const auClavier=new WeakMap();
-  for(const sel of [selEleve,selCritere]) {sel.addEventListener('keydown',() => auClavier.set(sel,true));sel.addEventListener('pointerdown',() => auClavier.set(sel,false));}
-  selEleve.addEventListener('change',() => {index=Number(selEleve.value);rendre();if(!auClavier.get(selEleve))haut();});
-  selCritere.addEventListener('change',() => {critere=selCritere.value;rendre();if(!auClavier.get(selCritere))haut();});
+  // focalisée sortirait de l'écran.
+  selEleve.addEventListener('change',() => {index=Number(selEleve.value);rendre();if(!auClavier)haut();});
+  selCritere.addEventListener('change',() => {critere=selCritere.value;rendre();if(!auClavier)haut();});
   selMode.addEventListener('change',() => {mode=selMode.value;rendre();});
   const groupeEleve=el('label',{class:'champ'},'Élève',selEleve), groupeCritere=el('label',{class:'champ'},'Critère',selCritere);
   const reutiliser=bouton('Réutiliser cette grille',async () => {
@@ -369,14 +389,15 @@ async function saisir(c,id) {
     if(mesuree.has(b) && libre!==libreAvant)annonce.textContent=libre
       ? 'Écran trop court : « Élève précédent » et « Élève suivant » passent à la fin de la saisie.'
       : '« Élève précédent » et « Élève suivant » sont de nouveau en bas de l’écran.';
-    // La barre qui GRANDIT ne doit pas recouvrir la case qui a le focus CLAVIER (2.4.11) — et rien d'autre : sans
+    // La barre qui GRANDIT ne doit pas recouvrir le contrôle qui a le focus CLAVIER (2.4.11) — et rien d'autre : sans
     // ces gardes, un tap au doigt armait un défilement de plusieurs centaines de pixels, sous le doigt, et le tap
-    // suivant tombait sur un autre élève (vérification finale v0.13.4).
+    // suivant tombait sur un autre élève (vérification finale v0.13.4). Le clavier se lit sur le dernier geste, pas sur
+    // `:focus-visible` (audit Codex V7-A02).
     const f=document.activeElement;
     mesuree.set(b,total);
     if(!f || !contenu.contains(f) || b.contains(f) || getComputedStyle(b).position!=='fixed')return;
     const r=f.getBoundingClientRect(), hautBarre=b.getBoundingClientRect().top;
-    if(f.matches(':focus-visible') && r.top<innerHeight && r.bottom>0 && r.bottom>hautBarre)f.scrollIntoView({block:'nearest'});
+    if(auClavier && r.top<innerHeight && r.bottom>0 && r.bottom>hautBarre)f.scrollIntoView({block:'nearest'});
   }
   const mesureBarre='ResizeObserver' in window ? new ResizeObserver(entrees => {for(const x of entrees)evaluerBarre(x.target);}) : null;
   // La hauteur de la fenêtre peut changer sans que la barre change (écran partagé, redimensionnement) : on réévalue.

@@ -4,6 +4,32 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-22 — v0.13.5 : correctifs de l'audit Codex V7 sur la saisie par grille
+
+Audit indépendant de la v0.13.4 (`audit codex/AUDIT_V7.md`, hors suivi Git) : 375 tests sur 375 au premier passage, quatre
+mutants tués, **aucune note attribuée à un autre élève**, et deux défauts mineurs — tous deux de mon fait.
+
+- **Un avertissement « Non enregistré » déjà rattrapé ne revient plus.** À l'ouverture, un échec rattrapé ailleurs était
+  retiré de l'écran mais pas de la mémoire de l'onglet : après la saisie valide suivante du même critère, il réapparaissait
+  au rechargement alors que la note était bien enregistrée. La mémoire est désormais réalignée dès l'ouverture, et n'en
+  perd que ce qui est rattrapé : l'échec d'un élève passé « parti » est gardé, et revient s'il retourne dans la classe.
+- **L'écran ne défile plus sous le doigt quand on choisit un statut ABS / DISP / NN.** Touchée au doigt, la liste passait
+  pour une sélection au clavier, et l'apparition d'une erreur faisait sauter l'écran de 96 px. Le dernier geste — doigt ou
+  clavier — est maintenant suivi à **un seul endroit pour toute la vue** : les listes d'élève et de critère, le statut et le
+  rattrapage du focus sous la barre lisent la même information. Une valeur tapée au clavier virtuel après un toucher (le
+  « OK » d'Android dans « Ajuster ») ne compte pas comme un geste clavier ; tapée sur un vrai clavier après un clic de
+  souris, si. Au clavier, une case atteinte avec Tab reste toujours
+  visible au-dessus de la barre (WCAG 2.4.11).
+- **Deux tours de revue adversariale** sur ces correctifs (2 réfutateurs par constat) : le premier a trouvé une régression
+  de mon correctif (l'échec d'un élève « parti » était effacé pour de bon) et le cas du clavier virtuel ; le second, une
+  régression de ce dernier correctif (l'Entrée d'un vrai clavier après un clic de souris était ignorée, et le bouton
+  « Ajuster » passait sous la barre). Tous corrigés.
+- **Preuves** : 5 tests nouveaux ou prolongés dans `tests/e2e/grilles.spec.mjs` (aussi rejoués sur le profil mobile), dont
+  deux en écran tactile simulé — un clic de souris ne reproduit pas le piège, un toucher si — et leur pendant à la souris
+  avec un vrai clavier. Chaque test **affirme d'abord ses
+  prémisses** et **attend le rendu suivant** avant de mesurer un défilement : le mutant qui remettait l'ancienne garde a
+  montré qu'une mesure prise trop tôt passait au vert par hasard. 52 mutants tués sur 52.
+
 ## 2026-09-17 — v0.13.4 : saisie par grille « un élève à la fois » sur un seul écran de téléphone
 
 Retour de l'essai téléphone : « l'ergonomie évaluation 1 élève à la fois, c'est pas top », puis « un élève à la fois c'est bien ». Le principe reste ; l'écran est refait pour le pouce. Mesuré avant sur 375 × 812 (grille 4 niveaux × 4 critères) : **aucune case au premier écran** (première à 982 px), « Élève suivant » à 1 921 px, plus de deux écrans par élève ; en mode « Par critère », environ 270 px par élève.
