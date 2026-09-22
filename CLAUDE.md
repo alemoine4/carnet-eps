@@ -26,9 +26,30 @@ Contraintes fortes :
 - **Zéro dépendance**, outils gratuits uniquement (BIBLE règle 1).
 - **Pronote** : échanges par CSV / presse-papiers uniquement, pas d'API côté prof — voir `docs/pronote.md`.
 - **Terrain** : utilisable d'une main au gymnase, cibles tactiles ≥ 44 px, appel d'une classe en moins de 40 s.
-- Objectif : **utilisable en classe à la rentrée de septembre 2026**.
+- **En service depuis le 2026-09-17** sur https://carnet-eps.github.io/ (objectif « rentrée 2026 » atteint).
 
 Cadrage : `docs/brief.md` + `docs/fonctionnalites.md`. Avancement : `docs/roadmap.md` + `TODO.md`.
+
+---
+
+## État en production (à relire à chaque début de session)
+
+| Quoi | Où en est-on |
+|---|---|
+| **Adresse de production** | https://carnet-eps.github.io/ (organisation `carnet-EPS`), **schéma IndexedDB 3**, version en ligne **v0.13.5** (2026-09-22) |
+| **Branche qui publie** | `grilles-schema3` (et non `main`) |
+| **Ancienne adresse** | https://alemoine4.github.io/carnet-eps/ en **v0.12.22**, schéma 2, bandeau « a déménagé » (branche `demenagement`) — **gelée** |
+| **Données de l'enseignant** | **aucune donnée saisie à ce jour** (dit le 2026-09-22) : plus rien à migrer, la condition « attendre la fin de la migration » est levée |
+| **Intégration continue** | GitHub Actions sur `main` **et** `grilles-schema3` (`.github/workflows/tests.yml`) |
+
+**Publier** (uniquement sur « go » explicite, jamais de soi-même) :
+
+```sh
+sha=$(git subtree split --prefix app grilles-schema3)
+git push https://github.com/carnet-EPS/carnet-eps.github.io.git "$sha":refs/heads/main
+```
+
+puis tag `vX.Y.Z`, vérification en ligne (`state.js`, `service-worker.js`, page contrôlée par le service-worker) et empreintes reportées dans `docs/deploiement.md`.
 
 ---
 
@@ -37,6 +58,8 @@ Cadrage : `docs/brief.md` + `docs/fonctionnalites.md`. Avancement : `docs/roadma
 **Début de session** : lire `TODO.md`, la dernière entrée de `docs/journal.md`, et la phase active de `docs/roadmap.md`.
 
 **Fin de session** : mettre à jour `TODO.md` et `CHANGELOG.md`, ajouter une entrée à `docs/journal.md`, cocher la roadmap ; compléter `docs/decisions.md` si choix structurant.
+
+**Gardes de documentation** (des tests rougissent sinon, `tests/e2e/audit5-lot5.spec.mjs`) : les comptes de tests par fichier **et** les totaux (PC + profil mobile) doivent suivre dans `tests/e2e/README.md` et `README.md` ; et à chaque version, `app/js/state.js`, `app/service-worker.js`, la première entrée du `CHANGELOG.md` et la première ligne du tableau de `docs/deploiement.md` doivent porter **le même numéro**.
 
 ---
 
@@ -51,7 +74,10 @@ Cadrage : `docs/brief.md` + `docs/fonctionnalites.md`. Avancement : `docs/roadma
 | Service worker | enregistré **uniquement hors localhost** → jamais de cache pendant le dev |
 | Échanges Pronote | `docs/pronote.md` |
 | Décisions actées | `docs/decisions.md` (D001 à D013) |
-| Audits | `docs/audit-2026-07-10.md` (soldé), `docs/audit-2026-09-05.md` (4e passe, suites v0.12.5→v0.12.8, reste B31), `docs/audit-2026-09-07.md` + `.json` (**5e passe sur v0.12.8 : 179 constats, plan en 5 lots — lots 1, 3, 4 et 5 livrés en v0.12.9 / v0.12.10 / v0.12.11 / v0.12.12 ; trois avis en attente de décision : lot 2 (`docs/avis/AVIS_CREATIONS_ATOMIQUES.md`), A01 (`docs/avis/AVIS_ORIGINE_DEDIEE.md`), restes du lot 5 (`docs/avis/AVIS_LOT5_RESTES.md`) ; restent A39 et la CI (C64) ; lot 5 « au mieux »**), `audit codex/` (audits d'une autre IA, dossier hors git) |
+| Déploiement | `docs/deploiement.md` — tableau version → commit → commit du site, et procédure de retour arrière |
+| Audits internes | `docs/audit-2026-07-10.md` (soldé), `docs/audit-2026-09-05.md` (4e passe), `docs/audit-2026-09-07.md` + `.json` (5e passe, 179 constats : lots 1, 3, 4, 5 livrés ; **lot 2 en attente de « go »** — `docs/avis/AVIS_CREATIONS_ATOMIQUES.md` ; A01 « origine dédiée » **tranché et exécuté** le 2026-09-17) |
+| Audits externes | **Audit indépendant du 2026-09-16** : `AUDIT-INDEPENDANT-2026-09-16.md`, **hors dépôt**, dans `CARNET EPS\` (36 constats ; premier lot livré en v0.13.1). **Audits Codex** : dossier `audit codex/` (hors suivi Git), un rapport par passe `AUDIT_Vn.md` ; je prépare `audit codex/CONSIGNE_Vn.md` et il suffit de dire à Codex « lis-la et exécute-la ». Dernier : **V7** (v0.13.4 → correctifs livrés en v0.13.5) |
+| Avis en attente de décision | `docs/avis/AVIS_PAGE_CLASSE_ONGLETS.md` (§12, 14 questions) · `docs/avis/AVIS_MARQUEURS_SEANCE.md` (§11, 17 questions) · `AVIS_GRILLES_EVALUATION.md` (phases suivantes) · `AVIS_CREATIONS_ATOMIQUES.md` (lot 2) · `AVIS_LOT5_RESTES.md` |
 
 ---
 
@@ -132,6 +158,34 @@ D'autres skills (`ux-eps`, `expert-indexeddb`, `import-export-csv-json`, `donnee
 
 ---
 
+## Pièges qui ont déjà coûté cher (les relire avant de « prouver » quelque chose)
+
+- **Une preuve peut être vide sans qu'aucun test ne rougisse.** Un test doit AFFIRMER ses prémisses avant de mesurer
+  (l'élément visé a bien le focus, la barre a bien grandi, l'erreur est bien apparue). Trois preuves de la v0.13.4 ne
+  prouvaient rien : le focus était ailleurs, le clic était programmatique, la barre ne grandissait pas.
+- **La campagne de mutants est le seul juge.** Chaque garantie doit avoir un mutant qui la casse (`scratchpad`,
+  `mutants-grille-compacte.mjs`). Un mutant qui SURVIT dit d'abord quelque chose du test. Un mutant tué par un test qui
+  n'est pas le sien est un signal, pas une victoire. Une ancre de mutation qui ne mute plus ne prouve rien.
+- **Le défilement part du `ResizeObserver`, qui tourne au rendu SUIVANT** : attendre deux `requestAnimationFrame`
+  (`deuxImages`) avant toute mesure de `scrollY`, sinon la mesure passe au vert par hasard.
+- **`:focus-visible` ne distingue pas le doigt du clavier sur un `<select>` dans Chromium** : suivre la modalité du
+  dernier geste (`keydown` / `pointerdown`), à UNE seule source pour toute la vue. Corriger ce défaut contrôle par
+  contrôle le fait revenir sur le contrôle suivant.
+- **Un clic de souris ne reproduit pas un piège tactile** : `test.use({hasTouch:true})` + `.tap()`.
+- **Mesurer une RÈGLE, jamais un résultat qui dépend de la police** (Segoe en local, DejaVu en CI Linux) : seuils et
+  comptes déduits de ce qui est réellement rendu. La CI m'a pris deux fois au même piège.
+- **`definirStatut` (appel) reconstruit l'enregistrement champ par champ** : tout champ ajouté sans ligne d'héritage est
+  perdu au premier changement de statut.
+- **`importerJSON` REMPLACE tout** (vide chaque magasin puis réécrit) : jamais de restauration par-dessus des données
+  saisies depuis.
+- **Un correctif est du code neuf** : chaque tour de revue adversariale de la v0.13.4 et de la v0.13.5 a trouvé un défaut
+  introduit par le correctif du tour précédent, dont un bloquant (écran qui saute sous le doigt, note écrite pour un
+  autre élève).
+- **Outils** : les gros textes français passent par l'outil d'écriture, pas par un `heredoc` bash (troncature) ; `sed -i`
+  sous Git Bash réécrit le fichier en LF (sans gravité avec `autocrlf`, mais visible dans le diff).
+
+---
+
 ## Interdictions permanentes
 
 - Ne jamais introduire de dépendance ou service **payant**.
@@ -141,3 +195,9 @@ D'autres skills (`ux-eps`, `expert-indexeddb`, `import-export-csv-json`, `donnee
 - Ne jamais commiter ou exporter de données nominatives d'élèves sans validation.
 - Ne jamais activer le service-worker sur localhost (cache de dev = bugs fantômes).
 - Toute migration de schéma IndexedDB doit préserver les données existantes (et être précédée d'un export JSON automatique).
+- **Ne jamais publier le schéma 3 vers l'ancienne adresse** (`git subtree push --prefix app origin gh-pages`) : elle est
+  gelée en schéma 2 et sert de repli.
+- **Ne jamais publier sans « go » explicite de l'enseignant**, et jamais sans intégration continue verte sur le commit
+  publié.
+- **Ne jamais monter `DB_VERSION` sans avis validé** : une base ouverte en schéma N ne redescend pas, et ses sauvegardes
+  sont refusées par les versions déjà installées.
