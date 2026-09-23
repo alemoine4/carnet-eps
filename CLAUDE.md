@@ -174,6 +174,12 @@ D'autres skills (`ux-eps`, `expert-indexeddb`, `import-export-csv-json`, `donnee
 - **Un clic de souris ne reproduit pas un piège tactile** : `test.use({hasTouch:true})` + `.tap()`.
 - **Mesurer une RÈGLE, jamais un résultat qui dépend de la police** (Segoe en local, DejaVu en CI Linux) : seuils et
   comptes déduits de ce qui est réellement rendu. La CI m'a pris deux fois au même piège.
+- **Le calendrier aussi est une police** : l'en-tête affiche la date du jour en toutes lettres. Tout test qui mesure une
+  hauteur ou une largeur d'écran fige l'horloge (`page.clock.setFixedTime`) sur le **pire cas** (« mercredi 30 septembre »).
+  FON-01 était vert le mardi et rouge le mercredi. Et une limite doit être rapportée à l'**écran**, jamais à l'élément
+  mesuré : sinon elle grandit avec lui et ne prouve rien.
+- **Une balise `<style>` injectée dans un test est bloquée par la CSP** de l'application : pour simuler une autre police,
+  passer par le CSSOM (`element.style.fontFamily`). Verdana est une doublure honnête de DejaVu, la police de la CI.
 - **`definirStatut` (appel) reconstruit l'enregistrement champ par champ** : tout champ ajouté sans ligne d'héritage est
   perdu au premier changement de statut.
 - **`importerJSON` REMPLACE tout** (vide chaque magasin puis réécrit) : jamais de restauration par-dessus des données

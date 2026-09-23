@@ -61,6 +61,16 @@ dans deux transactions) — à traiter en **v0.14.2**, quand la feuille posera d
 deux marqueurs actifs de même code court entre en base, et `ecrireMarqueur` refuse ensuite de modifier l'un comme l'autre —
 à rendre lisible en **v0.14.1** (écran du vocabulaire).
 
+**Intégration continue rouge après le commit (`ca99522`), sans rapport avec la v0.14.0** : FON-01 (« l'en-tête reste compact
+à 200 % », mode version d'essai) échouait sous Linux, 215,7 px pour une limite de 213,3. Diagnostic : l'en-tête affiche la date
+du jour en toutes lettres (`main.js:230`) ; la même suite était verte le mardi 22, rouge le mercredi 23. Reproduit ici avec
+Verdana, doublure de DejaVu (proportions voisines ; une balise `<style>` injectée est BLOQUÉE par la CSP de l'application, il
+faut passer par le CSSOM) : « mardi 22 septembre » tient sur une ligne (188,7 px), « mercredi » ou « dimanche » en prennent
+deux (219,7 px). Correction : horloge figée sur le pire cas, et mesure de la RÈGLE (le bandeau coûte moins d'un sixième de
+l'écran) au lieu d'un résultat qui dépend de la police et du jour. **Ma première règle était vide** : rapportée à la hauteur
+de ligne du bandeau, elle grandissait avec lui et laissait passer un bandeau trois fois plus haut. Rapportée à l'écran, elle
+l'attrape (mutant M62), sous les deux polices.
+
 **Décidé** : MIG-10 simule la défaillance au COMMIT par une requête émise dans le succès du `put`, donc placée après la relecture :
 un abandon dans le succès même du `put` aurait fait échouer la relecture et laissé survivre M32. MIG-02 prouve aussi le message
 français (base montée en 5 par un « autre onglet »).

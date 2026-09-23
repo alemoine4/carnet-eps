@@ -103,6 +103,10 @@ test('FON-01 — cohérence : le drapeau MODE_ESSAI et le manifeste disent la m�
 });
 
 test('FON-01 — sur téléphone, le marqueur est lisible EN ENTIER et l’en-tête reste compact, même texte agrandi', async ({ page }) => {
+  // Date FIGÉE sur le pire cas : l'en-tête affiche la date du jour en toutes lettres, et « mercredi 30 septembre »
+  // (jour et mois les plus longs) passe sur deux lignes à 200 % avec une police large. Sans horloge figée, le test
+  // était vert le mardi et rouge le mercredi sur la CI Linux (police DejaVu) — sans aucun changement de code.
+  await page.clock.setFixedTime(new Date('2026-09-30T10:00:00'));
   await forcerEssai(page, true);
   // Le texte est ce qui compte : une version « une seule ligne » tronquait « données fictives » dès 320 px.
   const mesure = () => page.evaluate(() => {
@@ -120,13 +124,31 @@ test('FON-01 — sur téléphone, le marqueur est lisible EN ENTIER et l’en-t�
     expect({ largeur, ...m, entete: undefined }).toEqual({ largeur, coupeLargeur: false, coupeHauteur: false, lignes: 1, entete: undefined });
     expect(m.entete, `${largeur} px`).toBeLessThan(hauteur / 5);
   }
-  // Réglage d'accessibilité « texte agrandi » : toujours rien de coupé, et l'en-tête sous le tiers de l'écran.
+  // Prémisse : l'horloge figée est bien celle que lit l'en-tête (sinon le pire cas ne serait pas exercé).
+  await expect(page.locator('#entete-contexte')).toHaveText(/^mercredi 30 septembre$/i);
+  // Réglage d'accessibilité « texte agrandi » : toujours rien de coupé, et le marqueur ne prend pas plus d'un SIXIÈME de
+  // l'écran. On mesure la RÈGLE que protège FON-01 — ce que coûte le marqueur — et non la hauteur totale de l'en-tête :
+  // celle-ci dépend de la police installée et de la longueur de la date, que la mise en page a le droit de replier sur
+  // deux lignes (CLAUDE.md, « mesurer une règle, jamais un résultat qui dépend de la police »). Le budget est rapporté à
+  // l'ÉCRAN, jamais à la hauteur de ligne du marqueur : une limite calculée sur sa propre hauteur de ligne grandissait
+  // avec lui, et laissait passer un marqueur trois fois plus haut (preuve vide, vérifiée par mutant). Un sixième = le
+  // tiers de l'écran de l'ancienne règle, moins l'en-tête sans marqueur à date courte.
   await page.setViewportSize({ width: 320, height: 640 });
   await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
   const agrandi = await mesure();
   expect({ coupeLargeur: agrandi.coupeLargeur, coupeHauteur: agrandi.coupeHauteur }).toEqual({ coupeLargeur: false, coupeHauteur: false });
   expect(agrandi.lignes).toBeLessThanOrEqual(2);
-  expect(agrandi.entete).toBeLessThan(640 / 3);
+  const cout = await page.evaluate(() => {
+    const b = document.querySelector('.essai'), e = document.querySelector('.entete');
+    const avec = e.getBoundingClientRect().height;
+    b.style.display = 'none';
+    const sans = e.getBoundingClientRect().height;
+    b.style.display = '';
+    return { cout: avec - sans, avec };
+  });
+  expect(cout.cout, 'prémisse : masquer le marqueur réduit bien l’en-tête').toBeGreaterThan(0);
+  expect(cout.cout, 'le marqueur ne prend pas plus d’un sixième de l’écran').toBeLessThan(640 / 6);
+  expect(cout.avec, 'garde-fou : l’en-tête reste sous la moitié de l’écran').toBeLessThan(640 / 2);
 });
 
 test('B05 — la marge de focus suit la hauteur réelle de l’en-tête : Maj+Tab ne cache pas la case sous le bandeau', async ({ page }) => {

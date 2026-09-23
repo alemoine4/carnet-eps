@@ -36,6 +36,13 @@ cette version fige le format pendant que la base de l'enseignant est encore vide
   magasins écrits à la main (elle oubliait déjà `inaptitudes`, et oubliait `marquages`) : elle dérive désormais de la
   base réelle la liste des magasins qui portent un index `eleveId`. Dix mutants nouveaux (M52 à M61), tous tués par leur
   test : **25 exécutions de mutants, 25 tuées**.
+- **Un test ancien dépendait du calendrier** (révélé par l'intégration continue un mercredi, sans aucun changement de
+  code) : FON-01 mesurait la hauteur totale de l'en-tête, qui affiche la date du jour en toutes lettres ; à 200 % de texte,
+  avec une police large, « mercredi 23 septembre » passe sur deux lignes et l'en-tête dépassait le tiers de l'écran — vert
+  le mardi, rouge le mercredi. Le test fige désormais l'horloge sur le **pire cas** (« mercredi 30 septembre ») et mesure la
+  **règle** qu'il protège : le bandeau d'essai ne prend pas plus d'un sixième de l'écran. Une première réécriture rapportait
+  cette limite à la hauteur de ligne du bandeau lui-même, et laissait donc passer un bandeau trois fois plus haut : le
+  mutant M62 l'a montré. Aucun effet pour l'enseignant : le mode « version d'essai » est désactivé en production.
 
 ## 2026-09-22 — v0.13.5 : correctifs de l'audit Codex V7 sur la saisie par grille
 
