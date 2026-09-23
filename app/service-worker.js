@@ -5,7 +5,7 @@
    ⚠ Incrémenter VERSION à chaque déploiement (synchroniser avec VERSION_APP de state.js).
    Non enregistré sur localhost (voir main.js, décision D008). */
 
-const VERSION = '0.13.5';
+const VERSION = '0.14.0';
 const CACHE = `carnet-eps-${VERSION}`;
 const ASSETS = [
   './',
@@ -20,6 +20,7 @@ const ASSETS = [
   './js/io.js',
   './js/metier.js',
   './js/grilles-calcul.js',
+  './js/marqueurs-calcul.js', // v0.14.0 — importé par io.js ; jamais un fichier AVANT la version qui le crée (addAll est tout-ou-rien)
   './js/modules/grilles.js',
   './js/media.js',
   './js/modules/sauvegarde.js',

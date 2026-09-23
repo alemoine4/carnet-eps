@@ -14,6 +14,61 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-23 (45) — v0.14.0 candidate : marqueurs de séance, le format seul (schéma 4)
+
+Demande : « je te suis » (contrat `docs/avis/AVIS_FORMAT_MARQUEURS.md` validé, 11 points ouverts tranchés) → implémenter la
+**v0.14.0** telle que le §13 la découpe, et rien d'autre. **Ni commit, ni publication** : la version attend la relecture et un
+« go » explicite — publier monte le schéma sans retour.
+
+**Fait** :
+- `io.js` : `DB_VERSION` 4, deux entrées ajoutées à la fin de `SCHEMA` (`marqueurs`, `marquages` + 3 index) ; `CHAMPS_TEXTE`
+  réduit aux champs indispensables (`libelle`, `court` ; les trois références d'une pose) ; `appliquerMarquages` (motif de
+  `mettreAJourEvaluation` : lectures d'abord, tout dans le `onsuccess` de la dernière, relecture émise après les écritures,
+  résolution sur `tx.oncomplete` ; `AppelManquant` ; rien écrit dans `appels`) ; `ecrireMarqueur` (id en dernier, aucun genre
+  par défaut, unicité de `cleCourt` relue dans la transaction) ; `validerExport` appelle les deux validateurs, motif préfixé de
+  la ligne ; cascades séance / séquence / élève ; aperçus + `apercuSuppressionSeance` ; `LIBELLES` ; message en français sur
+  `VersionError` ; commentaires « 14 stores » et « schéma 2 » corrigés.
+- `marqueurs-calcul.js` (nouveau) : `GENRES`, `LIBELLES_GENRE`, `COULEURS`, `cleCourt`, `validerMarqueur`, `validerMarquage`
+  (forme seulement, champs inconnus tolérés). Ajouté à `ASSETS` du service-worker — seul fichier neuf de la version.
+- `sequences.js` : la suppression d'une séance lit son aperçu et l'affiche en détail ; carte « Supprimer la séquence » sans
+  énumération. `eleves.js` : carte « Supprimer cet élève » sans énumération.
+- Docs : `modele-donnees.md` (schéma 4), D014, `deploiement.md` (ligne candidate, procédure 4 → 3, ce que voit un appareil resté
+  en v0.13.5), guide d'installation (ligne « Affichage impossible / VersionError »), `CLAUDE.md`, `architecture.md`, `TODO.md`.
+- Preuves : `tests/e2e/marqueurs-migration.spec.mjs`, 11 tests (MIG-01 à MIG-07, MIG-09 en trois tests, MIG-10), base vidée en
+  dérivant `io.STORES`, dates fixes et libellé de date indépendant du calendrier (`dateFR` n'affiche l'année que hors de
+  l'année scolaire). Gardes re-réglées : 18 → 19 fichiers, C37 5 → 6 lectures, B51 15 → 17 magasins, comptes des README.
+  **Quatre gardes écrites à la main que le contrat ne listait pas** ont aussi rougi et ont été re-réglées : D-11/C30 (montée
+  v1 → v4, `version: 4`), les deux tests de grilles qui figeaient le schéma 3 (`schema` et `version`), H01 (17 magasins) et A23
+  (`count` et `stores` à 17 — trouvée par la première exécution de la suite).
+- Mutants (`scratchpad/mutants-v0140.mjs`, en place, restauration dans un `finally`, ancre unique, fins de ligne CRLF
+  respectées, contrôle sain M0) : M01, M02, M03, M05, M07, M08, M09, M10, M32, M33, M34, M49 (+ variante `archivee` exigée),
+  M50 (+ variante sur les poses) — **15/15 tués, chacun par son propre test**.
+
+**Revue adversariale avant commit** (4 lentilles, 2 réfutateurs par constat, 28 agents) : 12 constats proposés, **2 retenus**,
+tous deux sur la VALEUR DES PREUVES et non sur le comportement :
+- neuf règles de forme de `marqueurs-calcul.js` (longueur et blancs du code court, types de genre, couleur, archivage,
+  occurrences entières, instantanés et date) n'étaient prouvées par aucun test : leurs mutants survivaient aux 11 tests
+  MIG. Ce sont précisément les règles du format qu'on ne pourra plus changer : MIG-07 porte désormais 15 cas, et le test
+  exige « un message par règle » (deux cas qui violent la même règle partagent son message) ; mutants M52 à M60 ;
+- la sonde de C37 (« l'aperçu compte sans charger ») ne surveillait les lectures de magasin entier que sur quatre
+  magasins écrits à la main — elle oubliait déjà `inaptitudes`, et oubliait `marquages`. Corrigée dans sa FORME : la liste
+  est dérivée de la base réelle (tout magasin qui porte un index `eleveId`), avec une prémisse qui affirme qu'elle voit les
+  six magasins connus. Mutant M61 (aperçu qui lit tout `marquages`), tué par C37 — l'ancienne sonde l'aurait laissé passer.
+
+Dix constats écartés, dont deux **réels mais inactifs dans cette version** (aucun écran n'écrit encore de marqueurs), reportés
+dans le contrat (§16) : une pose écrite pendant une suppression en cascade survivrait à sa séance (lectures puis écriture
+dans deux transactions) — à traiter en **v0.14.2**, quand la feuille posera des marqueurs ; une sauvegarde bricolée portant
+deux marqueurs actifs de même code court entre en base, et `ecrireMarqueur` refuse ensuite de modifier l'un comme l'autre —
+à rendre lisible en **v0.14.1** (écran du vocabulaire).
+
+**Décidé** : MIG-10 simule la défaillance au COMMIT par une requête émise dans le succès du `put`, donc placée après la relecture :
+un abandon dans le succès même du `put` aurait fait échouer la relecture et laissé survivre M32. MIG-02 prouve aussi le message
+français (base montée en 5 par un « autre onglet »).
+**Coincé / à vérifier** : ce que voit une v0.13.5 réellement installée face à une base en 4 (non prouvable ici, `docs/test-terrain.md`) ;
+la garde d'énumération du projet mobile (§12.1) n'a pas de version assignée par le contrat — non ajoutée, elle devra exister
+avant la v0.14.2.
+**Prochaine étape** : relecture, commit sur « go », publication sur « go » séparé (CI verte) ; puis v0.14.1 (vocabulaire).
+
 ## 2026-09-22 (44) — v0.13.5 : correctifs de l'audit Codex V7
 
 Demande : « donne le chemin et quoi dire pour vérifier par codex », puis « regarde le dernier audit codex ». Consigne

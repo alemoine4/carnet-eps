@@ -184,7 +184,23 @@ grille, mesurées sur une case rendue, ressemblent à leur nom. La première car
 d'actions. Sept mutants (ancienne palette claire, ancienne palette sombre automatique, pastille du retard, couleurs de grille rebranchées sur les statuts, espacement, les deux
 pastilles de la fiche élève) rendent ces tests rouges.
 
-Total de la suite : **294 tests** (+ 87 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs`, `grilles-robustesse.spec.mjs` et `audit-independant.spec.mjs`).
+**`marqueurs-migration.spec.mjs` (11)** — marqueurs de séance, **v0.14.0 « le format seul »** (contrat
+`docs/avis/AVIS_FORMAT_MARQUEURS.md`, §11.1) : aucun écran nouveau, le vocabulaire et les poses sont écrits par `io.js`. La
+base est vidée en **dérivant** la liste des magasins de `io.STORES`. **MIG-01** : une base de schéma 3 créée avant le chargement
+de l'application monte en 4, les deux magasins naissent avec les trois index de `marquages`, un appel est relu champ pour champ.
+**MIG-02** : la base montée en 4 refuse de s'ouvrir en 3 (`VersionError`, ce que ferait une v0.13.5) et rend ensuite les mêmes
+poses ; devant une base plus récente qu'elle, l'application affiche un message en français. **MIG-03** : un cycle présent →
+absent → oubli de tenue par taps (donc `definirStatut`, commentaire hérité relu) laisse les poses intactes. **MIG-04** :
+aller-retour JSON sans perte, `schemaVersion` 4. **MIG-05** : une sauvegarde de schéma 3, importée par l'écran, vide les deux
+magasins **et le dit** dans la confirmation. **MIG-06** : une sauvegarde de schéma 5 est refusée sans rien vider, la même en
+schéma 4 passe. **MIG-07** : six altérations refusées une à une, base intacte, un message distinct par cas ; une pose sans
+`courtSecours`, `genreSecours` ni `occurrences`, un marqueur sans `genre`, `couleur` ni `archivee`, et un champ inconnu sur l'un et
+sur l'autre sont acceptés et relus tels quels. **MIG-09** (trois tests) : supprimer une séance, une séquence ou un élève emporte les
+poses, la confirmation les compte (« 4 marqueurs posés ») et « Annuler » les restaure. **MIG-10** : `appliquerMarquages` rejette
+quand la transaction avorte après le succès de la requête d'écriture. **Treize mutants** (M01, M02, M03, M05, M07, M08, M09, M10,
+M32, M33, M34, M49, M50 ; 15 exécutions avec les variantes de M49 et M50) rendent ces tests rouges, chacun par son propre test.
+
+Total de la suite : **305 tests** (+ 87 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs`, `grilles-robustesse.spec.mjs` et `audit-independant.spec.mjs`).
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse

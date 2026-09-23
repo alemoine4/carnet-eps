@@ -144,7 +144,7 @@ export function initialiser() {
           action: 'Tout effacer',
         });
         if (!ok2) { btnPurge.disabled = false; return; }
-        await viderTout(); // une transaction sur les 14 stores : tout ou rien (H01)
+        await viderTout(); // une transaction sur les 17 stores (16 de données + meta) : tout ou rien (H01)
         effacerPrefs(); // sinon « Reprendre » pointait vers une classe fantôme (audit 2026-09-07, A25)
         toast('Données effacées — rechargement…');
         setTimeout(() => location.reload(), 900);

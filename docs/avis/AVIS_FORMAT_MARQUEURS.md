@@ -1608,6 +1608,30 @@ Le vérificateur du second tour a conclu « pas encore prêt » sur quatre défa
 
 ---
 
+### Revue de la v0.14.0 (2026-09-23)
+
+Revue adversariale du code de la v0.14.0 avant commit (4 lentilles, 2 réfutateurs par constat) : 2 constats retenus sur 12.
+
+- **Preuves du format complétées** : MIG-07 refuse 15 altérations au lieu des 6 prévues au §11.1 — ajout du code court de
+  4 caractères ou avec un espace, du genre et de la couleur non texte, de l'archivage non booléen, des occurrences non
+  entières, des instantanés et de la date non texte. Mutants **M52 à M60**, tués par MIG-07. Le §11.1 sous-estimait la
+  barrière d'import d'un format qu'on ne pourra plus changer.
+- **Sonde de C37 dérivée de la base** : la liste des magasins d'historique d'un élève n'est plus écrite à la main (elle
+  oubliait `inaptitudes` et `marquages`) mais lue dans la base réelle (tout magasin qui porte un index `eleveId`).
+  Mutant **M61**, tué par C37.
+
+**Deux points réels, inactifs en v0.14.0, reportés** — à traiter dans la version où ils deviennent atteignables :
+
+1. **v0.14.2** — une pose écrite pendant une suppression en cascade survivrait à sa séance ou à son élève : les cascades
+   collectent par lectures, puis suppriment dans une autre transaction. Dès que la feuille « ⋯ » posera des marqueurs, la
+   collecte et la suppression des `marquages` doivent être faites dans la transaction d'écriture (ou la pose refusée si
+   sa séance n'existe plus), avec un test de concurrence.
+2. **v0.14.1** — une sauvegarde bricolée peut contenir deux marqueurs actifs de même code court (l'import ne contrôle que
+   la forme, §9.2) ; `ecrireMarqueur` refuse ensuite de modifier l'un comme l'autre. L'écran du vocabulaire doit rendre ce
+   blocage lisible (nommer le doublon, proposer d'archiver l'un des deux) au lieu d'un refus muet.
+
+---
+
 **Garde-fous, rappelés une dernière fois** : aucune ligne de code avant validation de ce contrat ; aucune publication
 sans « go » explicite ; ne jamais monter `DB_VERSION` sans avis validé (`CLAUDE.md:202`) — c'est précisément ce que ce
 document demande de valider.

@@ -301,7 +301,7 @@ test('Grilles sauvegarde : aller-retour et refus de détail ou note altérés',a
     const detail=structuredClone(dump);detail.stores.notes[0].detail.inconnu='mauvais';
     let refuseDetail=false;try{await io.importerJSON(detail);}catch{refuseDetail=true;}
     return {schema:dump.schemaVersion,grilles:(await io.tous('grilles')).length,valeur:(await io.tous('notes'))[0].valeur,refuse,refuseDetail};
-  });expect(r).toEqual({schema:3,grilles:1,valeur:20,refuse:true,refuseDetail:true});
+  });expect(r).toEqual({schema:4,grilles:1,valeur:20,refuse:true,refuseDetail:true});
 });
 
 test('Grilles migration : base v2 préexistante conservée, ancien export restaurable',async({page}) => {
@@ -310,7 +310,7 @@ test('Grilles migration : base v2 préexistante conservée, ancien export restau
   await page.evaluate(async()=>{await new Promise((ok,ko)=>{const r=indexedDB.open('carnet-eps',2);r.onupgradeneeded=()=>{const s=r.result.createObjectStore('classes',{keyPath:'id'});s.put({id:'ancien',nom:'ANCIENNE'});};r.onsuccess=()=>{r.result.close();ok();};r.onerror=()=>ko(r.error);});});
   await page.goto('/');
   const r=await page.evaluate(async()=>{const io=await import('/js/io.js');const conserve=await io.lire('classes','ancien');const db=await io.ouvrirDB();await io.importerJSON({app:'carnet-eps',schemaVersion:2,stores:{classes:[{id:'restauree',nom:'RESTAUREE'}]}});return {nom:conserve.nom,version:db.version,grilles:db.objectStoreNames.contains('grilles'),ancienImport:(await io.lire('classes','restauree')).nom};});
-  expect(r).toEqual({nom:'ANCIENNE',version:3,grilles:true,ancienImport:'RESTAUREE'});
+  expect(r).toEqual({nom:'ANCIENNE',version:4,grilles:true,ancienImport:'RESTAUREE'});
 });
 
 test('Grilles bureau : éditeur lisible, niveaux sauvegardés et thème sombre',async({page},testInfo)=>{

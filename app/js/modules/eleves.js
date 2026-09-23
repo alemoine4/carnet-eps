@@ -573,7 +573,7 @@ async function vueFiche(c, id) {
   c.append(carteAp, carteIn, carteNo);
   c.append(await carteObservations(id, rafraichir));
 
-  const carteSuppr = carte('Supprimer cet élève', 'Supprime l’élève et TOUT son historique (appels, inaptitudes, certificats, notes). Pensez à faire une sauvegarde avant (Plus → Sauvegarde).');
+  const carteSuppr = carte('Supprimer cet élève', 'Supprime l’élève et TOUT son historique ; le détail s’affiche avant de confirmer. Pensez à faire une sauvegarde avant (Plus → Sauvegarde).');
   const btnSuppr = el('button', { class: 'btn btn-danger' }, 'Supprimer définitivement');
   btnSuppr.addEventListener('click', async () => {
     const comptes = await apercuSuppressionEleve(eleve.id);

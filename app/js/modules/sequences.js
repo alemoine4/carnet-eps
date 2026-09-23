@@ -7,7 +7,7 @@ import { enregistrerVue, el, carte, champ, champTexte, champSelect, champZone, c
 import {
   tous, lire, parIndex, enregistrer,
   supprimerSeanceEnCascade, supprimerSequenceEnCascade,
-  apercuSuppressionSequence, detailSuppression, restaurer,
+  apercuSuppressionSequence, apercuSuppressionSeance, detailSuppression, restaurer,
 } from '../io.js';
 import { dateFR, isoAujourdhui, trierClasses } from '../metier.js';
 
@@ -222,7 +222,14 @@ async function vueDetail(c, id) {
     seances.forEach((s, idx) => {
       const btnSuppr = el('button', { class: 'btn btn-mini', 'aria-label': `Supprimer la séance du ${dateFR(s.date)}` }, '✕');
       btnSuppr.addEventListener('click', async () => {
-        if (!(await confirmer({ titre: 'Supprimer la séance', message: `Séance ${idx + 1}/${total} du ${dateFR(s.date)} — son appel éventuel sera supprimé.` }))) return;
+        // Aperçu lu AVANT de confirmer : l'appel et les marqueurs posés partent avec la séance, la
+        // confirmation les compte (même motif que la suppression de la séquence, plus bas).
+        const comptes = await apercuSuppressionSeance(s.id);
+        if (!(await confirmer({
+          titre: 'Supprimer la séance',
+          message: `Séance ${idx + 1}/${total} du ${dateFR(s.date)}.`,
+          detail: detailSuppression(comptes),
+        }))) return;
         const objets = await supprimerSeanceEnCascade(s.id);
         rafraichir();
         toast('Séance supprimée', { action: async () => {
@@ -243,7 +250,7 @@ async function vueDetail(c, id) {
   c.append(carteSe);
 
   // --- Suppression ---
-  const carteSuppr = carte('Supprimer la séquence', 'Supprime la séquence, ses séances, leurs appels, ses évaluations et leurs notes. Pensez à une sauvegarde avant (Plus → Sauvegarde).');
+  const carteSuppr = carte('Supprimer la séquence', 'Supprime la séquence et tout ce qui en dépend ; le détail s’affiche avant de confirmer. Pensez à une sauvegarde avant (Plus → Sauvegarde).');
   const btnSuppr = el('button', { class: 'btn btn-danger' }, 'Supprimer définitivement');
   btnSuppr.addEventListener('click', async () => {
     const comptes = await apercuSuppressionSequence(id);

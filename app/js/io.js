@@ -3,9 +3,10 @@
 // Schéma et règles d'intégrité : docs/modele-donnees.md.
 
 import { validerGrille, calculerGrille } from './grilles-calcul.js';
+import { validerMarqueur, validerMarquage, GENRES, COULEURS, cleCourt } from './marqueurs-calcul.js';
 
 const DB_NOM = 'carnet-eps';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 // store -> keyPath + index. Migration additive uniquement (D009) : `onupgradeneeded` crée les stores
 // manquants et les index manquants d'un store existant, jamais de suppression ni de transformation.
@@ -27,6 +28,8 @@ const SCHEMA = {
   notes: { keyPath: 'id', index: ['evaluationId', 'eleveId'] },
   documents: { keyPath: 'id' },
   observations: { keyPath: 'id', index: ['eleveId'] }, // v2 — notes terrain par élève
+  marqueurs: { keyPath: 'id' },                                               // v4 — vocabulaire
+  marquages: { keyPath: 'id', index: ['seanceId', 'eleveId', 'marqueurId'] }, // v4 — poses
 };
 
 export const STORES = Object.keys(SCHEMA);
@@ -46,6 +49,11 @@ const CHAMPS_TEXTE = {
   evaluations: ['sequenceId', 'titre'],
   notes: ['evaluationId', 'eleveId'],
   observations: ['eleveId', 'texte'],
+  // Marqueurs de séance (schéma 4) : seuls les champs sans lesquels une ligne ne peut ni se rattacher
+  // ni s'afficher. genre, couleur, archivee, courtSecours, genreSecours et occurrences dégradent
+  // l'affichage s'ils manquent : contrôlés « si présents » par marqueurs-calcul.js, jamais exigés ici.
+  marqueurs: ['libelle', 'court'],
+  marquages: ['seanceId', 'eleveId', 'marqueurId'],
 };
 // Champs conservés à l'import pour `eleves` : tout champ inconnu (INE, adresse…) est écarté, la
 // minimisation RGPD ne dépend plus de la provenance du fichier (audit 2026-09-07, A24).
@@ -85,7 +93,15 @@ export function ouvrirDB() {
     };
     // Une promesse REJETÉE ne doit pas rester en cache : après un blocage résolu (autre onglet
     // fermé), la prochaine opération doit pouvoir rouvrir la base (audit 2026-09-07, A04).
-    req.onerror = () => { dbPromesse = null; rejeter(req.error); };
+    // VersionError : la base locale a déjà été ouverte par une version PLUS RÉCENTE de l'app (son
+    // schéma ne redescend pas). Le navigateur refuse l'ouverture, rien n'est lu ni effacé ; le texte
+    // de la DOMException est anglais et technique, d'où un message qui dit quoi faire.
+    req.onerror = () => {
+      dbPromesse = null;
+      rejeter(req.error?.name === 'VersionError'
+        ? new Error('cet appareil a déjà ouvert le carnet avec une version plus récente de l’application — rechargez la page', { cause: req.error })
+        : req.error);
+    };
     req.onblocked = () => {
       abandonnee = true;
       dbPromesse = null;
@@ -256,6 +272,132 @@ export async function mettreAJourEvaluation(id, modifs = {}, operations = [], at
   });
 }
 
+// ---------------------------------------------------------------------------
+// Marqueurs de séance (schéma 4) — contrat docs/avis/AVIS_FORMAT_MARQUEURS.md, §4.
+// Deux magasins dédiés : le vocabulaire (`marqueurs`) et les poses (`marquages`, une ligne par
+// séance × élève × marqueur). Une pose n'écrit JAMAIS dans `appels` : elle ne peut pas fabriquer
+// une présence (décision 14), et `definirStatut` ne peut pas l'effacer.
+// ---------------------------------------------------------------------------
+
+// Pose / retrait de marqueurs : lecture, contrôle et écriture dans UNE transaction, sur le motif de
+// mettreAJourEvaluation. L'appel est relu ICI, jamais dans la mémoire de la vue : « Terminer
+// l'appel » lancé sur un autre onglet doit débloquer la pose, et un onglet resté ouvert avant l'appel
+// ne doit pas croire l'élève appelé. Unique chemin d'écriture des poses (pose, retrait, reprise et
+// annulation de la reprise). L'opération est toujours ABSOLUE (« poser » / « retirer ») : la bascule
+// se décide dans la vue, jamais ici.
+// operations = [{ eleveId, marqueurId, op: 'poser' | 'retirer' }]
+// options    = { surEleveNonAppele: 'refuser' (défaut) | 'ignorer' }
+// Résout { marquages, creees, ignores } sur tx.oncomplete — marquages = la séance relue APRÈS les
+// écritures (la vérité de la base), creees = les seuls couples réellement ajoutés.
+export async function appliquerMarquages(seanceId, operations = [], options = {}) {
+  const surEleveNonAppele = options.surEleveNonAppele ?? 'refuser';
+  const db = await ouvrirDB();
+  return new Promise((resolve, reject) => {
+    let resultat;
+    let erreur;
+    const tx = db.transaction(['appels', 'marqueurs', 'marquages'], 'readwrite');
+    // `appels` n'est ouvert en écriture que parce qu'une transaction ne mélange pas les modes : il est
+    // LU, jamais écrit — statut, minutes de retard et commentaire sont préservés par construction.
+    const appels = tx.objectStore('appels');
+    const marquages = tx.objectStore('marquages');
+    const reqAppels = appels.index('seanceId').getAll(seanceId);
+    const reqMarqueurs = tx.objectStore('marqueurs').getAll();
+    const reqPoses = marquages.index('seanceId').getAll(seanceId); // dernière émise : son onsuccess porte tout
+    tx.oncomplete = () => resolve(resultat);
+    tx.onabort = () => reject(erreur || motifEcriture(tx.error || new Error('écriture interrompue')));
+    tx.onerror = (e) => { erreur ||= motifEcriture(e.target?.error || tx.error); };
+    reqPoses.onsuccess = () => {
+      try {
+        if (!['refuser', 'ignorer'].includes(surEleveNonAppele)) throw new Error('option de marqueur invalide');
+        const appeles = new Set(reqAppels.result.map((a) => a.eleveId));
+        const vocabulaire = new Map(reqMarqueurs.result.map((m) => [m.id, m]));
+        const enBase = new Map(reqPoses.result.map((p) => [p.id, p]));
+        const creees = [];
+        const ignores = [];
+        for (const { eleveId, marqueurId, op } of operations) {
+          if ((op !== 'poser' && op !== 'retirer') || typeof eleveId !== 'string' || !eleveId || typeof marqueurId !== 'string' || !marqueurId) {
+            throw new Error('opération de marqueur invalide');
+          }
+          const id = `${seanceId}_${eleveId}_${marqueurId}`;
+          // Un retrait est TOUJOURS permis : seul chemin de nettoyage d'un orphelin ou d'un marqueur
+          // archivé depuis (décision 16).
+          if (op === 'retirer') { marquages.delete(id); enBase.delete(id); continue; }
+          if (!appeles.has(eleveId)) {
+            if (surEleveNonAppele === 'ignorer') { ignores.push({ eleveId, marqueurId }); continue; }
+            const e = new Error('appel introuvable pour cet élève : il faut d’abord un statut');
+            e.name = 'AppelManquant';
+            e.eleveId = eleveId;
+            throw e;
+          }
+          const marqueur = vocabulaire.get(marqueurId);
+          if (!marqueur) throw new Error('marqueur inconnu : rechargez la page');
+          if (marqueur.archivee) throw new Error(`marqueur « ${marqueur.libelle} » archivé : rechargez la page`);
+          // `...actuel` : reposer ne remet pas la ligne à neuf (occurrences, dateAjout et tout champ
+          // inconnu conservés) — c'est ce qui permettra de compter plus tard sans migrer.
+          const actuel = enBase.get(id);
+          const pose = validerMarquage({ occurrences: 1, ...actuel, id, seanceId, eleveId, marqueurId,
+            courtSecours: marqueur.court, genreSecours: marqueur.genre,
+            dateAjout: actuel?.dateAjout ?? new Date().toISOString() });
+          marquages.put(pose);
+          if (!actuel) creees.push({ eleveId, marqueurId });
+          enBase.set(id, pose);
+        }
+        // Relecture émise APRÈS les écritures : elle les voit.
+        const reqFin = marquages.index('seanceId').getAll(seanceId);
+        reqFin.onsuccess = () => { resultat = { marquages: reqFin.result, creees, ignores }; };
+      } catch (e) {
+        erreur = e;
+        tx.abort();
+      }
+    };
+  });
+}
+
+// Vocabulaire : une ligne par marqueur, relue dans la transaction. L'id n'est JAMAIS pris dans
+// `modifs` (décision 13 : renommer garde l'identifiant) — d'où `id` écrit EN DERNIER dans le candidat.
+// Création  : ecrireMarqueur(crypto.randomUUID(), { libelle, court, genre, couleur })
+// Renommage, couleur, archivage : ecrireMarqueur(id, { … }) — modifications partielles.
+// Aucun `genre` par défaut : un marqueur importé sans genre ne devient pas un rôle en silence à sa
+// première modification (il est refusé, et reste lisible). Les champs inconnus relus sont PRÉSERVÉS.
+// Résout le marqueur écrit, sur tx.oncomplete.
+export async function ecrireMarqueur(id, modifs = {}) {
+  if (typeof id !== 'string' || !id) throw new Error('identifiant de marqueur manquant');
+  const db = await ouvrirDB();
+  return new Promise((resolve, reject) => {
+    let resultat;
+    let erreur;
+    const tx = db.transaction(['marqueurs'], 'readwrite');
+    const store = tx.objectStore('marqueurs');
+    const req = store.getAll();
+    tx.oncomplete = () => resolve(resultat);
+    tx.onabort = () => reject(erreur || motifEcriture(tx.error || new Error('écriture interrompue')));
+    tx.onerror = (e) => { erreur ||= motifEcriture(e.target?.error || tx.error); };
+    req.onsuccess = () => {
+      try {
+        const base = req.result;
+        const actuel = base.find((m) => m.id === id);
+        const candidat = { couleur: 'gris', libelle: '', court: '', archivee: false, // PAS de genre par défaut
+          ...actuel, ...modifs, id }; // id en dernier : un renommage ne peut pas le changer
+        validerMarqueur(candidat); // forme
+        if (!GENRES.includes(candidat.genre)) throw new Error('genre de marqueur inconnu');
+        if (candidat.genre === 'comportement') candidat.couleur = 'gris'; // décision 10, invariant forcé
+        if (!COULEURS.includes(candidat.couleur)) throw new Error('couleur de marqueur inconnue');
+        // Unicité du code court, relue ICI : deux onglets ne peuvent pas créer deux « ARB ».
+        // Un marqueur archivé ne réserve plus son code.
+        if (!candidat.archivee) {
+          const collision = base.find((m) => m.id !== id && !m.archivee && cleCourt(m.court) === cleCourt(candidat.court));
+          if (collision) throw new Error(`le code « ${candidat.court} » est déjà pris par « ${collision.libelle} »`);
+        }
+        store.put(candidat);
+        resultat = candidat;
+      } catch (e) {
+        erreur = e;
+        tx.abort();
+      }
+    };
+  });
+}
+
 export async function supprimer(store, id) {
   return ecrireLot([{ store, op: 'delete', cle: id }]);
 }
@@ -264,7 +406,7 @@ export async function vider(store) {
   return ecrireLot([{ store, op: 'clear' }]);
 }
 
-// Purge totale en UNE transaction sur les 14 stores — tout ou rien, comme l'import (H01).
+// Purge totale en UNE transaction sur les 17 stores (16 de données + meta) — tout ou rien, comme l'import (H01).
 export async function viderTout() {
   return ecrireLot(STORES.map((store) => ({ store, op: 'clear' })));
 }
@@ -395,6 +537,12 @@ export function validerExport(objet) {
       vus.add(enreg[cle]);
       if (nom === 'grilles') validerGrille(enreg);
       if (nom === 'evaluations' && enreg.type === 'grille') { validerGrille(enreg.grille); calculerGrille(enreg.grille, {}, enreg.bareme); }
+      // Marqueurs de séance : FORME seulement (aucun contrôle relationnel, champs inconnus tolérés) ;
+      // le motif est préfixé de la ligne fautive, comme pour les notes plus bas.
+      try {
+        if (nom === 'marqueurs') validerMarqueur(enreg);
+        if (nom === 'marquages') validerMarquage(enreg);
+      } catch (e) { throw new Error(`sauvegarde altérée : « ${nom} » ligne ${i + 1} — ${e?.message || e}`); }
       for (const champ of CHAMPS_TEXTE[nom] || []) {
         if (typeof enreg[champ] !== 'string') {
           throw new Error(`sauvegarde altérée : « ${nom} » ligne ${i + 1} — « ${champ} » doit être un texte`);
@@ -427,7 +575,8 @@ export function validerExport(objet) {
 // entière (~10 000 appels) et tout-ou-rien, même si l'onglet est fermé en cours (avis B29).
 export async function importerJSON(objet) {
   validerExport(objet);
-  // schemaVersion < DB_VERSION : aucune migration à l'import à ce jour (schéma 2) — un store absent est vidé (H04).
+  // schemaVersion < DB_VERSION : aucune migration à l'import (sauvegardes de schéma 1, 2 et 3 acceptées) —
+  // un store absent du fichier est VIDÉ (H04), ainsi « marqueurs » et « marquages » d'une sauvegarde de schéma 3.
   const lots = {};
   for (const nom of STORES) {
     if (nom === 'fichiers') {
@@ -667,8 +816,13 @@ export async function restaurer(objets) {
 // elle renvoie { <store>: [records supprimés] } pour l'annulation via restaurer().
 // ---------------------------------------------------------------------------
 
+// Une séance supprimée emporte ses appels ET ses marqueurs posés (décision 16).
 async function collecterSeance(seanceId) {
-  const objets = { appels: await parIndex('appels', 'seanceId', seanceId), seances: [] };
+  const objets = {
+    appels: await parIndex('appels', 'seanceId', seanceId),
+    marquages: await parIndex('marquages', 'seanceId', seanceId),
+    seances: [],
+  };
   const seance = await lire('seances', seanceId);
   if (seance) objets.seances.push(seance);
   return objets;
@@ -681,11 +835,14 @@ export async function supprimerSeanceEnCascade(seanceId) {
 }
 
 export async function supprimerSequenceEnCascade(sequenceId) {
-  const objets = { seances: [], appels: [], evaluations: [], notes: [], sequences: [] };
+  // Chaque magasin collecté par collecterSeance doit être reporté ICI : un oubli laisse ses lignes
+  // orphelines sans la moindre erreur.
+  const objets = { seances: [], appels: [], marquages: [], evaluations: [], notes: [], sequences: [] };
   for (const s of await parIndex('seances', 'sequenceId', sequenceId)) {
     const o = await collecterSeance(s.id);
     objets.seances.push(...o.seances);
     objets.appels.push(...o.appels);
+    objets.marquages.push(...o.marquages);
   }
   for (const ev of await parIndex('evaluations', 'sequenceId', sequenceId)) {
     objets.notes.push(...(await parIndex('notes', 'evaluationId', ev.id)));
@@ -698,8 +855,9 @@ export async function supprimerSequenceEnCascade(sequenceId) {
 }
 
 export async function supprimerEleveEnCascade(eleveId) {
-  const objets = { appels: [], inaptitudes: [], certificats: [], notes: [], observations: [], fichiers: [], eleves: [] };
+  const objets = { appels: [], marquages: [], inaptitudes: [], certificats: [], notes: [], observations: [], fichiers: [], eleves: [] };
   objets.appels = await parIndex('appels', 'eleveId', eleveId);
+  objets.marquages = await parIndex('marquages', 'eleveId', eleveId);
   objets.inaptitudes = await parIndex('inaptitudes', 'eleveId', eleveId);
   objets.certificats = await parIndex('certificats', 'eleveId', eleveId);
   for (const c of objets.certificats) {
@@ -728,6 +886,7 @@ export async function supprimerEleveEnCascade(eleveId) {
 export async function apercuSuppressionEleve(eleveId) {
   return {
     appels: await compterIndex('appels', 'eleveId', eleveId),
+    marquages: await compterIndex('marquages', 'eleveId', eleveId),
     inaptitudes: await compterIndex('inaptitudes', 'eleveId', eleveId),
     certificats: await compterIndex('certificats', 'eleveId', eleveId),
     notes: await compterIndex('notes', 'eleveId', eleveId),
@@ -738,11 +897,24 @@ export async function apercuSuppressionEleve(eleveId) {
 export async function apercuSuppressionSequence(sequenceId) {
   const seances = await parIndex('seances', 'sequenceId', sequenceId);
   let appels = 0;
-  for (const s of seances) appels += await compterIndex('appels', 'seanceId', s.id);
+  let marquages = 0;
+  for (const s of seances) {
+    appels += await compterIndex('appels', 'seanceId', s.id);
+    marquages += await compterIndex('marquages', 'seanceId', s.id);
+  }
   const evaluations = await parIndex('evaluations', 'sequenceId', sequenceId);
   let notes = 0;
   for (const ev of evaluations) notes += await compterIndex('notes', 'evaluationId', ev.id);
-  return { seances: seances.length, appels, evaluations: evaluations.length, notes };
+  return { seances: seances.length, appels, marquages, evaluations: evaluations.length, notes };
+}
+
+// Suppression d'une séance : son appel et ses marqueurs posés partent avec elle — l'aperçu les
+// annonce dans la confirmation, sinon la perte serait muette (décision 16).
+export async function apercuSuppressionSeance(seanceId) {
+  return {
+    appels: await compterIndex('appels', 'seanceId', seanceId),
+    marquages: await compterIndex('marquages', 'seanceId', seanceId),
+  };
 }
 
 // [singulier, pluriel] par store de données (`meta` exclu) — partagé par les aperçus de suppression
@@ -763,6 +935,8 @@ export const LIBELLES = {
   notes: ['note', 'notes'],
   documents: ['document', 'documents'],
   observations: ['observation', 'observations'],
+  marqueurs: ['marqueur', 'marqueurs'],
+  marquages: ['marqueur posé', 'marqueurs posés'],
 };
 
 // { appels: 12, notes: 4 } → « Seront aussi supprimés : 12 appels, 4 notes. » (ignore les zéros).

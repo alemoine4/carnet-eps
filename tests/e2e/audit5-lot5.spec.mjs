@@ -67,7 +67,7 @@ test.describe('D-09 — date de sauvegarde en heure locale', () => {
   });
 });
 
-test('D-11 / C30 — montée de schéma v1 → v3 : store « observations » créé, index manquant ajouté, données conservées', async ({ page }) => {
+test('D-11 / C30 — montée de schéma v1 → v4 : store « observations » créé, index manquant ajouté, données conservées', async ({ page }) => {
   const res = await page.evaluate(async () => {
     const io = await import('/js/io.js');
     await io.ouvrirDB();
@@ -95,12 +95,12 @@ test('D-11 / C30 — montée de schéma v1 → v3 : store « observations » cr�
       r.onerror = () => ko(r.error);
     });
     try {
-      const db = await io.ouvrirDB(); // montée v1 → v3 par l'app
+      const db = await io.ouvrirDB(); // montée v1 → v4 par l'app
       const idx = db.transaction('eleves').objectStore('eleves').indexNames.contains('classeId');
       return { version: db.version, observations: db.objectStoreNames.contains('observations'), idx, lus: (await io.parIndex('eleves', 'classeId', 'c1')).length, eleve: (await io.lire('eleves', 'e1'))?.nom };
     } catch (e) { return { erreur: e.name + ': ' + e.message }; }
   });
-  expect(res).toEqual({ version: 3, observations: true, idx: true, lus: 1, eleve: 'A' }); // avant : idx false, parIndex → NotFoundError
+  expect(res).toEqual({ version: 4, observations: true, idx: true, lus: 1, eleve: 'A' }); // avant : idx false, parIndex → NotFoundError
 });
 
 test('C03 / B37 — CSV : UTF-16 avec BOM décodé, « � » légitime conservé, Windows-1252 en repli, caractères de contrôle retirés', async ({ page }) => {
@@ -163,26 +163,40 @@ test('C37 — supprimer un élève : l’aperçu compte sans charger, la cascade
   });
   await page.goto('/#/eleves/fiche/e1');
   await expect(page.locator('#vue')).toContainText('A B');
-  await page.evaluate(() => {
+  // Magasins d'historique d'un élève : DÉRIVÉS de la base réelle (tout magasin qui porte un index « eleveId »), jamais
+  // écrits à la main — la liste manuelle oubliait « inaptitudes », puis « marquages » (revue v0.14.0).
+  const historique = await page.evaluate(() => new Promise((ok, ko) => {
+    const q = indexedDB.open('carnet-eps');
+    q.onerror = () => ko(q.error);
+    q.onsuccess = () => {
+      const db = q.result;
+      const noms = [...db.objectStoreNames].filter((n) => db.transaction(n).objectStore(n).indexNames.contains('eleveId'));
+      db.close();
+      ok(noms.sort());
+    };
+  }));
+  // Prémisse : la dérivation voit bien les magasins connus, dont les deux que la liste manuelle oubliait.
+  expect(historique).toEqual(expect.arrayContaining(['appels', 'certificats', 'inaptitudes', 'marquages', 'notes', 'observations']));
+  await page.evaluate((historique) => {
     // Enregistrements chargés (par index ET par store entier) : l'aperçu ne doit rien charger, la cascade une fois.
     window.__getAll = 0;
     for (const proto of [IDBIndex.prototype, IDBObjectStore.prototype]) {
       const orig = proto.getAll;
       proto.getAll = function (...a) {
         const store = this instanceof IDBIndex ? this.objectStore.name : this.name;
-        // lectures imputables à l'aperçu ou à la cascade : par index sur e1, ou un store d'historique lu en entier
-        if ((this instanceof IDBIndex && a[0] === 'e1') || (!(this instanceof IDBIndex) && ['appels', 'notes', 'certificats', 'observations'].includes(store))) window.__getAll++;
+        // lectures imputables à l'aperçu ou à la cascade : par index sur e1, ou un magasin d'historique lu en entier
+        if ((this instanceof IDBIndex && a[0] === 'e1') || (!(this instanceof IDBIndex) && historique.includes(store))) window.__getAll++;
         return orig.apply(this, a);
       };
     }
-  });
+  }, historique);
   await page.getByRole('button', { name: 'Supprimer définitivement' }).click();
   const dlg = page.locator('dialog.feuille-confirm');
   await expect(dlg).toContainText('Seront aussi supprimés : 2 appels, 1 note.');
   expect(await page.evaluate(() => window.__getAll)).toBe(0); // aperçu par count() : avant, 5 getAll
   await dlg.locator('.btn-danger').click();
   await expect(page.locator('.toasts')).toContainText('B A supprimé');
-  expect(await page.evaluate(() => window.__getAll)).toBe(5); // la cascade seule : 5 lectures par index (avant : 10 avec l'aperçu), aucun store d'historique lu en entier
+  expect(await page.evaluate(() => window.__getAll)).toBe(6); // la cascade seule : 6 lectures par index (avant : 10 avec l'aperçu ; 5 jusqu'au schéma 3, + « marquages » par eleveId en v0.14.0), aucun store d'historique lu en entier
   expect(await page.evaluate(async () => (await (await import('/js/io.js')).tous('appels')).length)).toBe(0);
 });
 
@@ -562,7 +576,7 @@ test('B51 — Sauvegarde : base illisible → « Comptage impossible » au lieu 
   await page.evaluate(() => {
     const original = IDBDatabase.prototype.transaction;
     IDBDatabase.prototype.transaction = function (stores, mode, ...rest) {
-      if (mode === 'readonly' && [].concat(stores).length === 15) throw new DOMException('Base indisponible', 'InvalidStateError'); // compterTout (14 stores)
+      if (mode === 'readonly' && [].concat(stores).length === 17) throw new DOMException('Base indisponible', 'InvalidStateError'); // compterTout (16 magasins de données + meta)
       return original.call(this, stores, mode, ...rest);
     };
   });
@@ -639,7 +653,7 @@ test('C57 / C59 — la documentation suit le code : restrictions, champs EDT, pr
   expect(readme).toContain('app.localhost'); // avant : « [::1] » alors que le code essaie app.localhost en premier
   // Comptes dérivés des SIX specs (tests imbriqués dans un describe compris), par fichier et au total (revue du lot 5).
   const specs = readdirSync(new URL('./', import.meta.url)).filter((f) => f.endsWith('.spec.mjs'));
-  expect(specs.length).toBe(18);
+  expect(specs.length).toBe(19);
   let total = 0;
   for (const f of specs) {
     const n = (lire('./' + f).match(/^\s*test\(/gm) || []).length;

@@ -77,3 +77,39 @@ Audit du 2026-09-05 (B30) : le seuil ⚠ « 3 oublis de tenue / 3 dispenses « m
 - **Départage** entre deux inaptitudes actives : totale > partielle, puis certificat > infirmerie > mot (déterministe, indépendant de l'ordre des identifiants).
 **Écartés** : statut `infirmerie` pour l'origine infirmerie (il signifie « parti à l'infirmerie pendant le cours ») ; pré-remplir la partielle en `inapte` (fausse le compteur de pratiquants) ; marquer les enregistrements posés d'office (`auto`) pour les exclure du seuil (retiré du cadre de D012, à rouvrir si le terrain trouve l'alerte gênante).
 *Réexamen si* : besoin d'un statut « aménagé » distinct pour les partielles (compte pratiquant, mais tracé) ; alerte « 3 dispenses » jugée parasite pour une inaptitude sur mot déclarée → exclure les enregistrements posés d'office du seuil.
+
+## D014 — 2026-09-22 — Marqueurs de séance : magasin dédié et schéma 4, pendant la fenêtre « zéro donnée »
+
+Demande de l'enseignant (« des infos comme score, groupe », puis « un système de pastilles pour des rôles dans la séance ou pour
+le comportement », référence iDoceo). Avis `docs/avis/AVIS_MARQUEURS_SEANCE.md`, **18 réponses actées le 2026-09-22 (« je te
+suis »)** ; contrat d'implémentation `docs/avis/AVIS_FORMAT_MARQUEURS.md`, **validé le 2026-09-23** (« je te suis » aux 11 points
+ouverts). Les 18 décisions :
+1. rôles **de séance** seulement ; 2. cumul libre, **aucune exclusivité** automatique ; 3. feuille de l'élève **et** mode tampon
+dans le premier lot ; 4. deux codes courts sur la carte puis « +n », liste triée par usage récent, sans plafond codé ; 5. alerte :
+**lecture seule**, aucun seuil ; 6. équipes à la séance, avec « reprendre les marqueurs de la séance précédente » ; 7. codes
+courts sur la carte pour les rôles et les équipes ; 8. **aucune sortie** (ni impression ni CSV) dans le premier lot ; 9. marqueurs
+et observations coexistent, rien n'est converti ; 10. comportements : pas de code sur la carte, un **repère neutre**, le sens dans
+la feuille ; 11. score chiffré : la colonne « AFL / positionnement », pas le barème ; 12. les marqueurs **avant** le carnet à
+onglets ; 13. renommer = corriger une faute, changer de sens = nouveau marqueur ; 14. un marqueur **ne valide jamais une
+présence** ; 15. une occurrence dans l'usage, un format qui saura compter **sans migrer** ; 16. retrait, archivage, séance
+supprimée, référence orpheline (affichée en gris, sans erreur) ; 17. la compatibilité est tenue **par le code**, pas par la
+mémoire de l'enseignant ; 18. **magasin dédié et montée `DB_VERSION` 4**, décidée pendant la fenêtre « zéro donnée ».
+
+**Motif de la décision 18.** Au 2026-09-22, aucune donnée n'est saisie sur la nouvelle adresse. Un champ ajouté aux appels et un
+vocabulaire rangé dans `meta` n'exigeaient aucune montée de schéma, mais auraient laissé une version ancienne réécrire les appels
+en perdant les marqueurs sans un mot, fabriqué des présences, et écrasé le vocabulaire entre deux onglets. Deux magasins dédiés
+(`marqueurs`, `marquages`) donnent l'écriture atomique et la validation, et **une version ancienne refuse d'ouvrir la base au lieu
+de l'abîmer** (`VersionError` : la décision 17 devient structurelle). Le prix — pas de retour arrière vers le schéma 3 — se paie en
+données : il valait zéro ce jour-là et redevient cher dès la première classe saisie. D'où le découpage du contrat : **le format se
+publie seul, en premier** (v0.14.0), les écrans suivent (v0.14.1 à v0.14.4).
+
+**Arbitrages de format** (contrat §2) : magasin des poses nommé `marquages`, une ligne par séance × élève × marqueur avec un
+compteur `occurrences` (sans horodatage par occurrence) ; `id` opaque et stable pour le vocabulaire ; instantanés `courtSecours` et
+`genreSecours` pour les seuls orphelins ; champs inconnus **tolérés et préservés** ; valeurs de `genre` et `couleur` contrôlées à
+l'écriture seulement ; ordre « usage récent » propre à l'appareil (`localStorage`) ; archivage sans suppression ; genre fixé à la
+création.
+**Écartés** : champ sur `appels` + vocabulaire dans `meta` (voir motif) ; une ligne par occurrence (écritures plus délicates) ;
+contrôle de concurrence optimiste sur les poses (un tap au gymnase deviendrait « rechargez la page ») ; exclusivité par famille
+(aucune dans le premier lot, ajoutable sans montée de schéma grâce à la tolérance des champs).
+*Réexamen si* : besoin de compter plusieurs fois un comportement dans une séance (changer la valeur d'`occurrences`, rien à
+migrer) ; besoin d'une exclusivité (champ `famille`) ; besoin de l'heure de chaque occurrence (changerait les clés, donc migration).

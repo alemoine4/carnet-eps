@@ -252,7 +252,7 @@ test('A23 — compterTout() compte sans charger les enregistrements (count, pas 
     IDBObjectStore.prototype.getAll = oG; IDBObjectStore.prototype.count = oC;
     return { getAll, count, classes: comptes.classes, stores: Object.keys(comptes).length };
   });
-  expect(res).toEqual({ getAll: 0, count: 15, classes: 1, stores: 15 });
+  expect(res).toEqual({ getAll: 0, count: 17, classes: 1, stores: 17 }); // 16 magasins de données + meta (schéma 4, v0.14.0)
 });
 
 test('C08 / B39 — une pièce jointe non-image de plus de 8 Mo est refusée avec un message', async ({ page }) => {

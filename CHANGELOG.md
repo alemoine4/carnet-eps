@@ -4,6 +4,39 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-23 — v0.14.0 : marqueurs de séance, le format seul (schéma 4) — candidate, NON publiée
+
+Premier des cinq paliers du contrat `docs/avis/AVIS_FORMAT_MARQUEURS.md` (validé le 2026-09-23). **Aucun écran nouveau** :
+cette version fige le format pendant que la base de l'enseignant est encore vide (décision 18, fenêtre « zéro donnée »).
+
+- **Schéma IndexedDB 4** : deux magasins dédiés, `marqueurs` (le vocabulaire) et `marquages` (une ligne par séance × élève ×
+  marqueur, index `seanceId`, `eleveId`, `marqueurId`). Migration purement additive, aucune donnée existante lue ni
+  transformée. **Une version plus ancienne ne peut plus ouvrir la base** : le navigateur la refuse (`VersionError`), rien
+  n'est effacé ; l'application affiche désormais un message en français dans ce cas (pour la montée suivante).
+- **Écritures** : `appliquerMarquages` (pose, retrait) relit l'appel **dans** la transaction et n'écrit jamais dans `appels` :
+  un marqueur ne peut pas valider une présence ; reposer conserve le nombre d'occurrences et la date d'origine ; résolution à
+  la validation de la transaction seulement. `ecrireMarqueur` garde l'identifiant à vie, refuse un code court déjà pris
+  (« É1 » = « E1 »), n'invente aucun genre et préserve les champs qu'il ne connaît pas. Nouveau module pur
+  `app/js/marqueurs-calcul.js`, ajouté au précache du service-worker.
+- **Sauvegardes** : export en schéma 4 ; une sauvegarde de schéma 1, 2 ou 3 reste restaurable (les deux magasins sont vidés et
+  la confirmation le dit) ; une sauvegarde de schéma 5 est refusée avant toute écriture ; la validation contrôle la forme,
+  tolère les champs inconnus et les références orphelines.
+- **Suppressions** : une séance, une séquence ou un élève supprimés emportent leurs marqueurs posés, et « Annuler » les
+  restaure. **La suppression d'une séance affiche enfin un aperçu** (« Seront aussi supprimés : 1 appel, 4 marqueurs
+  posés. ») ; les cartes « Supprimer la séquence » et « Supprimer cet élève » n'énumèrent plus ce qu'elles emportent (la
+  seconde omettait déjà les observations et les pièces) : le détail s'affiche avant de confirmer.
+- **Preuves** : `tests/e2e/marqueurs-migration.spec.mjs` (11 tests : MIG-01 à MIG-07, MIG-09 ×3, MIG-10) ; gardes
+  re-réglées (19 fichiers de tests, 6 lectures pour la cascade d'un élève, 17 magasins) ; 13 mutants revendiqués par cette
+  version (M01, M02, M03, M05, M07, M08, M09, M10, M32, M33, M34, M49, M50 ; 15 exécutions avec les variantes de M49 et M50), tous tués par leur propre test, contrôle sain vert.
+- **Revue adversariale avant commit** (4 lentilles : montée de schéma, écritures, import et sécurité, valeur des preuves ;
+  2 réfutateurs par constat) : 2 constats retenus sur 12, corrigés. **Neuf règles de forme du format n'étaient prouvées
+  par aucun test** — or ce format est figé pour toujours à la publication : MIG-07 refuse désormais 15 altérations au lieu
+  de 6 (code court de 4 caractères ou avec un espace, genre ou couleur non texte, archivage non booléen, occurrences non
+  entières, instantanés et date non texte), une règle par message. **La sonde du test C37** ne surveillait que quatre
+  magasins écrits à la main (elle oubliait déjà `inaptitudes`, et oubliait `marquages`) : elle dérive désormais de la
+  base réelle la liste des magasins qui portent un index `eleveId`. Dix mutants nouveaux (M52 à M61), tous tués par leur
+  test : **25 exécutions de mutants, 25 tuées**.
+
 ## 2026-09-22 — v0.13.5 : correctifs de l'audit Codex V7 sur la saisie par grille
 
 Audit indépendant de la v0.13.4 (`audit codex/AUDIT_V7.md`, hors suivi Git) : 375 tests sur 375 au premier passage, quatre

@@ -73,11 +73,11 @@ puis tag `vX.Y.Z`, vérification en ligne (`state.js`, `service-worker.js`, page
 | Modèle de données | `docs/modele-donnees.md` — IndexedDB `carnet-eps`, wrapper maison dans `app/js/io.js` |
 | Service worker | enregistré **uniquement hors localhost** → jamais de cache pendant le dev |
 | Échanges Pronote | `docs/pronote.md` |
-| Décisions actées | `docs/decisions.md` (D001 à D013) |
+| Décisions actées | `docs/decisions.md` (D001 à D014) |
 | Déploiement | `docs/deploiement.md` — tableau version → commit → commit du site, et procédure de retour arrière |
 | Audits internes | `docs/audit-2026-07-10.md` (soldé), `docs/audit-2026-09-05.md` (4e passe), `docs/audit-2026-09-07.md` + `.json` (5e passe, 179 constats : lots 1, 3, 4, 5 livrés ; **lot 2 en attente de « go »** — `docs/avis/AVIS_CREATIONS_ATOMIQUES.md` ; A01 « origine dédiée » **tranché et exécuté** le 2026-09-17) |
 | Audits externes | **Audit indépendant du 2026-09-16** : `AUDIT-INDEPENDANT-2026-09-16.md`, **hors dépôt**, dans `CARNET EPS\` (36 constats ; premier lot livré en v0.13.1). **Audits Codex** : dossier `audit codex/` (hors suivi Git), un rapport par passe `AUDIT_Vn.md` ; je prépare `audit codex/CONSIGNE_Vn.md` et il suffit de dire à Codex « lis-la et exécute-la ». Dernier : **V7** (v0.13.4 → correctifs livrés en v0.13.5) |
-| Avis en attente de décision | `docs/avis/AVIS_PAGE_CLASSE_ONGLETS.md` (§12, 14 questions) · `docs/avis/AVIS_MARQUEURS_SEANCE.md` (§11, 17 questions) · `AVIS_GRILLES_EVALUATION.md` (phases suivantes) · `AVIS_CREATIONS_ATOMIQUES.md` (lot 2) · `AVIS_LOT5_RESTES.md` |
+| Avis en attente de décision | `docs/avis/AVIS_PAGE_CLASSE_ONGLETS.md` (§12, 14 questions) · `docs/avis/AVIS_MARQUEURS_SEANCE.md` (§11, 18 questions, décidées le 2026-09-22) · `docs/avis/AVIS_FORMAT_MARQUEURS.md` (contrat des marqueurs, **validé le 2026-09-23** ; v0.14.0 = le format, puis v0.14.1 à v0.14.4) · `AVIS_GRILLES_EVALUATION.md` (phases suivantes) · `AVIS_CREATIONS_ATOMIQUES.md` (lot 2) · `AVIS_LOT5_RESTES.md` |
 
 ---
 
@@ -201,3 +201,5 @@ D'autres skills (`ux-eps`, `expert-indexeddb`, `import-export-csv-json`, `donnee
   publié.
 - **Ne jamais monter `DB_VERSION` sans avis validé** : une base ouverte en schéma N ne redescend pas, et ses sauvegardes
   sont refusées par les versions déjà installées.
+- **Schéma 4 (v0.14.0, marqueurs de séance)** : une fois la v0.14.0 publiée, **ne jamais redéployer une version dont
+  `DB_VERSION` est 3** (v0.13.x) ; un correctif se fait toujours en avant (`docs/deploiement.md`, procédure 4 → 3).

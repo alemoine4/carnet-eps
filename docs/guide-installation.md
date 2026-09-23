@@ -55,6 +55,7 @@ Les données sont **propres à chaque appareil** (c'est le principe : rien ne pa
 | Données disparues | Restaurer la dernière sauvegarde JSON (Plus → Sauvegarde → Importer) — d'où l'importance d'exporter régulièrement |
 | « Espace insuffisant » | Réglages → vérifier l'espace ; supprimer de vieux documents/photos ou purger l'année passée (après export d'archive) |
 | L'app semble bloquée sur une vieille version | Réglages → Vérifier les mises à jour, puis fermer **complètement** l'app et la rouvrir |
+| « Affichage impossible » avec un message anglais (`VersionError`), ou « cet appareil a déjà ouvert le carnet avec une version plus récente de l'application » | L'appareil a déjà ouvert une version plus récente (par exemple dans un autre onglet) et garde une ancienne version en cache. **Aucune donnée n'est perdue**, mais l'ancienne version ne peut plus ouvrir la base : **recharger la page avec une connexion** pour recevoir la version à jour. Le conseil « exportez une sauvegarde » est inapplicable tant que la page n'est pas rechargée |
 
 ## 🔒 Où sont mes données ?
 

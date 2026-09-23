@@ -39,7 +39,7 @@ Ce qui est commun à plusieurs modules vit dans **`metier.js`** (vocabulaire, da
 
 ## Stockage
 
-- **IndexedDB** `carnet-eps` (wrapper maison promisifié dans `io.js`, décision D003 — pas d'idb-keyval) : 14 stores (`DB_VERSION 2` depuis v0.12.0, migrations additives D009), schéma détaillé dans `modele-donnees.md`.
+- **IndexedDB** `carnet-eps` (wrapper maison promisifié dans `io.js`, décision D003 — pas d'idb-keyval) : 17 stores (`DB_VERSION 4` depuis v0.14.0 — `grilles` en schéma 3, `marqueurs` et `marquages` en schéma 4 —, migrations additives D009), schéma détaillé dans `modele-donnees.md`. Les règles pures des marqueurs de séance vivent dans `marqueurs-calcul.js`, importé par `io.js` comme `grilles-calcul.js` (D014).
 - **localStorage** `carnet-eps:prefs` : préférences UI uniquement — `theme`, `derniereClasseId`, `derniereEvalId` (raccourcis « Reprendre » de l'accueil, effacés à la purge et à l'import, A25) — jamais de données élèves.
 - **Blobs** (photos certificats, documents) : store dédié `fichiers`, compression canvas→JPEG avant écriture.
 - `navigator.storage.persist()` demandé au premier lancement (évite l'éviction silencieuse sur Android).
