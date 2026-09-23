@@ -1355,6 +1355,22 @@ pas une estimation de charge, et le chiffrage ne doit pas en être déduit.
 
 ## 14. Points ouverts — à trancher par l'enseignant
 
+> ✅ **TRANCHÉS LE 2026-09-23 : « je te suis ».** Le contrat est **validé**, et les onze points prennent la réponse
+> recommandée :
+>
+> 1. **oui**, le format se publie seul en v0.14.0 ;
+> 2. **compteur** `occurrences`, sans horodatage par occurrence ;
+> 3. **oui**, « Terminer l'appel » est durci, dans la **v0.14.2** (le lot où il devient le passage obligé vers les
+>    marqueurs) ;
+> 4. **non**, la feuille « ⋯ » se ferme comme aujourd'hui ;
+> 5. **oui** à l'amorçage « créer les 6 marqueurs proposés » (ARB, OBS, COA, E1, E2, REC), dans la **v0.14.1**,
+>    sur un vocabulaire vide seulement ;
+> 6. à 10. **d'accord** : genre fixé à la création ; ordre « derniers utilisés » propre à l'appareil ; archivage sans
+>    suppression ; ce contrat et D014 suffisent ; la reprise part de la dernière séance qui porte des rôles ou des
+>    équipes ;
+> 11. **(d) complété par (a)** : le repère de comportement passe en premier sur la carte, et le deuxième code
+>    disparaît entièrement sous contrainte. L'assertion définitive d'ECR-09 en découle (v0.14.2).
+
 1. **Le format se publie-t-il seul (v0.14.0), avant le moindre écran ?** C'est ce que recommande ce contrat : la
    fenêtre « zéro donnée » se referme à la première classe saisie, pas à la fin du chantier. L'alternative est de tout
    livrer d'un bloc, en s'interdisant de saisir une vraie classe jusque-là.
