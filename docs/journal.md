@@ -14,6 +14,86 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-24 (47) — v0.14.1 : revue adversariale, 8 constats corrigés avant commit
+
+Demande : corriger les 8 constats retenus par la revue adversariale de la v0.14.1 (R1 à R8), sans toucher au format
+(`io.js`, `marqueurs-calcul.js`) ni aux textes provisoires (`#mq-bientot`, carte « Plus »). **Ni commit, ni publication.**
+
+**Fait** :
+- **R1** : `#mq-court` n'est plus réécrit pendant la frappe (un clavier qui compose le mot doublait les lettres : « arb » →
+  « AARARB »). Majuscules affichées par `text-transform`, appliquées par `toLocaleUpperCase('fr')` dans l'aperçu et à
+  l'enregistrement.
+- **R2 + R6** : l'aperçu d'un marqueur rangé « Comportements » (genre absent ou inconnu compris) rend le repère `.mq-neutre`,
+  sans texte, et « un repère neutre, sans code ; le sens reste dans la feuille de l’élève. », dans le formulaire et sur les
+  cartes de la liste. Règle `.mq-neutre` du §7 point 3 livrée, avec `display: inline-block` en plus (hors rangée flex).
+  Ambiguïté du §6.5 (« aperçu `.mq-code` identique ») tranchée par la décision 10, consignée au §16 du contrat.
+- **R3** : `retenirFocus` — après `basculerArchive` et après la branche « Des marqueurs existent déjà », si le focus a quitté
+  la vue, il va au bouton « Archiver / Restaurer » du marqueur traité, sinon à « Nouveau marqueur ».
+- **R4, R5, R7, R8** : preuves ajoutées à MQ-18 (vue périmée) et MQ-19 (restauration refusée puis réussie, archivés en
+  dernier, mention sur chaque carte du groupe, focus au clavier). **MQ-20** créé (majuscules par composition CDP, aperçu).
+- Docs : contrat §6.5 (renvoi), §11.2 (MQ-18, MQ-19 élargis ; MQ-20), §13, §16 « Revue de la v0.14.1 » ; README (5 tests,
+  total 310 / 302), CHANGELOG, TODO, `docs/deploiement.md`. Campagne : mutants M71 à M77 avec variantes (14 de plus).
+
+**Résultats** : `node --check` OK ; `marqueurs.spec.mjs` 5/5 (chromium) ; suite complète au premier passage **397/397**
+(310 + 87 rejoués sur le projet mobile) ; campagne `mutants-v0141.mjs` relancée en entier : contrôle sain vert (6 verts),
+**28 mutants, 28 tués par leur test** (M06, M31, M35, M51, M63 à M70 et variantes ; M71 à M77 et variantes).
+
+**Vérifié par moi ensuite (2026-09-24)** : suite complète relancée, **397/397** ; campagne relancée en entier, 28/28 tués,
+arbre de travail identique avant et après ; format intact (`io.js`, `marqueurs-calcul.js` sans diff). **Regardé à l'écran**
+(captures d'éléments en Pixel 7 émulé, clair et sombre — les captures du panneau intégré restent figées sur ce PC) : deux
+défauts qu'aucun test ne voyait. (1) Dans le formulaire d'un comportement, « Sur la carte : » restait seul à droite du champ,
+et le repère partait à la ligne avec sa phrase : l'aperçu formait un bloc `inline-flex` dans la rangée qui passe à la ligne,
+et la phrase l'emportait. Correction : `.mq-apercu { display: contents }`, ses nœuds sont rangés un à un ; seule la phrase
+passe à la ligne. Preuve ajoutée à MQ-20 : à 360 px sur les deux profils (la phrase n'y tient jamais à côté du repère,
+quelle que soit la police — prémisse assertée), le milieu du repère est dans la hauteur de l'étiquette et la phrase part du
+bord gauche du champ. **M78** (l'aperçu refait bloc) tué par MQ-20. (2) La mention provisoire `#mq-bientot` était centrée
+(`.note-discrete`) sous un paragraphe aligné à gauche ; en `.note-inline`, `.carte p` l'écrasait et elle se lisait comme la
+suite du paragraphe. Classe `.mq-provisoire` (espace au-dessus, texte plus petit), retirée en v0.14.2 avec le texte ; pas de
+test pour un alignement qui disparaît à la version suivante.
+
+**Prochaine étape** : relecture et « go » de commit puis de publication ; puis v0.14.2.
+
+---
+
+## 2026-09-24 (46) — v0.14.1 candidate : marqueurs de séance, le vocabulaire
+
+Demande : implémenter la **v0.14.1** du contrat `docs/avis/AVIS_FORMAT_MARQUEURS.md` (§6.5, §13), avec l'amorçage (§14,
+réponse 5) et les doublons lisibles (§16, revue de la v0.14.0, point 2). **Ni commit, ni publication.** Format figé : aucun
+changement de `DB_VERSION`, de `ecrireMarqueur` ni de la validation des sauvegardes.
+
+**Fait** :
+- `app/js/modules/marqueurs.js` (nouveau) : routes `#/marqueurs`, `#/marqueurs/nouveau`, `#/marqueurs/modifier/<id>`. Liste :
+  carte d'introduction (texte du §6.5), « Nouveau marqueur », vocabulaire groupé par genre dans l'ordre `GENRES`, archivés en
+  dernier, aperçu `.mq-code` ; « Modifier », « Archiver » / « Restaurer » (refus en toast), aucune suppression. Formulaire :
+  libellé (40), code court (3, majuscules à la saisie), genre verrouillé en modification avec sa note, couleur masquée pour un
+  comportement avec sa note, aperçu vivant, refus dans le `p.statut`, rien d'écrit. Genre absent ou inconnu → « Comportements ».
+- **Amorçage** : bouton « Créer les 6 marqueurs proposés » sur un vocabulaire vide seulement (relu au moment du geste), six
+  appels à `ecrireMarqueur`, bilan dit à l'écran et en toast en cas d'échec partiel.
+- **Doublons lisibles** : alerte « Codes en double » (nomme les marqueurs, un bouton « Archiver « … » » par marqueur), mention
+  sur chaque carte concernée, rappel à l'ouverture du formulaire et après un refus.
+- `main.js` : `TITRES`, `PARENT`, import, carte-lien après « Séquences & séances ». `service-worker.js` : `VERSION` 0.14.1,
+  `ASSETS` += `./js/modules/marqueurs.js`. `state.js` : 0.14.1. `components.css` : `.mq-code` (§7 point 2) et trois règles de
+  mise en page de l'écran (`.mq-genre`, `.mq-titre`, `.mq-ligne-code`).
+- Preuves : `tests/e2e/marqueurs.spec.mjs` (MQ-12, MQ-17 du §11.2 ; MQ-18 amorçage et MQ-19 doublons, ajoutés au §11.2 et au §13
+  du contrat). Gardes re-réglées : 19 → 20 fichiers, 14 routes (smoke-test 1 et C33), table `TITRES` de C42, comptes des README.
+  Campagne `mutants-v0141.mjs` (scratchpad) : 14 mutants tués, chacun par son test (M06, M31, M35, M51, M63 à M70).
+
+**Décidé** : la collision de MQ-12 est écrite **juste avant la transaction d'écriture** (transaction interposée, même portée,
+créée d'abord) : c'est ce qui tue M06 même sous sa forme « liste relue avant la transaction », qu'une collision posée avant le
+clic laisserait survivre. Le repli « Comportements » est prouvé dans MQ-17, qui manipule déjà le marqueur sans genre.
+
+**Résultats** : `marqueurs.spec.mjs` 4/4 (chromium) ; suite complète au premier passage **396/396** (309 + 87 rejoués sur
+le projet mobile), puis les gardes relancées après la dernière retouche des docs, 90/90 ; campagne : contrôle sain vert, 14
+mutants, 14 tués par leur test.
+
+**Coincé / à vérifier** : relecture visuelle de l'enseignant sur téléphone (captures faites en Pixel 7 émulé, clair et sombre,
+sans débordement ni erreur de console) ; l'aperçu du code prend la taille du texte de la carte qui le porte, la taille exacte
+de la carte d'élève (0,74 rem) n'arrive qu'en v0.14.2.
+
+**Prochaine étape** : relecture et « go » de commit puis de publication ; puis v0.14.2.
+
+---
+
 ## 2026-09-23 (45) — v0.14.0 candidate : marqueurs de séance, le format seul (schéma 4)
 
 Demande : « je te suis » (contrat `docs/avis/AVIS_FORMAT_MARQUEURS.md` validé, 11 points ouverts tranchés) → implémenter la

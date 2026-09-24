@@ -200,7 +200,28 @@ poses, la confirmation les compte (« 4 marqueurs posés ») et « Annuler » le
 quand la transaction avorte après le succès de la requête d'écriture. **Treize mutants** (M01, M02, M03, M05, M07, M08, M09, M10,
 M32, M33, M34, M49, M50 ; 15 exécutions avec les variantes de M49 et M50) rendent ces tests rouges, chacun par son propre test.
 
-Total de la suite : **305 tests** (+ 87 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs`, `grilles-robustesse.spec.mjs` et `audit-independant.spec.mjs`).
+**`marqueurs.spec.mjs` (5)** — marqueurs de séance, **v0.14.1 « le vocabulaire »** (contrat §6.5 et §11.2) : l'écran
+`#/marqueurs`. Même `beforeEach` dérivé de `io.STORES`. **MQ-12** : un code court déjà pris sous une autre forme (« éq » contre
+« EQ ») est refusé, avec son motif, par la relecture **dans** la transaction — la collision est écrite juste avant la
+transaction d'écriture, derrière une vue ouverte sur un vocabulaire vide ; rien n'est écrit, la saisie reste ; le genre est
+verrouillé en modification et n'est jamais transmis, même forcé par programme ; le même code est accepté après renommage du
+premier (témoin). **MQ-17** : un champ inconnu survit au renommage par le formulaire ; `ecrireMarqueur(id, { id: 'autre' })`
+n'écrit que la ligne `id` ; un marqueur importé sans genre ne s'archive pas (aucun genre par défaut) et, à l'écran, se lit et se
+range « Comportements » comme un genre inconnu, le refus d'« Archiver » étant dit en toast. **MQ-18** : l'amorçage crée les six
+marqueurs proposés par `ecrireMarqueur`, couleurs distinctes pour les rôles et les équipes, puis disparaît dès qu'un marqueur
+existe (même archivé) ; sur une vue périmée (marqueur écrit derrière une liste rendue vide), le geste relit la base, ne crée
+rien, le dit et garde le focus dans la vue ; un « ARB » créé ailleurs juste avant la première écriture donne « 5 marqueurs créés
+sur 6 » et le motif, à l'écran et en toast. **MQ-19** : deux marqueurs actifs de même code (sauvegarde bricolée) sont nommés dans
+la liste (mention sur chaque carte du groupe) et dans le formulaire ; archiver l'un depuis l'alerte, au clavier, libère l'autre,
+qui se modifie de nouveau, et le focus reste dans la vue ; archivés en dernier dans un genre ; « Restaurer » un marqueur dont le
+code est repris est refusé et dit, puis réussit une fois le code libéré. **MQ-20** : une composition de clavier (type Gboard,
+par CDP) en minuscules n'est jamais réécrite pendant la frappe, le champ s'affiche en majuscules et « ARB » est enregistré ;
+l'aperçu d'un rôle montre son code, qui suit la frappe ; celui d'un comportement ne montre que le repère neutre, sans texte,
+couleur masquée, dans le formulaire et dans la liste. **Vingt-huit mutants** (M06, M31, M35, M51 ; M63 à M70 avec les variantes
+de M66 et M67 ; M71 à M77 avec leurs variantes, revue de la v0.14.1) rendent ces tests rouges, chacun par son propre test (A43
+pour le précache).
+
+Total de la suite : **310 tests** (+ 87 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs`, `grilles-robustesse.spec.mjs` et `audit-independant.spec.mjs`).
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse

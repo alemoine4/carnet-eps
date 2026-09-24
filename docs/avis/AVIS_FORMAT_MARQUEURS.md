@@ -846,7 +846,9 @@ et le bouton « Nouveau marqueur », rien d'autre (§2).
 | Couleur | `select` sur `COULEURS` (`grilles-calcul.js:4`), option par option comme `grilles.js:65`-`:67` | **masqué** quand `genre === 'comportement'`, avec la note « Les comportements n’affichent pas de couleur sur la carte. » |
 
 **Aperçu vivant** : à droite des champs, un `.mq-code` mis à jour à chaque frappe, montrant exactement le rendu de la
-carte d'élève. C'est le seul endroit où l'enseignant voit son code avant le gymnase.
+carte d'élève. C'est le seul endroit où l'enseignant voit son code avant le gymnase. (Précisé par la revue de la
+v0.14.1, §16 : pour un comportement, « le rendu de la carte d'élève » est le repère `.mq-neutre`, sans code ; et les
+majuscules sont affichées par le CSS, appliquées à l'aperçu et à l'enregistrement, jamais réécrites pendant la frappe.)
 
 Enregistrement réussi : `location.hash = '#/marqueurs'` + `toast('Marqueur enregistré.')`. Refus : le motif s'affiche
 dans le `p.statut.statut-erreur`, **rien n'est écrit**, la saisie reste à l'écran.
@@ -1186,6 +1188,9 @@ Gabarits à reprendre : `audit5-lot5.spec.mjs:70`-`:100` (montée de version sur
 | MQ-15 | marqueurs et observations coexistent : poser n'écrit ni observation ni note | **ancres** : dans le même test, une observation ajoutée par la fiche élève fait bouger le compte, et une note écrite fait bouger `notes` |
 | MQ-16 | aucune sortie : le CSV du récapitulatif et le papier ne gagnent pas une colonne ; à l'impression de l'écran d'appel (`page.emulateMedia({ media: 'print' })`, motif `audit5-lot3.spec.mjs:423`), la rangée de la carte n'est pas affichée | l'en-tête CSV produit (`appel.js:621`) est comparé à la liste **dérivée de `STATUTS`**, pas à une chaîne recopiée ; le CSV contient bien les libellés de statut avant de conclure qu'il ne contient pas de marqueur ; en impression, le nom de l'élève de la même carte **reste** affiché (témoin) et un code était visible à l'écran juste avant |
 | MQ-17 | un champ **inconnu** déjà en base sur un marqueur (`famille: 'x'`, écrit directement) survit à un renommage fait par le formulaire ; **et l'identifiant ne vient jamais de `modifs`** : `io.ecrireMarqueur(id, { id: 'autre', libelle: 'X' })`, appelé directement, modifie la ligne `id` et ne crée aucune ligne `'autre'` (§4.4) | le renommage a bien eu lieu (nouveau libellé relu en base) et le champ était présent avant ; la ligne `id` porte bien le libellé `'X'` après l'appel direct (l'écriture a eu lieu), et le magasin compte le même nombre de lignes qu'avant |
+| MQ-18 | **amorçage** (§14, réponse 5 — ajouté en v0.14.1) : sur un vocabulaire vide, « Créer les 6 marqueurs proposés » écrit Arbitre/ARB, Observateur/OBS, Coach/COA (`role`), Équipe 1/E1, Équipe 2/E2 (`groupe`), À recadrer/REC (`comportement`, gris) par `ecrireMarqueur`, couleurs distinctes pour les rôles et les équipes ; le bouton disparaît dès qu'un marqueur existe, **même archivé** ; un échec partiel est **dit** (à l'écran et en toast, marqueur et motif), jamais avalé, et rien n'est doublé ; **sur une vue périmée** (liste rendue sur un vocabulaire vide, marqueur écrit ensuite derrière elle), le geste relit la base : toast « Des marqueurs existent déjà : rien n’a été créé. », aucun marqueur ajouté, focus sur « Nouveau marqueur » (§16, revue de la v0.14.1, R3 et R4) | le vocabulaire est vide avant le clic ; le témoin « un seul marqueur, archivé » affiche bien la liste ; pour la vue périmée, le marqueur est **en base** et le bouton **encore visible** avant le geste, qui part du bouton focalisé ; pour l'échec partiel, une ligne `ARB` est écrite juste avant la première transaction d'écriture (`window.__injecte` relu) |
+| MQ-19 | **doublons lisibles** (§16, « Revue de la v0.14.0 », point 2 — ajouté en v0.14.1) : deux marqueurs actifs de même `cleCourt` entrés par une sauvegarde bricolée sont **nommés** dans la liste (alerte « Codes en double » et mention sur **chaque** carte du groupe) et à l'ouverture de leur formulaire ; archiver l'un depuis l'alerte, **au clavier**, libère le code, laisse le focus dans la vue (sur le bouton de la carte traitée) et l'autre se modifie de nouveau ; **archivés en dernier** dans un genre ; « Restaurer » un marqueur dont le code est repris est **refusé et dit** en toast (il reste archivé), puis réussit une fois le code libéré (§16, revue de la v0.14.1, R3, R5, R7, R8) | le blocage existe avant l'écran : `ecrireMarqueur` refuse de modifier l'un comme l'autre (motifs relus) ; un troisième marqueur sans doublon ne porte aucune mention (témoin) ; le bouton de l'alerte a le focus, atteint par Tab, avant Entrée ; la modification finale est relue en base ; le code est libre (archivage relu en base) avant la restauration témoin |
+| MQ-20 | **code court et aperçu « sur la carte »** (§16, revue de la v0.14.1, R1, R2, R6 — ajouté en v0.14.1) : une composition de clavier (type Gboard, `Input.imeSetComposition` puis `Input.insertText` par CDP) en minuscules n'est jamais réécrite pendant la frappe, le champ s'affiche en majuscules (`text-transform`) et « ARB » est enregistré, jamais « AARARB » ; l'aperçu d'un rôle montre son code, en majuscules, qui suit la frappe et l'effacement ; celui d'un comportement montre le repère `.mq-neutre` **sans texte** (taille réelle, encre pleine), jamais le code, couleur masquée et phrase « le sens reste dans la feuille de l’élève », dans le formulaire **et** sur la carte de la liste ; un genre absent ou inconnu fait de même (MQ-17) | le champ a le focus avant la composition ; genre « rôle » et couleur visibles au départ ; témoin dans le même test : revenu au rôle, le code et la couleur reviennent, et la carte d'un rôle de la liste montre son code |
 
 ### 11.3 `marqueurs-ecran.spec.mjs` (chromium **et** mobile Pixel 7) — le geste au gymnase
 
@@ -1339,7 +1344,7 @@ par son test ») serait intenable dès la v0.14.0, dont les écrans n'existent p
 | Version | Contenu | Tests livrés | Mutants revendiqués | Ce qu'elle referme |
 |---|---|---|---|---|
 | **v0.14.0 — le format** | `DB_VERSION` 4, les deux magasins, `marqueurs-calcul.js` (constantes, validateurs, `cleCourt`), `appliquerMarquages`, `ecrireMarqueur`, `CHAMPS_TEXTE`, `validerExport`, `LIBELLES`, cascades et aperçus (dont `apercuSuppressionSeance` et la confirmation existante de `sequences.js:225`), message `VersionError`, textes de suppression sans énumération (`sequences.js:246`, `eleves.js:576`, §8), service-worker (**`ASSETS` += `./js/marqueurs-calcul.js` seulement**), `docs/modele-donnees.md`, D014, `docs/deploiement.md`. **Aucun écran nouveau** | `marqueurs-migration.spec.mjs` : MIG-01 à MIG-07, MIG-09, MIG-10 | M01, M02, M03, M05, M07, M08, M09, M10, M32, M33, M34, M49, M50 | la décision 18 et la décision 17. Après elle, la fenêtre peut se refermer sans rien coûter |
-| **v0.14.1 — le vocabulaire** | route `#/marqueurs`, liste, formulaire, archivage, aperçu vivant ; `main.js`, gardes de routes ; service-worker (**`ASSETS` += `./js/modules/marqueurs.js`**, créé dans cette version) | `marqueurs.spec.mjs` (créé) : MQ-12, MQ-17 | M06, M31, M35, M51 | décisions 7, 10, 13 côté saisie |
+| **v0.14.1 — le vocabulaire** | route `#/marqueurs`, liste, formulaire, archivage, aperçu vivant ; **amorçage des 6 marqueurs proposés** (§14, réponse 5) ; **doublons lisibles** (§16, revue de la v0.14.0, point 2) ; `main.js`, gardes de routes ; service-worker (**`ASSETS` += `./js/modules/marqueurs.js`**, créé dans cette version) | `marqueurs.spec.mjs` (créé) : MQ-12, MQ-17, **MQ-18, MQ-19, MQ-20** | M06, M31, M35, M51 ; **M63 à M70** (amorçage, doublons lisibles, genre verrouillé, repli « Comportements », précache) ; **M71 à M77** (revue de la v0.14.1, §16) — définis dans la campagne de la version, hors suivi Git | décisions 7, 10, 13 côté saisie |
 | **v0.14.2 — poser et relire** | rangée dans la feuille « ⋯ », refus « pas encore appelé », file d'attente et échecs durables, rangée sur la carte, `codesCarte`, CSS, impression | MQ-01 à MQ-11, MQ-13, MQ-15, MQ-16 ; MIG-08 (ajouté à `marqueurs-migration.spec.mjs`) ; `marqueurs-ecran.spec.mjs` (créé) : ECR-01, ECR-07 à ECR-10, ECR-12 à ECR-16 | M04, M11 à M17, M21 (sans sa variante, §6.1), M22 à M24, M28 à M30, M38, M39, M42 (feuille), M43, M44, M45, M47, M48 | décisions 1, 2, 4, 7, 8, 9, 10, 14, 15, 16 côté usage |
 | **v0.14.3 — le mode tampon** | armement, trois signaux, raccourcis suspendus, quatre sorties | ECR-02 à ECR-06, ECR-11, ECR-17 à ECR-19 | M18, M19, M20, M40, M41, M42 (armement), M46 | décision 3 |
 | **v0.14.4 — la reprise** | bouton « Reprendre les marqueurs de la séance précédente », confirmation chiffrée, annulation exacte | MQ-14 | M25, M26, M27, M36, M37 | décision 6 |
@@ -1629,6 +1634,47 @@ Revue adversariale du code de la v0.14.0 avant commit (4 lentilles, 2 réfutateu
 2. **v0.14.1** — une sauvegarde bricolée peut contenir deux marqueurs actifs de même code court (l'import ne contrôle que
    la forme, §9.2) ; `ecrireMarqueur` refuse ensuite de modifier l'un comme l'autre. L'écran du vocabulaire doit rendre ce
    blocage lisible (nommer le doublon, proposer d'archiver l'un des deux) au lieu d'un refus muet.
+
+### v0.14.1 — deux textes provisoires, à rétablir en v0.14.2
+
+Publiée seule, la v0.14.1 permet de préparer le vocabulaire mais pas encore de poser un marqueur. Pour ne rien
+promettre d'absent : la carte « Plus » dit « Préparez vos rôles, équipes et comportements ; leur pose pendant l'appel
+arrive bientôt » (au lieu du texte du §6.5, « posés d'un tap pendant l'appel »), et l'introduction de l'écran porte un
+paragraphe `#mq-bientot`. **La v0.14.2 rétablit le texte du §6.5 et retire `#mq-bientot`** (repérés en commentaire
+dans `main.js` et `modules/marqueurs.js`).
+
+### Revue de la v0.14.1 (2026-09-24)
+
+Revue adversariale du code de la v0.14.1 avant commit (lentilles usage, accessibilité, preuves ; 2 réfutateurs par
+constat) : **8 constats retenus**, tous corrigés avant commit. Le format n'est pas touché (`io.js`,
+`marqueurs-calcul.js` inchangés).
+
+- **R1 — majuscules « à la saisie » (§6.5), précisées.** Réécrire `value` à chaque `input` doublait les lettres avec un
+  clavier qui compose le mot en cours (type Gboard) : « arb » tapé en minuscules donnait « AARARB », refusé à
+  l'enregistrement. Désormais le champ **s'affiche** en majuscules (`text-transform: uppercase`) et la valeur est mise en
+  majuscules (`toLocaleUpperCase('fr')`) **dans l'aperçu et à l'enregistrement**, jamais pendant la frappe. C'est la
+  lecture retenue de « mis en majuscules à la saisie » : ce que l'enseignant voit et ce qui est enregistré sont en
+  majuscules ; la valeur brute du champ ne l'est plus. Preuve : MQ-20, par composition CDP (`fill()` n'en ouvre aucune).
+- **R2 + R6 — l'aperçu d'un comportement. Ambiguïté du §6.5 tranchée par la décision 10.** Le §6.5 demande « un aperçu
+  `.mq-code` identique à celui de la carte d'élève » sans distinguer les genres, alors que la décision 10, le §5.1
+  (points 2 et 5), le §5.2 et le §7 (point 3) fixent le rendu d'un comportement — genre absent ou inconnu compris — à un
+  repère neutre **sans code**. L'aperçu montrait donc « REC » là où la carte d'élève n'affichera qu'un point. **La
+  décision 10 prime** : pour un marqueur rangé « Comportements », l'aperçu (formulaire **et** cartes de la liste) rend
+  `span.mq-neutre`, sans texte, suivi de « un repère neutre, sans code ; le sens reste dans la feuille de l’élève. » Le
+  texte de la carte de liste (`REC · Comportements`) garde le code : c'est l'écran de préparation. La règle `.mq-neutre`
+  du §7 point 3 est livrée dès la v0.14.1, **avec `display: inline-block` et `vertical-align: middle` en plus** : hors
+  de la rangée flex de la carte d'élève, un `span` sans eux n'a aucune taille. Preuves : MQ-20 (formulaire, liste,
+  témoin « rôle » dans le même test), MQ-17 (genre absent ou inconnu).
+- **R3 — focus.** Archiver depuis l'alerte « Codes en double » (boutons sans `id`) ou lancer l'amorçage sur un
+  vocabulaire déjà rempli (bouton disparu) laissait tomber le focus sur `<body>`. Cause commune traitée une fois : après
+  le nouveau rendu, si le focus n'est plus dans la vue, il va au bouton « Archiver / Restaurer » du marqueur traité,
+  sinon à « Nouveau marqueur ». Preuves : MQ-19 (au clavier, Tab puis Entrée réels), MQ-18 (vue périmée).
+- **R4, R5, R7, R8 — preuves manquantes**, ajoutées à MQ-18 (amorçage sur une vue périmée) et MQ-19 (« Restaurer »
+  refusé puis réussi ; archivés en dernier dans un genre ; mention « Code en double » sur chaque carte du groupe).
+- Mutants **M71 à M77** (avec variantes), chacun tué par son test.
+- **Vu à l'écran après la revue.** Au téléphone, la phrase de l'aperçu d'un comportement emportait le repère à la ligne,
+  loin de « Sur la carte : » : `.mq-apercu` est passé en `display: contents`, le repère reste à côté de son étiquette et
+  seule la phrase passe à la ligne. Preuve : MQ-20 (mesure à 360 px, sur les deux profils) ; mutant **M78**.
 
 ---
 

@@ -492,12 +492,12 @@ test('H05 — le service-worker ne nettoie que ses propres caches (origine parta
   expect(etat.cles).toContain(`carnet-eps-${etat.version}`);
 });
 
-test('C33 — règle n°1 de la BIBLE : aucune requête hors de l’origine sur les 13 routes, CSP en place', async ({ page }) => {
+test('C33 — règle n°1 de la BIBLE : aucune requête hors de l’origine sur les 14 routes, CSP en place', async ({ page }) => {
   const origine = new URL(page.url()).origin; // http://localhost:8160 (beforeEach a déjà navigué)
   const externes = [];
   page.on('request', (r) => { const u = new URL(r.url()); if (u.protocol !== 'data:' && u.origin !== origine) externes.push(r.url()); });
   await page.reload(); // le chargement complet (index.html, CSS, modules) est observé lui aussi
-  for (const r of ['accueil', 'appel', 'eleves', 'notes', 'edt', 'plus', 'suivi', 'aide', 'reglages', 'sauvegarde', 'sequences', 'inaptitudes', 'documents']) {
+  for (const r of ['accueil', 'appel', 'eleves', 'notes', 'edt', 'plus', 'suivi', 'aide', 'reglages', 'sauvegarde', 'sequences', 'inaptitudes', 'documents', 'marqueurs']) {
     await page.goto('/#/' + r);
     await expect(page.locator('#vue')).not.toBeEmpty();
   }

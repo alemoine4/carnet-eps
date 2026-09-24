@@ -16,14 +16,15 @@ import { initialiser as initInaptitudes } from './modules/inaptitudes.js';
 import { initialiser as initGrilles } from './modules/grilles.js';
 import { initialiser as initNotes } from './modules/notes.js';
 import { initialiser as initDocuments } from './modules/documents.js';
+import { initialiser as initMarqueurs } from './modules/marqueurs.js';
 
 // Nom accessible de la zone de contenu par route → annoncé au lecteur d'écran à chaque navigation
 // (la zone #vue reçoit le focus dans afficherVue). Routes principales (onglets) + routes enfants
 // (accessibles depuis « Plus ») : UNE seule liste, dérivée des titres (audit 2026-09-07, C42).
-const TITRES = { grilles: 'Grilles d’évaluation', accueil: 'Aujourd’hui', appel: 'Appel', eleves: 'Élèves', notes: 'Notes', edt: 'Emploi du temps', plus: 'Plus', suivi: 'Suivi', sauvegarde: 'Sauvegarde', reglages: 'Réglages', sequences: 'Séquences', inaptitudes: 'Inaptitudes', documents: 'Documents', aide: 'Aide' };
+const TITRES = { grilles: 'Grilles d’évaluation', accueil: 'Aujourd’hui', appel: 'Appel', eleves: 'Élèves', notes: 'Notes', edt: 'Emploi du temps', plus: 'Plus', suivi: 'Suivi', sauvegarde: 'Sauvegarde', reglages: 'Réglages', sequences: 'Séquences', inaptitudes: 'Inaptitudes', documents: 'Documents', aide: 'Aide', marqueurs: 'Marqueurs de séance' };
 const ROUTES = Object.keys(TITRES);
 // EDT déplacé sous « Plus » ; les inaptitudes sont désormais frontées par l'onglet « Suivi ».
-const PARENT = { grilles: 'notes', sauvegarde: 'plus', reglages: 'plus', sequences: 'plus', inaptitudes: 'suivi', documents: 'plus', aide: 'plus', edt: 'plus' };
+const PARENT = { grilles: 'notes', sauvegarde: 'plus', reglages: 'plus', sequences: 'plus', inaptitudes: 'suivi', documents: 'plus', aide: 'plus', edt: 'plus', marqueurs: 'plus' };
 
 // ---- Vue « Plus » (menu des modules secondaires) ----
 
@@ -34,6 +35,8 @@ enregistrerVue('plus', (c) => {
     lien('grilles', carte('Grilles d’évaluation', 'Critères, niveaux de maîtrise, pondérations et notes sur 20.')),
     lien('edt', carte('Emploi du temps', 'Créneaux hebdomadaires, semaines A/B, installations.')),
     lien('sequences', carte('Séquences & séances', 'APSA, champs d’apprentissage, séances numérotées automatiquement.')),
+    // v0.14.1 : la pose n'existe pas encore — le texte du contrat (« posés d’un tap pendant l’appel ») revient en v0.14.2.
+    lien('marqueurs', carte('Marqueurs de séance', 'Préparez vos rôles, équipes et comportements ; leur pose pendant l’appel arrive bientôt.')),
     lien('documents', carte('Documents', 'Bibliothèque locale : fiches, protocoles, convocations — photo, PDF ou lien.')),
     lien('sauvegarde', carte('Sauvegarde', 'Export / import JSON complet — le transfert PC ↔ Android et le filet de sécurité.')),
     lien('reglages', carte('Réglages', 'Établissement, année scolaire, thème, stockage, mises à jour.')),
@@ -141,6 +144,7 @@ initInaptitudes();
 initNotes();
 initGrilles();
 initDocuments();
+initMarqueurs();
 
 // ---- Router (hash) — segments : #/eleves/fiche/<id> → route 'eleves', params ['fiche','<id>'] ----
 

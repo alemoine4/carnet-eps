@@ -730,6 +730,72 @@ fieldset.groupe legend {
 .btn-eleve[data-statut="oubli_tenue"] .badge-statut { background: var(--stbf-oubli_tenue, var(--stb-oubli_tenue)); color: var(--stbt-oubli_tenue, var(--c-sur-accent)); }
 .btn-eleve[data-statut="infirmerie"] .badge-statut { background: var(--stbf-infirmerie, var(--stb-infirmerie)); color: var(--stbt-infirmerie, var(--c-sur-accent)); }
 
+/* ---- Marqueurs de séance : le code court (v0.14.1, écran du vocabulaire ; la carte d'élève le
+   reprendra en v0.14.2). Contraste par construction (contrat AVIS_FORMAT_MARQUEURS §7, point 2) :
+   le texte est TOUJOURS en encre pleine, la couleur ne porte que la bordure et une teinte à 12 %.
+   La couleur arrive par data-niveau-couleur (pont générique plus bas), jamais par element.style. ---- */
+.mq-code {
+  display: inline-block;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--c-texte);
+  border: 1.5px solid var(--niveau-couleur, var(--c-bordure));
+  background: color-mix(in srgb, var(--niveau-couleur, transparent) 12%, var(--c-surface));
+}
+
+/* Écran du vocabulaire : titre de genre entre les cartes, titre de carte d'un marqueur, et le champ
+   « Code court » suivi de son aperçu vivant sur une seule ligne. */
+.mq-genre {
+  font-size: 1rem;
+  margin: 18px 0 8px;
+}
+
+.carte .mq-titre {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+}
+
+.mq-ligne-code {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mq-ligne-code input {
+  flex: 0 1 7em;
+  min-width: 0;
+  text-transform: uppercase; /* majuscules AFFICHÉES : la valeur n'est jamais réécrite pendant la frappe (revue v0.14.1, R1) */
+}
+
+/* L'aperçu ne fait pas bloc dans la rangée : ses nœuds (code, ou repère + phrase) y sont rangés un à un.
+   Sinon, au téléphone, la phrase d'un comportement emportait le repère à la ligne, loin de « Sur la
+   carte : » (vu à l'écran, Pixel 7) ; là, seule la phrase passe à la ligne. */
+.mq-apercu {
+  display: contents;
+}
+
+/* Mention provisoire de l'écran du vocabulaire (v0.14.1 seulement, retirée en v0.14.2 avec son texte) :
+   un paragraphe à part, aligné sur le texte de la carte, plus petit — pas la suite du paragraphe. */
+.carte .mq-provisoire {
+  margin-top: 10px;
+  font-size: 0.85rem;
+}
+
+/* Repère d'un comportement (contrat §7, point 3) : même forme, même encre PLEINE pour tous, aucun texte
+   ni couleur parlante (décision 10). `display` et `vertical-align` en plus de la règle du contrat : hors
+   de la rangée flex de la carte d'élève (écran du vocabulaire), un span sans eux n'aurait aucune taille. */
+.mq-neutre {
+  display: inline-block;
+  vertical-align: middle;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--c-texte);
+}
+
 /* ---- Feuille (menu de statuts, <dialog> natif) ---- */
 
 /* Feuille modale = <dialog> natif (helper ouvrirFeuille) : menu d'appel, observations,

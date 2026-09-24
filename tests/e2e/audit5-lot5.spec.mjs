@@ -512,7 +512,7 @@ test('C41 / C42 / C54 / C43 — dédoublonnages : ligne d’alerte partagée, un
   // C42 : une seule liste de routes, dérivée des titres (garde de source, comme pour le service-worker) et,
   // route par route, le nom accessible attendu — une route présente dans une liste et absente de l'autre serait rouge.
   expect(await (await page.request.get('/js/main.js')).text()).toContain('const ROUTES = Object.keys(TITRES)'); // avant : deux listes en parallèle
-  const TITRES = { accueil: 'Aujourd’hui', appel: 'Appel', eleves: 'Élèves', notes: 'Notes', edt: 'Emploi du temps', plus: 'Plus', suivi: 'Suivi', sauvegarde: 'Sauvegarde', reglages: 'Réglages', sequences: 'Séquences', inaptitudes: 'Inaptitudes', documents: 'Documents', aide: 'Aide' };
+  const TITRES = { accueil: 'Aujourd’hui', appel: 'Appel', eleves: 'Élèves', notes: 'Notes', edt: 'Emploi du temps', plus: 'Plus', suivi: 'Suivi', sauvegarde: 'Sauvegarde', reglages: 'Réglages', sequences: 'Séquences', inaptitudes: 'Inaptitudes', documents: 'Documents', aide: 'Aide', marqueurs: 'Marqueurs de séance' };
   for (const [r, titre] of Object.entries(TITRES)) {
     await page.goto('/#/' + r);
     await expect(page.locator('#vue')).toHaveAttribute('aria-label', titre);
@@ -653,7 +653,7 @@ test('C57 / C59 — la documentation suit le code : restrictions, champs EDT, pr
   expect(readme).toContain('app.localhost'); // avant : « [::1] » alors que le code essaie app.localhost en premier
   // Comptes dérivés des SIX specs (tests imbriqués dans un describe compris), par fichier et au total (revue du lot 5).
   const specs = readdirSync(new URL('./', import.meta.url)).filter((f) => f.endsWith('.spec.mjs'));
-  expect(specs.length).toBe(19);
+  expect(specs.length).toBe(20);
   let total = 0;
   for (const f of specs) {
     const n = (lire('./' + f).match(/^\s*test\(/gm) || []).length;

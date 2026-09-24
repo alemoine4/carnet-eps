@@ -4,6 +4,43 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-24 — v0.14.1 : marqueurs de séance, le vocabulaire — candidate, NON publiée
+
+Deuxième des cinq paliers du contrat `docs/avis/AVIS_FORMAT_MARQUEURS.md`. **Aucun changement de format** : schéma 4 et
+`DB_VERSION` inchangés, `ecrireMarqueur` et la validation des sauvegardes intacts. On ne pose encore aucun marqueur (v0.14.2).
+
+- **Nouvel écran « Marqueurs de séance »** (Plus → Marqueurs de séance, `#/marqueurs`) : une carte d'introduction (un marqueur vit
+  le temps d'une séance ; renommer sert à corriger une faute, changer de sens = nouveau marqueur), puis le vocabulaire groupé
+  en Rôles, Équipes, Comportements, archivés en dernier, chacun avec l'aperçu de son code. Formulaire : libellé (40 caractères),
+  code court (3 caractères, mis en majuscules à la saisie, unique quelle que soit sa forme : « É1 » = « E1 »), genre choisi à
+  la création puis **verrouillé**, couleur masquée pour un comportement ; aperçu vivant du code. « Archiver » / « Restaurer »,
+  **aucune suppression**. Un refus est dit avec son motif et rien n'est écrit.
+- **Amorçage** (réponse 5 de l'enseignant) : sur un vocabulaire vide, « Créer les 6 marqueurs proposés » crée Arbitre (ARB),
+  Observateur (OBS), Coach (COA), Équipe 1 (E1), Équipe 2 (E2) et À recadrer (REC), couleurs distinctes pour les rôles et
+  les équipes. Le bouton disparaît dès qu'un marqueur existe, même archivé. Un échec partiel (code créé entre-temps sur un
+  autre écran) est **dit**, à l'écran et en toast, avec le marqueur non créé et son motif.
+- **Doublons lisibles** (revue de la v0.14.0, point 2) : deux marqueurs actifs de même code, venus d'une sauvegarde
+  bricolée, ne pouvaient plus être modifiés sans explication. L'écran les **nomme** (alerte « Codes en double », mention sur
+  chaque carte, rappel à l'ouverture du formulaire) et propose d'archiver l'un ou l'autre, ce qui libère le code.
+- Un marqueur de genre absent ou inconnu (sauvegarde d'une autre version) se lit et se range « Comportements », jamais
+  « undefined » ; il ne peut être ni modifié ni archivé, et l'écran le dit.
+- Service-worker : `ASSETS` += `./js/modules/marqueurs.js` (créé dans cette version).
+- **Revue adversariale avant commit, 8 constats corrigés** : le code court n'est plus réécrit pendant la frappe (un clavier
+  qui compose le mot, type Gboard, transformait « arb » en « AARARB ») — il s'affiche en majuscules et s'enregistre en
+  majuscules ; l'aperçu d'un comportement (genre absent ou inconnu compris) montre le **repère neutre** de la carte d'élève,
+  jamais son code, avec « le sens reste dans la feuille de l'élève » (décision 10), dans le formulaire et dans la liste ; le
+  focus ne tombe plus sur la page après un archivage depuis l'alerte « Codes en double » ni après un amorçage refusé ; preuves
+  ajoutées pour l'amorçage sur une vue périmée, « Restaurer » (refusé puis réussi), l'ordre « archivés en dernier » et la
+  mention sur chaque carte en double. Contrat : §16, « Revue de la v0.14.1 ».
+- **Vu à l'écran après la revue** (Pixel 7 émulé, clair et sombre) : dans le formulaire d'un comportement, la phrase de
+  l'aperçu emportait le repère à la ligne, loin de « Sur la carte : » ; le repère reste désormais à côté de son étiquette
+  et seule la phrase passe à la ligne, calée sur le champ. La mention provisoire de l'écran est un paragraphe à part,
+  aligné sur le texte de la carte (elle était centrée sous un texte aligné à gauche).
+- **Preuves** : `tests/e2e/marqueurs.spec.mjs` (5 tests : MQ-12, MQ-17, MQ-18, MQ-19, MQ-20) ; gardes re-réglées (20 fichiers de
+  tests, 14 routes parcourues par C33 et le smoke-test 1, table des titres de C42, comptes des README) ; 29 mutants (M06, M31,
+  M35, M51 ; M63 à M70 avec deux variantes ; M71 à M77 avec sept variantes ; M78), tous tués par leur propre test, contrôle
+  sain vert.
+
 ## 2026-09-23 — v0.14.0 : marqueurs de séance, le format seul (schéma 4) — candidate, NON publiée
 
 Premier des cinq paliers du contrat `docs/avis/AVIS_FORMAT_MARQUEURS.md` (validé le 2026-09-23). **Aucun écran nouveau** :

@@ -5,7 +5,7 @@
    ⚠ Incrémenter VERSION à chaque déploiement (synchroniser avec VERSION_APP de state.js).
    Non enregistré sur localhost (voir main.js, décision D008). */
 
-const VERSION = '0.14.0';
+const VERSION = '0.14.1';
 const CACHE = `carnet-eps-${VERSION}`;
 const ASSETS = [
   './',
@@ -33,6 +33,7 @@ const ASSETS = [
   './js/modules/notes.js',
   './js/modules/accueil.js',
   './js/modules/documents.js',
+  './js/modules/marqueurs.js', // v0.14.1 — écran du vocabulaire, créé dans cette version (jamais une entrée avant son fichier)
   './js/modules/observations.js',
   './data/exemple_eleves_pronote.csv',
   './assets/icons/icon.svg',

@@ -27,7 +27,7 @@ test.beforeEach(async ({ page }) => {
 test('1. chargement sans erreur console + navigation complète', async ({ page }) => {
   await page.reload(); // second chargement observé lui aussi (écouteurs posés dans beforeEach)
   for (const r of ['accueil', 'appel', 'eleves', 'notes', 'edt', 'plus', 'suivi', 'aide',
-    'reglages', 'sauvegarde', 'sequences', 'inaptitudes', 'documents']) {
+    'reglages', 'sauvegarde', 'sequences', 'inaptitudes', 'documents', 'marqueurs']) {
     await page.goto('/#/' + r);
     await expect(page.locator('#vue')).not.toBeEmpty();
   }
