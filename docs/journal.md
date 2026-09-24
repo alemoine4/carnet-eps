@@ -14,6 +14,23 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-24 (48) — B20 instable en intégration continue : un vrai vol de focus
+**Fait** : en surveillant la CI de la v0.14.1 (`afbec3c`, verte), la liste des passages a montré que celle du commit
+`dc7e359` (documentation de la publication de la v0.14.0, 2026-09-23) était ROUGE : un seul test, **B20 sur le profil
+mobile** (« changer un select sur la fiche élève re-rend la vue sans perdre le focus »), focus attendu sur `f-actif`, trouvé
+sur `vue`. Aucun code applicatif changé depuis le passage vert précédent : test instable, que je n'avais pas vu passer.
+**Diagnostic** : la fiche élève insère sa carte d'identité (dont `#f-actif`) puis lit l'historique (`parIndex('appels')`,
+séances, séquences, trimestres…) ; `afficherVue` donne le focus à `#vue` à la FIN du rendu. B20 posait son focus dès que
+`#f-actif` existait : sur une machine lente, `#vue` le reprenait, et `rerendre` relisait « vue ». **Reproduit de façon
+déterministe** (spec temporaire `_b20`) en tenant une transaction `readwrite` sur `appels` pendant la navigation :
+prémisse assertée (rendu inachevé au moment du focus), même message que la CI, sur les deux profils.
+**Décidé** : B20 attend la fin du rendu (focus sur `#vue`) avant de poser le sien — il prouve `rerendre`, sur une vue au
+repos ; mutant « `rerendre` ne rend plus le focus » tué sur les deux profils ; B20 ×5 sur chaque profil, 10/10 verts. Le
+**défaut réel** (le focus que l'enseignant pose pendant un chargement lui est repris) est consigné dans `TODO.md` avec sa
+recette : il touche `afficherVue`, donc toutes les vues, dont plusieurs posent elles-mêmes un focus — pas de correctif de
+dernière minute dans la v0.14.1.
+**Prochaine étape** : CI verte sur ce commit, puis « go » de publication de la v0.14.1.
+
 ## 2026-09-24 (47) — v0.14.1 : revue adversariale, 8 constats corrigés avant commit
 
 Demande : corriger les 8 constats retenus par la revue adversariale de la v0.14.1 (R1 à R8), sans toucher au format

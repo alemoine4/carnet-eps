@@ -185,6 +185,11 @@ test('B19 — les boutons qui déplient un formulaire exposent aria-expanded', a
 test('B20 — changer un select sur la fiche élève re-rend la vue sans perdre le focus', async ({ page }) => {
   await seedClasse(page, 1);
   await page.goto('/#/eleves/fiche/e0');
+  // Attendre la FIN du rendu (afficherVue donne alors le focus à #vue) : la fiche insère #f-actif AVANT de
+  // lire l'historique, et un focus posé entre les deux était repris par #vue — B20 échouait alors sur une
+  // machine lente (CI du 2026-09-23, profil mobile) sans rien dire de rerendre. Ce vol de focus pendant le
+  // rendu est un défaut réel, suivi à part (TODO.md) ; ce test-ci prouve rerendre, sur une vue au repos.
+  await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe('vue');
   await page.locator('#f-actif').focus();
   await page.locator('#f-actif').selectOption('parti');
   await expect(page.locator('#vue')).toContainText('parti');
