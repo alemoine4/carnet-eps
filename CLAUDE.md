@@ -36,7 +36,7 @@ Cadrage : `docs/brief.md` + `docs/fonctionnalites.md`. Avancement : `docs/roadma
 
 | Quoi | Où en est-on |
 |---|---|
-| **Adresse de production** | https://carnet-eps.github.io/ (organisation `carnet-EPS`), **schéma IndexedDB 4** (depuis le 2026-09-23 : plus jamais de version en `DB_VERSION` 3), version en ligne **v0.14.0** (2026-09-23 ; le format des marqueurs, aucun écran — v0.14.1 à v0.14.4 à venir) |
+| **Adresse de production** | https://carnet-eps.github.io/ (organisation `carnet-EPS`), **schéma IndexedDB 4** (depuis le 2026-09-23 : plus jamais de version en `DB_VERSION` 3), version en ligne **v0.14.1** (2026-09-25 ; l’écran du vocabulaire des marqueurs, sans pose — v0.14.2 à v0.14.4 à venir ; ses deux textes provisoires sont à rétablir en v0.14.2, contrat §16) |
 | **Branche qui publie** | `grilles-schema3` (et non `main`) |
 | **Ancienne adresse** | https://alemoine4.github.io/carnet-eps/ en **v0.12.22**, schéma 2, bandeau « a déménagé » (branche `demenagement`) — **gelée** |
 | **Données de l'enseignant** | **aucune donnée saisie à ce jour** (dit le 2026-09-22) : plus rien à migrer, la condition « attendre la fin de la migration » est levée |
