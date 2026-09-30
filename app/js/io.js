@@ -272,6 +272,67 @@ export async function mettreAJourEvaluation(id, modifs = {}, operations = [], at
   });
 }
 
+// « Terminer l'appel » et pré-remplissage des inaptitudes : COMPLÉTER l'appel d'une séance sans jamais remplacer un appel
+// existant (contrat marqueurs §2 point 1, §14 réponse 3). Chaque candidat n'est écrit que si son élève n'a AUCUN appel dans
+// la base relue DANS la transaction : un statut posé entre-temps par un autre onglet n'est plus écrasé. L'appel existant est
+// retrouvé par (séance, élève), comme la vue le repère, jamais par sa clé : une sauvegarde tierce peut ranger un élève sous
+// la clé d'un autre ; cette clé occupée rend le candidat incohérent (revue v0.14.2, R03). Motif de mettreAJourEvaluation :
+// lectures émises d'abord, contrôle et écritures dans le onsuccess de la dernière.
+// candidats = [{ id, seanceId, eleveId, statut, minutesRetard, commentaire }] (construits par la vue)
+// Résout { creees, deja, ecartes } sur tx.oncomplete : creees = appels écrits ; deja = appels TROUVÉS en base, rendus tels
+// quels ; ecartes = eleveId supprimés entre-temps (rien d'écrit pour eux). Tout ou rien : séance supprimée, candidat incohérent
+// (dont une clé prise par l'appel d'un autre élève).
+export async function completerAppels(seanceId, candidats = []) {
+  const db = await ouvrirDB();
+  return new Promise((resolve, reject) => {
+    let resultat;
+    let erreur;
+    // `seances` et `eleves` sont LUS, jamais écrits (une transaction ne mélange pas les modes). UNE transaction (A27).
+    const tx = db.transaction(['seances', 'eleves', 'appels'], 'readwrite');
+    const appels = tx.objectStore('appels');
+    const reqSeance = tx.objectStore('seances').get(seanceId);
+    const elevesStore = tx.objectStore('eleves');
+    const reqEleves = new Map();
+    for (const c of candidats) {
+      if (typeof c?.eleveId === 'string' && !reqEleves.has(c.eleveId)) reqEleves.set(c.eleveId, elevesStore.get(c.eleveId));
+    }
+    const reqAppels = appels.index('seanceId').getAll(seanceId); // dernière émise : son onsuccess porte tout
+    tx.oncomplete = () => resolve(resultat);
+    tx.onabort = () => reject(erreur || motifEcriture(tx.error || new Error('écriture interrompue')));
+    tx.onerror = (e) => { erreur ||= motifEcriture(e.target?.error || tx.error); };
+    reqAppels.onsuccess = () => {
+      try {
+        if (!reqSeance.result) throw new Error('séance supprimée entre-temps : rechargez la page');
+        const enBase = new Map(reqAppels.result.map((a) => [a.eleveId, a])); // par ÉLÈVE, comme la vue (R03)
+        const cles = new Set(reqAppels.result.map((a) => a.id));
+        const creees = [];
+        const deja = [];
+        const ecartes = [];
+        for (const c of candidats) {
+          if (!c || c.seanceId !== seanceId || typeof c.eleveId !== 'string' || !c.eleveId
+            || c.id !== `${seanceId}_${c.eleveId}`
+            || typeof c.statut !== 'string' || !c.statut) {
+            throw new Error('appel incohérent avec sa séance : rechargez la page');
+          }
+          const actuel = enBase.get(c.eleveId);
+          if (actuel) { deja.push(actuel); continue; } // JAMAIS réécrit : c'est tout l'objet de la fonction
+          // Clé prise par l'appel d'un AUTRE élève (sauvegarde tierce) : l'écrire l'écraserait — incohérent, tout est refusé.
+          if (cles.has(c.id)) throw new Error('appel incohérent avec sa séance : rechargez la page');
+          if (!reqEleves.get(c.eleveId)?.result) { ecartes.push(c.eleveId); continue; }
+          appels.put(c);
+          enBase.set(c.eleveId, c);
+          cles.add(c.id);
+          creees.push(c);
+        }
+        resultat = { creees, deja, ecartes };
+      } catch (e) {
+        erreur = motifEcriture(e); // parité avec ecrireLot : un quota levé par put() garde son conseil
+        tx.abort();
+      }
+    };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Marqueurs de séance (schéma 4) — contrat docs/avis/AVIS_FORMAT_MARQUEURS.md, §4.
 // Deux magasins dédiés : le vocabulaire (`marqueurs`) et les poses (`marquages`, une ligne par
@@ -295,9 +356,16 @@ export async function appliquerMarquages(seanceId, operations = [], options = {}
   return new Promise((resolve, reject) => {
     let resultat;
     let erreur;
-    const tx = db.transaction(['appels', 'marqueurs', 'marquages'], 'readwrite');
-    // `appels` n'est ouvert en écriture que parce qu'une transaction ne mélange pas les modes : il est
-    // LU, jamais écrit — statut, minutes de retard et commentaire sont préservés par construction.
+    const tx = db.transaction(['seances', 'eleves', 'appels', 'marqueurs', 'marquages'], 'readwrite');
+    // `seances`, `eleves` et `appels` ne sont ouverts en écriture que parce qu'une transaction ne mélange pas les modes :
+    // ils sont LUS, jamais écrits — statut, minutes de retard et commentaire sont préservés par construction. La séance et
+    // l'élève sont relus pour qu'une pose ne survive pas à leur suppression (contrat §16, revue v0.14.0, point 1).
+    const reqSeance = tx.objectStore('seances').get(seanceId);
+    const elevesStore = tx.objectStore('eleves');
+    const reqEleves = new Map();
+    for (const o of operations) {
+      if (o?.op === 'poser' && typeof o.eleveId === 'string' && !reqEleves.has(o.eleveId)) reqEleves.set(o.eleveId, elevesStore.get(o.eleveId));
+    }
     const appels = tx.objectStore('appels');
     const marquages = tx.objectStore('marquages');
     const reqAppels = appels.index('seanceId').getAll(seanceId);
@@ -322,6 +390,13 @@ export async function appliquerMarquages(seanceId, operations = [], options = {}
           // Un retrait est TOUJOURS permis : seul chemin de nettoyage d'un orphelin ou d'un marqueur
           // archivé depuis (décision 16).
           if (op === 'retirer') { marquages.delete(id); enBase.delete(id); continue; }
+          // Une POSE exige, relus ICI, la séance puis l'élève (une vue périmée peut avoir recréé l'appel par definirStatut
+          // après leur suppression), puis l'appel.
+          if (!reqSeance.result) throw new Error('séance supprimée entre-temps : rechargez la page');
+          if (!reqEleves.get(eleveId)?.result) {
+            if (surEleveNonAppele === 'ignorer') { ignores.push({ eleveId, marqueurId }); continue; }
+            throw new Error('élève introuvable : rechargez la page');
+          }
           if (!appeles.has(eleveId)) {
             if (surEleveNonAppele === 'ignorer') { ignores.push({ eleveId, marqueurId }); continue; }
             const e = new Error('appel introuvable pour cet élève : il faut d’abord un statut');
@@ -346,7 +421,7 @@ export async function appliquerMarquages(seanceId, operations = [], options = {}
         const reqFin = marquages.index('seanceId').getAll(seanceId);
         reqFin.onsuccess = () => { resultat = { marquages: reqFin.result, creees, ignores }; };
       } catch (e) {
-        erreur = e;
+        erreur = motifEcriture(e); // un quota levé par put() garde son conseil ; toute autre erreur (AppelManquant) passe telle quelle
         tx.abort();
       }
     };
@@ -810,71 +885,92 @@ export async function restaurer(objets) {
 }
 
 // ---------------------------------------------------------------------------
-// Cascades de suppression (IndexedDB n'a pas de clés étrangères) —
-// règles documentées dans docs/modele-donnees.md.
-// Chaque cascade COLLECTE d'abord (lectures), puis supprime en UNE transaction ;
-// elle renvoie { <store>: [records supprimés] } pour l'annulation via restaurer().
+// Cascades de suppression (IndexedDB n'a pas de clés étrangères) — docs/modele-donnees.md.
+// Depuis la v0.14.2, chaque cascade COLLECTE et SUPPRIME dans UNE transaction readwrite : IndexedDB exécute dans leur
+// ordre de création les transactions d'écriture de portées communes, donc une pose, un statut ou une note écrits par un
+// autre onglet passent AVANT (collectés, supprimés, rendus par l'annulation) ou APRÈS — jamais entre la lecture et la
+// suppression. APRÈS, seules les écritures qui RELISENT la séance et l'élève dans leur transaction sont refusées ou
+// écartées (appliquerMarquages, completerAppels). Un statut ou un commentaire (definirStatut, hors contrat : règle n° 1),
+// une note (mettreAJourEvaluation relit l'évaluation, pas l'élève) ou une observation écrits par une vue restée ouverte
+// sont des put qui ne relisent rien : ils RECRÉENT une ligne orpheline, exportée avec les sauvegardes (revue v0.14.2, R04 ;
+// TODO « Appel orphelin »). Avant : lectures dans des transactions séparées puis supprimerLot, et une pose écrite entre
+// les deux survivait à sa séance (contrat marqueurs §16, revue v0.14.0, point 1).
+// Renvoie { <store>: [lignes supprimées] } pour restaurer().
 // ---------------------------------------------------------------------------
 
+// Magasins rattachés à une séance ou à un élève, DÉRIVÉS du schéma (un magasin indexé par `seanceId` / `eleveId` part
+// avec sa séance / son élève) : une liste écrite à la main en a déjà oublié deux (C37, v0.14.0).
+const PAR_SEANCE = STORES.filter((s) => SCHEMA[s].index?.includes('seanceId')); // appels, marquages
+const PAR_ELEVE = STORES.filter((s) => SCHEMA[s].index?.includes('eleveId')); // appels, inaptitudes, certificats, notes, observations, marquages
+
+// `collecter(t)` émet lectures et suppressions par t.index / t.cle / t.supprimer, SANS await : une promesse attendue
+// laisserait la transaction se valider avant la fin de la collecte.
+async function cascade(stores, collecter) {
+  const db = await ouvrirDB();
+  return new Promise((resolve, reject) => {
+    let erreur;
+    const tx = db.transaction(stores, 'readwrite');
+    const objets = Object.fromEntries(stores.map((s) => [s, []]));
+    const vus = new Set();
+    const garde = (f) => (...a) => { try { f(...a); } catch (e) { erreur ||= e; try { tx.abort(); } catch { /* déjà close */ } } };
+    const t = {
+      index: (store, index, valeur, suite) => { const r = tx.objectStore(store).index(index).getAll(valeur); r.onsuccess = garde(() => suite(r.result)); },
+      cle: (store, cle, suite) => { const r = tx.objectStore(store).get(cle); r.onsuccess = garde(() => suite(r.result)); },
+      supprimer: (store, lignes) => {
+        const cle = SCHEMA[store].keyPath;
+        for (const l of lignes) {
+          if (!l || vus.has(`${store} ${l[cle]}`)) continue;
+          vus.add(`${store} ${l[cle]}`);
+          tx.objectStore(store).delete(l[cle]);
+          objets[store].push(l);
+        }
+      },
+    };
+    tx.oncomplete = () => resolve(objets);
+    tx.onabort = () => reject(erreur || motifEcriture(tx.error || new Error('suppression interrompue')));
+    tx.onerror = (e) => { erreur ||= motifEcriture(e.target?.error || tx.error); };
+    garde(collecter)(t);
+  });
+}
+
+// Une séance : ses dépendances ET sa ligne. Partagée par la séance et la séquence : la séquence ne peut plus oublier un
+// magasin que la séance emporte (le « chemin oublié » de la v0.14.0).
+function emporterSeance(t, seanceId) {
+  for (const store of PAR_SEANCE) t.index(store, 'seanceId', seanceId, (l) => t.supprimer(store, l));
+  t.cle('seances', seanceId, (s) => t.supprimer('seances', [s]));
+}
+
 // Une séance supprimée emporte ses appels ET ses marqueurs posés (décision 16).
-async function collecterSeance(seanceId) {
-  const objets = {
-    appels: await parIndex('appels', 'seanceId', seanceId),
-    marquages: await parIndex('marquages', 'seanceId', seanceId),
-    seances: [],
-  };
-  const seance = await lire('seances', seanceId);
-  if (seance) objets.seances.push(seance);
-  return objets;
+export function supprimerSeanceEnCascade(seanceId) {
+  return cascade([...PAR_SEANCE, 'seances'], (t) => emporterSeance(t, seanceId));
 }
 
-export async function supprimerSeanceEnCascade(seanceId) {
-  const objets = await collecterSeance(seanceId);
-  await supprimerLot(objets);
-  return objets;
+export function supprimerSequenceEnCascade(sequenceId) {
+  return cascade([...PAR_SEANCE, 'seances', 'evaluations', 'notes', 'sequences'], (t) => {
+    t.index('seances', 'sequenceId', sequenceId, (seances) => {
+      for (const s of seances) emporterSeance(t, s.id);
+    });
+    t.index('evaluations', 'sequenceId', sequenceId, (evs) => {
+      for (const ev of evs) t.index('notes', 'evaluationId', ev.id, (l) => t.supprimer('notes', l));
+      t.supprimer('evaluations', evs);
+    });
+    t.cle('sequences', sequenceId, (s) => t.supprimer('sequences', [s]));
+  });
 }
 
-export async function supprimerSequenceEnCascade(sequenceId) {
-  // Chaque magasin collecté par collecterSeance doit être reporté ICI : un oubli laisse ses lignes
-  // orphelines sans la moindre erreur.
-  const objets = { seances: [], appels: [], marquages: [], evaluations: [], notes: [], sequences: [] };
-  for (const s of await parIndex('seances', 'sequenceId', sequenceId)) {
-    const o = await collecterSeance(s.id);
-    objets.seances.push(...o.seances);
-    objets.appels.push(...o.appels);
-    objets.marquages.push(...o.marquages);
-  }
-  for (const ev of await parIndex('evaluations', 'sequenceId', sequenceId)) {
-    objets.notes.push(...(await parIndex('notes', 'evaluationId', ev.id)));
-    objets.evaluations.push(ev);
-  }
-  const sequence = await lire('sequences', sequenceId);
-  if (sequence) objets.sequences.push(sequence);
-  await supprimerLot(objets);
-  return objets;
-}
-
-export async function supprimerEleveEnCascade(eleveId) {
-  const objets = { appels: [], marquages: [], inaptitudes: [], certificats: [], notes: [], observations: [], fichiers: [], eleves: [] };
-  objets.appels = await parIndex('appels', 'eleveId', eleveId);
-  objets.marquages = await parIndex('marquages', 'eleveId', eleveId);
-  objets.inaptitudes = await parIndex('inaptitudes', 'eleveId', eleveId);
-  objets.certificats = await parIndex('certificats', 'eleveId', eleveId);
-  for (const c of objets.certificats) {
-    if (!c.fichierId) continue;
-    const f = await lire('fichiers', c.fichierId);
-    if (f) objets.fichiers.push(f);
-  }
-  objets.notes = await parIndex('notes', 'eleveId', eleveId);
-  objets.observations = await parIndex('observations', 'eleveId', eleveId);
-  const eleve = await lire('eleves', eleveId);
-  if (eleve?.photoFichierId) {
-    const f = await lire('fichiers', eleve.photoFichierId);
-    if (f) objets.fichiers.push(f);
-  }
-  if (eleve) objets.eleves.push(eleve);
-  await supprimerLot(objets);
-  return objets;
+export function supprimerEleveEnCascade(eleveId) {
+  return cascade([...PAR_ELEVE, 'fichiers', 'eleves'], (t) => {
+    for (const store of PAR_ELEVE) {
+      t.index(store, 'eleveId', eleveId, (lignes) => {
+        t.supprimer(store, lignes);
+        if (store === 'certificats') for (const c of lignes) if (c.fichierId) t.cle('fichiers', c.fichierId, (f) => t.supprimer('fichiers', [f]));
+      });
+    }
+    t.cle('eleves', eleveId, (e) => {
+      t.supprimer('eleves', [e]);
+      if (e?.photoFichierId) t.cle('fichiers', e.photoFichierId, (f) => t.supprimer('fichiers', [f]));
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------

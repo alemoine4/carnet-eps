@@ -3,7 +3,7 @@
 // la cible ≤ ~300 Ko (docs/modele-donnees.md) ; les PDF sont stockés tels quels.
 
 import { enregistrer, lire, supprimer } from './io.js';
-import { toast } from './ui.js';
+import { toast, ouvrirModale } from './ui.js';
 import { isoAujourdhui } from './metier.js';
 
 export async function compresserImage(fichier, { maxDim = 1600, cibleOctets = 300 * 1024 } = {}) {
@@ -120,6 +120,5 @@ export function ouvrirVisionneuse(fichier) {
     revoquerURL(url);
     if (declencheur?.isConnected) declencheur.focus();
   });
-  document.body.append(dlg);
-  dlg.showModal();
+  ouvrirModale(dlg); // pile des toasts et région d’annonce dans la modale (revue v0.14.2, D1)
 }

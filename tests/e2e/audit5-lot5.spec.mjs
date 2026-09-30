@@ -196,7 +196,7 @@ test('C37 — supprimer un élève : l’aperçu compte sans charger, la cascade
   expect(await page.evaluate(() => window.__getAll)).toBe(0); // aperçu par count() : avant, 5 getAll
   await dlg.locator('.btn-danger').click();
   await expect(page.locator('.toasts')).toContainText('B A supprimé');
-  expect(await page.evaluate(() => window.__getAll)).toBe(6); // la cascade seule : 6 lectures par index (avant : 10 avec l'aperçu ; 5 jusqu'au schéma 3, + « marquages » par eleveId en v0.14.0), aucun store d'historique lu en entier
+  expect(await page.evaluate(() => window.__getAll)).toBe(6); // la cascade seule, dans sa transaction d'écriture depuis la v0.14.2 : 6 lectures par index (avant : 10 avec l'aperçu ; 5 jusqu'au schéma 3, + « marquages » par eleveId en v0.14.0), aucun store d'historique lu en entier
   expect(await page.evaluate(async () => (await (await import('/js/io.js')).tous('appels')).length)).toBe(0);
 });
 
@@ -646,14 +646,27 @@ test('C57 / C59 — la documentation suit le code : restrictions, champs EDT, pr
   expect(docCles).toEqual(cles); // avant : « autre » documenté, inconnu du code
   expect(doc.match(/^edt\s+\{[^}]*\}/m)[0]).not.toContain('dateDebut'); // avant : dateDebut?/dateFin? documentés, absents d'edt.js
   const archi = lire('../../docs/architecture.md');
-  const modules = ['eleves', 'notes', 'reglages'].map((m) => lire(`../../app/js/modules/${m}.js`)).join('\n');
-  for (const p of new Set([...modules.matchAll(/sauverPrefs\(\{ (\w+):/g)].map((m) => m[1]))) expect(archi).toContain(p); // avant : « dernier onglet », derniereClasseId absent
+  // Préférences ↔ architecture, DÉRIVÉE : tout module qui écrit une préférence est lu (la liste écrite à la main ignorait
+  // appel.js, contrat marqueurs §12.1), et chaque appel doit avoir la forme reconnue — sinon la garde serait vide sans rougir.
+  // (Avant le lot 5 : « dernier onglet » documenté, derniereClasseId absent.)
+  const dossier = new URL('../../app/js/modules/', import.meta.url);
+  const ecrivains = readdirSync(dossier).filter((f) => f.endsWith('.js')).map((f) => lire(`../../app/js/modules/${f}`))
+    .filter((t) => /sauverPrefs\(/.test(t.replace(/^import .*$/gm, '')));
+  const prefs = new Set();
+  for (const t of ecrivains) {
+    const corps = t.replace(/^import .*$/gm, '');
+    const reconnus = [...corps.matchAll(/sauverPrefs\(\{ (\w+):/g)].map((m) => m[1]);
+    expect(reconnus.length, 'chaque appel à sauverPrefs a la forme sauverPrefs({ nom: …').toBe((corps.match(/sauverPrefs\(/g) || []).length);
+    for (const p of reconnus) prefs.add(p);
+  }
+  expect(prefs.size).toBeGreaterThan(0);
+  for (const p of prefs) expect(archi).toContain(p);
   expect(archi).not.toContain('dernier onglet');
   const readme = lire('./README.md');
   expect(readme).toContain('app.localhost'); // avant : « [::1] » alors que le code essaie app.localhost en premier
   // Comptes dérivés des SIX specs (tests imbriqués dans un describe compris), par fichier et au total (revue du lot 5).
   const specs = readdirSync(new URL('./', import.meta.url)).filter((f) => f.endsWith('.spec.mjs'));
-  expect(specs.length).toBe(20);
+  expect(specs.length).toBe(21);
   let total = 0;
   for (const f of specs) {
     const n = (lire('./' + f).match(/^\s*test\(/gm) || []).length;
@@ -672,6 +685,13 @@ test('C57 / C59 — la documentation suit le code : restrictions, champs EDT, pr
     .flatMap((f) => [...lire('./' + f).matchAll(/^\s*test\('([^']*)'/gm)].map((m) => m[1]));
   expect(titres.length).toBeGreaterThan(0);
   expect(readme).toContain(`+ ${titres.filter((x) => !exclus.test(x)).length} rejoués sur le projet **mobile**`);
+  // Énumération du projet mobile (contrat marqueurs §12.1) : chaque fichier retenu par `testMatch` est CITÉ dans la ligne du
+  // README qui annonce les tests rejoués — un fichier ajouté au projet sans y être nommé rougit ici.
+  const ligneMobileReadme = readme.split('\n').find((l) => l.includes('rejoués sur le projet **mobile**'));
+  expect(ligneMobileReadme, 'la ligne du README existe').toBeTruthy();
+  const fichiersMobile = specs.filter((f) => cible.test(f));
+  expect(fichiersMobile.length).toBeGreaterThan(0);
+  for (const f of fichiersMobile) expect(ligneMobileReadme, f).toContain(f);
   expect(lire('../../README.md')).toContain(`**8 smoke-tests + ${total - 8} tests de non-régression**`);
 });
 

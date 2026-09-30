@@ -153,6 +153,43 @@ export function groupe(libelle, controle) {
   return el('fieldset', { class: 'champ groupe' }, el('legend', {}, libelle), controle);
 }
 
+// ---- Modales : ce qu'on dit pendant qu'elles sont ouvertes reste vu et entendu ----
+// showModal() rend INERTE tout ce qui n'est pas dans la modale : la pile des toasts (index.html) et les régions d'annonce des
+// vues, recouvertes par la feuille, sortaient aussi de l'arbre d'accessibilité — un refus ou un échec d'écriture tapé dans
+// une feuille n'était ni vu ni entendu (revue v0.14.2, D1 : K1, R11, R21, R22). Toute modale de l'application s'ouvre donc
+// par `ouvrirModale` : elle reçoit sa propre région d'annonce (`regionModale`), et la pile des toasts vit DANS la modale au
+// premier plan tant qu'elle est ouverte (couche supérieure, non inerte), puis revient au document à sa fermeture. Dans la
+// modale, la pile est rangée dans un porte-pile (`.pile-modale`, components.css) où elle n'est plus qu'un bloc : les règles
+// qui la placent dans la PAGE (bas d'écran, zone de contenu sur PC, au-dessus de la barre des grilles) n'y ont plus prise,
+// quelle que soit leur spécificité — l'une d'elles l'étirait, vide, sur toute la feuille, qui ne recevait plus aucun tap.
+const modales = []; // modales ouvertes, la plus récente en dernier
+const modaleAuPremierPlan = () => modales.findLast((d) => d.open && d.isConnected) || null;
+// La pile est RETENUE : la modale qui la porte est retirée du document à sa fermeture, parfois avant son retour.
+let pileToasts = null;
+function placerToasts() {
+  // Conteneur permanent (index.html) porteur de la région live ; créé ici seulement à défaut (B27).
+  pileToasts ||= document.querySelector('.toasts') || el('div', { class: 'toasts', role: 'status', 'aria-live': 'polite' });
+  const hote = modaleAuPremierPlan()?.querySelector(':scope > .pile-modale') || document.body;
+  if (pileToasts.parentElement !== hote) hote.append(pileToasts);
+  return pileToasts;
+}
+// Ouvre `dlg` en modale (ajouté au document) ; les appelants gardent leur focus initial, posé après.
+export function ouvrirModale(dlg) {
+  dlg.append(el('p', { class: 'sr-only annonce-modale', role: 'status' }), el('div', { class: 'pile-modale' }));
+  document.body.append(dlg);
+  dlg.showModal();
+  modales.push(dlg);
+  dlg.addEventListener('close', () => {
+    const i = modales.indexOf(dlg);
+    if (i >= 0) modales.splice(i, 1);
+    placerToasts();
+  });
+  placerToasts();
+  return dlg;
+}
+// Région d'annonce de la modale au premier plan, ou null : une vue y annonce tant qu'une feuille la recouvre.
+export const regionModale = () => modaleAuPremierPlan()?.querySelector(':scope > .annonce-modale') || null;
+
 // ---- Feuille modale (menu bas d'écran) ----
 // <dialog> natif : piège de focus, fermeture par Échap et par clic sur le fond,
 // arrière-plan rendu inerte par le navigateur, focus restitué au déclencheur.
@@ -170,8 +207,7 @@ export function ouvrirFeuille({ titre = '', label = '', contenu }) {
     dlg.remove();
     if (declencheur?.isConnected) declencheur.focus();
   });
-  document.body.append(dlg);
-  dlg.showModal();
+  ouvrirModale(dlg);
   dlg.querySelector('button, [href], input, select, textarea')?.focus();
   return dlg;
 }
@@ -198,8 +234,7 @@ export function confirmer({ titre, message = '', detail = '', action = 'Supprime
     if (message) dlg.append(el('p', {}, message));
     if (detail) dlg.append(el('p', { class: 'confirm-detail' }, detail));
     dlg.append(el('div', { class: 'rang-btn' }, btnAnnuler, btnAction));
-    document.body.append(dlg);
-    dlg.showModal();
+    ouvrirModale(dlg);
     btnAnnuler.focus();
   });
 }
@@ -230,8 +265,7 @@ export function choisir({ titre, message = '', detail = '', choix = [] }) {
     if (message) dlg.append(el('p', {}, message));
     if (detail) dlg.append(el('p', { class: 'confirm-detail' }, detail));
     dlg.append(el('div', { class: 'rang-btn' }, btnAnnuler, ...boutons));
-    document.body.append(dlg);
-    dlg.showModal();
+    ouvrirModale(dlg);
     btnAnnuler.focus();
   });
 }
@@ -242,9 +276,9 @@ export function choisir({ titre, message = '', detail = '', choix = [] }) {
 // Un toast porteur d'action dure 20 s (8 s ne laissaient pas le temps d'y aller au clavier — B28),
 // reçoit le focus, et son minuteur est suspendu tant qu'il est survolé ou focalisé.
 export function toast(message, { action, libelleAction = 'Annuler', duree = action ? 20000 : 8000 } = {}) {
-  // Conteneur permanent (index.html) porteur de la région live ; créé ici seulement à défaut (B27).
-  let pile = document.querySelector('.toasts');
-  if (!pile) { pile = el('div', { class: 'toasts', role: 'status', 'aria-live': 'polite' }); document.body.append(pile); }
+  // Dans la modale au premier plan s'il y en a une, sinon dans le document (D1) — relu à chaque toast : une modale fermée
+  // l'instant d'avant (événement « close » pas encore reçu) ne l'emporte pas.
+  const pile = placerToasts();
   // L'éviction n'emporte que les toasts à durée finie : le toast persistant
   // (ex. « Nouvelle version installée ») survit à une rafale de notifications.
   while (pile.children.length >= 3) {

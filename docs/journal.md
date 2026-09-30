@@ -14,6 +14,138 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-29 (50) — v0.14.2 : revue adversariale et regard à l'écran, 31 constats corrigés ou consignés
+
+Demande : l'étape É13 de la v0.14.2 — revue adversariale du diff, regard à l'écran, corrections — puis la documentation de la
+revue. **Ni commit, ni publication** (HEAD `a67f5e4`, v0.14.1 en production). Format figé (`DB_VERSION` 4, validateurs de
+`marqueurs-calcul.js`, forme des enregistrements) ; mode tampon, reprise et `afficherVue` hors lot.
+
+**Fait** :
+- **Revue** (2026-09-28) : cinq lentilles — données (4 constats), usage au gymnase (5), accessibilité (5), affichage (5),
+  preuves (7) —, deux réfutateurs par constat, qui rejouent chaque preuve (dont sur une copie de HEAD, pour dire ce qui est
+  préexistant) : **26 constats, tous retenus** (R01 à R26). **Regard à l'écran** (Pixel 7 émulé, clair, 320 px à 100 % et
+  200 %, feuille ouverte, ligne d'échec, comparé à la production) : K1 toasts recouverts par la feuille ; K2 « Présent » pressé
+  pour un élève sans appel (déjà en v0.14.1) ; K3 ligne d'échec à deux « : » ; K4 annonce en minuscule ; K5 barre « Terminer
+  l'appel » d'un tiers d'écran à 320 px et 200 % (préexistant).
+- **Corrections, en cinq lots** (correcteurs C1 à C5 ; chaque correction de code : test d'abord, vu rouge sur le code d'avant,
+  correctif, mutant tué par ce test) :
+  - C1 (D7, D2, D3) : échecs réalignés après chaque retour réussi (R01) ; cartes repeintes quand la base a changé (R06) ; refus
+    venu de la base annoncé, sans accuser « un autre écran » après un statut refusé ici (R02, R08, R24) ; `completerAppels`
+    retrouve un appel par (séance, élève), et « Terminer » ne plante plus sur une sauvegarde tierce (R03) ; « derniers
+    utilisés » hors de l'écriture (R20) ; preuve de l'attente de la file (R26) ; ligne et toast d'échec « Non enregistré : QUOI
+    pour QUI — cause. », un seul « : » (R05, R10, R17, K3) ; majuscule en tête de toute annonce (K4) ; aucun statut pressé sans
+    appel (K2 — « Présent pressé » n'était une décision consignée nulle part) ; le refus ne promet plus « tout le monde » (R07).
+  - C2 (D1, D5, D6, D8) : `ouvrirModale()` dans `ui.js` — toute modale a sa région d'annonce, et la pile des toasts vit dedans
+    (en haut, sur le fond) tant qu'elle est ouverte (K1, R11, R21, R22 : corrigé pour la CLASSE, confirmation, choix, feuilles et
+    visionneuse comprises) ; « Fermer » dans un pied collant (R09) ; plus de gras sur un posé, anneau de focus visible (R25,
+    R12) ; fond non teinté d'un archivé ou supprimé posé, repère en `CanvasText` en couleurs forcées (R13, R14, R19).
+  - C3 (D4, D9) : aucun code de carte affiché rogné — ce qui ne tient pas disparaît en entier, « +n » le compte (R15, R16 :
+    « E11 » se lisait « E1 ») ; 🩺 et ⚠ relevés à l'écran seulement, plus jamais sur le nom imprimé (R18).
+  - C4 (D10) : MQ-11 et MQ-16 mesurent le code de la carte après la passe de l'observateur, en une seule évaluation (R23 : le
+    rouge intermittent était un défaut du test) ; M84, M93, M120 rejoués cinq fois ; campagne complète des mutants ; contrôle
+    de couverture constat → test → mutant.
+  - C5 (D11, cette entrée) : documentation. R04 — trois textes (D015, `docs/modele-donnees.md`, commentaire des cascades
+    d'`io.js`) disaient qu'une écriture APRÈS la cascade « ne trouve plus rien » : faux pour un statut, un commentaire, une
+    note, une observation d'une vue restée ouverte, qui recréent une ligne orpheline (un commentaire de santé survit à la
+    suppression définitive de l'élève et part dans la sauvegarde) ; corrigés, et §8 du contrat précisé. Contrat §16 : la revue
+    entière (méthode, arbitrages D1 à D11, une ligne par constat avec sa correction, sa preuve et son mutant, écarts, non-faits),
+    « Textes nouveaux de la v0.14.2 » récrit mot pour mot sur le code, « ce qui change à l'œil » ; §9.1 (motifs : lequel
+    apparaît où), §6.1 (le point 2 disait encore que `code2` rétrécit), §13 (tests et mutants de la revue). CHANGELOG (en-tête,
+    textes nouveaux, cinquième lot, regard à l'écran), `docs/deploiement.md`, TODO (K5, appel orphelin et cas du commentaire de
+    santé, points préexistants relevés par I5, essai de terrain avant la v0.14.3, entrée d'avis périmée mise à jour).
+
+**Décidé** (arbitrages D1 à D11, reportés au §16 du contrat) : corriger la classe « modale » une fois pour toutes les feuilles
+(D1) ; QUI et QUOI jamais coupés (D2) ; aucun statut pressé sans appel (D3) ; la réponse 11 à la lettre, jamais un code qui ment
+(D4) ; pied collant (D5) ; même graisse posé / non posé (D6) ; les correctifs précisés par les réfutateurs (D7) ; contraste et
+couleurs forcées (D8) ; impression (D9) ; preuves stabilisées (D10) ; documentation, K5 et appel orphelin au TODO (D11). Écarts
+au contrat : règle n° 3 (« la même porte, `annoncer()` »), §7 points 4 et 7. Non faits, exprès : K5, l'appel orphelin
+(`definirStatut` hors contrat), le refus à l'import des sauvegardes de R03 (format figé), `aria-describedby` du refus.
+
+**Résultats** : 12 tests nouveaux (MQ-27 à MQ-30, ECR-20 à ECR-27), 13 renforcés ou récrits ; suite **357 tests + 105 rejoués
+sur le projet mobile**, verte ; **183 mutants** (50 de la revue, 13 réancrés, M80b retiré), **183 tués par leur propre test** du
+premier coup ; 29 constats corrigés en code ou en preuve, chacun relié à un test présent et à un mutant tué par ce test (0 écart).
+Le lot C5 ne change qu'un commentaire d'`io.js` : ancres des mutants relues (183, toutes une fois), référence des empreintes
+renouvelée après relecture du diff, gardes de documentation et suite complète vertes.
+
+**Coincé / à vérifier** : K5 (barre à 320 px et 200 %), préexistant ; l'appel orphelin recréé par une vue périmée, préexistant ;
+le rouge isolé d'ECR-01 sous M120 (campagne d'implémentation), que R23 n'explique pas, jamais reproduit — à surveiller en CI ;
+la contrepartie de D4 (« ● +2 » à 320 px et 200 %) et la place des toasts feuille ouverte, à juger au gymnase.
+
+**Prochaine étape** : ta **relecture des textes nouveaux** (contrat §16, « Textes nouveaux de la v0.14.2, à relire par
+l'enseignant », et « ce qui change à l'œil ») ; « go » de commit, puis « go » de publication ; **essai de terrain avant la
+v0.14.3** (`docs/test-terrain.md`).
+
+---
+
+## 2026-09-27 (49) — v0.14.2 candidate : marqueurs de séance, poser et relire
+
+Demande : implémenter la **v0.14.2** du contrat `docs/avis/AVIS_FORMAT_MARQUEURS.md` (§13), avec les réponses 3 (« Terminer
+l'appel » durci) et 11 (le repère d'abord, le 2e code disparaît entier) de l'enseignant (§14) et le point 1 de la revue de la
+v0.14.0 (§16 : cascade et pose concurrentes). Un plan d'implémentation (étapes É0 à É13, 126 exigences), tiré de quatre
+relectures du contrat sur le code publié, puis revu par une critique de complétude (addendum A1 à A10, tout retenu), a été
+suivi étape par étape, chacune vérifiée seule (2026-09-26 et 27). **Ni commit, ni publication.** Format figé : `DB_VERSION` 4,
+validateurs et forme des enregistrements intacts ; ni mode tampon (v0.14.3), ni reprise (v0.14.4), ni `afficherVue`.
+
+**Fait** :
+- `marqueurs-calcul.js` : `genreAffiche`, `couleurAffichee`, `trierMarqueurs`, `grouperParEleve`, `codesCarte` (pures, ajoutées
+  après les validateurs, qui ne bougent pas). L'écran du vocabulaire perd ses copies locales ; son aperçu devient la rangée de
+  la carte d'élève (addendum A3). `main.js` et l'écran : les deux textes provisoires de la v0.14.1 retirés.
+- `io.js` : `completerAppels` (nouvelle, D016) ; `appliquerMarquages` relit la séance et les élèves d'une pose (pose refusée
+  s'ils ont disparu, retrait toujours permis) et passe son erreur par `motifEcriture` ; cascades réécrites (`cascade`,
+  `PAR_SEANCE` / `PAR_ELEVE` dérivés de `SCHEMA`, `emporterSeance` partagée ; `collecterSeance` disparue — D015).
+- `appel.js` : pré-remplissage et « Terminer l'appel » par `completerAppels`, alignés par identifiant, toasts « déjà saisi » et
+  « introuvable » ; état des marqueurs (vocabulaire lu une fois, dernier état confirmé, ordre gelé, état voulu pendant une
+  rafale, échecs durables en session réalignés à l'ouverture) ; rangée de la carte peinte par `majBouton` seul (garde
+  `rangeeActive` en tête), ajustée dans le document (`ajusterRangee` + `ResizeObserver`) ; ligne d'échec dans la barre ;
+  `basculerMarqueur` et `rangeeFeuille` dans la feuille « ⋯ », recalculée en direct. **`definirStatut` : aucune ligne touchée.**
+- `components.css` : rangée (réserve en unité de police, `code1` seul rétrécissable, relèvement de 🩺 / ⚠ par `:has()`),
+  `.btn-marqueur` et ses deux états, orphelin et archivé atténués, rangée masquée à l'impression ; `.mq-provisoire` retirée.
+  **Vu en mesurant** : une carte étirée par sa voisine au nom plus long laissait 🩺 chevaucher la rangée → règle neuve
+  `.eleve-cycle > .rang-marqueurs-carte { margin-top: auto; }` (ECR-09, mutant M125).
+- Tests : `marqueurs-ecran.spec.mjs` créé (10, joués aussi sur mobile), `marqueurs.spec.mjs` 5 → 25, `marqueurs-migration.spec.mjs`
+  11 → 16 ; C57 : garde « Préférences ↔ architecture » **dérivée**, garde d'**énumération du projet mobile** écrite ;
+  `playwright.config.mjs` (projet mobile) ; comptes des README ; version 0.14.2 aux quatre endroits.
+- Docs : CHANGELOG, `docs/deploiement.md` (ligne candidate), TODO (entrée v0.14.2 et points consignés), D015 et D016 (+ renvoi
+  à la fin de D013), `docs/modele-donnees.md`, `docs/architecture.md`, `docs/fonctionnalites.md` §4, `docs/test-terrain.md`
+  (section « Marqueurs de séance (v0.14.2) », addendum A10), contrat : précisions en place (texte d'origine barré quand il est
+  corrigé), lignes ajoutées aux §9.1, §11.1, §11.2, §11.4 (M04b, M79 à M125) et §13, sous-section §16 « v0.14.2 » ; tableau du
+  §12.2 réparé (quatre lignes à trois colonnes, défaut antérieur).
+
+**Décidé** (une ligne par point au §16 du contrat, « v0.14.2 ») : C1 et C26, « Terminer l'appel » **et** le pré-remplissage
+durcis par la même écriture relue (D016, qui amende D013 : un statut posé ailleurs n'est plus remplacé) ; C2, « autre appareil »
+se lit « autre onglet ou autre fenêtre du même appareil » ; C3 à C6 et C19, la règle de la réponse 11 (repères, `code1`,
+`code2`, « +n » ; seul `code1` rétrécit ; `code2` masqué entier, « +n » compté un de plus ; `data-mq-rang` au lieu de
+`:nth-of-type` ; `align-self: stretch`), assertion définitive d'ECR-09 ; C7 et C8, nom accessible dans l'ordre des codes, `max`
+plafond, orphelin après les connus de son genre ; C9, tri genre → archivage → libellé → code ; C10 à C13, feuille (un fieldset
+par genre qui a un bouton, orphelins retirables jamais reposables, retiré = reste en place verrouillé, verrou recalculé en
+direct) ; C14 à C16 et C27, échecs (ligne dans la barre, toast à chaque échec, obsolètes écartés) ; C17, les deux remèdes à la
+course cascade / pose (D015) ; C18, harnais de mutants en place ; C20, garde dérivée ; C21 à C25, textes et mutants rendus
+prouvables ; C28, `motifEcriture` ; C29, `marqueursRecents` lu comme tableau de chaînes ; C30, C31, silences tranchés au plus
+littéral ; C32, commentaire de MQ-20. Aucune question ouverte pour l'enseignant, mais des **textes nouveaux à relire** (liste
+mot pour mot au §16 et dans le CHANGELOG).
+
+**Résultats** : chaque test nouveau vu **rouge** sur l'application d'origine (HEAD `a67f5e4` servie à part), sauf MQ-09 et
+MIG-12 dont la garantie était déjà tenue (rouges par leur mutant) ; suite complète **442/442** (345 + 97 rejoués sur le projet
+mobile), trois passages dont le dernier après la mise à jour des documents (3,2 min) ; campagne de mutants complète (`mutants-v0142.mjs`, hors dépôt) : contrôle sain vert sur les deux
+projets, **134 exécutions, 134 tuées par leur propre test** (84 de la v0.14.2, 23 de la v0.14.0 et 27 de la v0.14.1 rejouées,
+M07 à M09, M68, M72, M72d et M76 réancrés), fichiers et `git diff` identiques octet pour octet avant et après la campagne ;
+après la mise à jour des documents, gardes de documentation vertes (`audit-v4`, `audit5-lot5`, `audit-independant`,
+`audit5-lot3`, sur les deux projets).
+
+**Coincé / à vérifier** : deux rouges intermittents jamais reproduits — MQ-11 (deux fois pendant la campagne) et ECR-01 (une
+fois) —, verts à chaque rejeu (MQ-11 ×20, ECR-01 ×25, fichiers de marqueurs répétés, suites complètes) ; le script de mutants
+garde désormais l'extrait de chaque échec. « +n » peut être rogné dans le pire cas extrême (dit au contrat, consigné). La ligne
+d'échec se lit avec deux « : » quand le motif d'`io.js` en porte un (à trancher à la relecture des textes). Points hors
+périmètre consignés au TODO (appel orphelin recréé par `definirStatut`, « Annuler » par `put` aveugle, aperçu lu avant la
+confirmation, cascades de `notes.js` / `inaptitudes.js` / `documents.js`, `btnTerminer` en `disabled`).
+
+**Prochaine étape** : revue adversariale du diff (lentilles données, usage au gymnase, accessibilité, preuves ; deux réfutateurs
+par constat) puis **regard à l'écran** (Pixel 7 émulé, clair et sombre, 320 px à 100 % et 200 %, feuille ouverte, ligne
+d'échec) ; relecture des textes nouveaux par l'enseignant ; « go » de commit puis de publication ; **essai de terrain avant la
+v0.14.3** (`docs/test-terrain.md`).
+
+---
+
 ## 2026-09-24 (48) — B20 instable en intégration continue : un vrai vol de focus
 **Fait** : en surveillant la CI de la v0.14.1 (`afbec3c`, verte), la liste des passages a montré que celle du commit
 `dc7e359` (documentation de la publication de la v0.14.0, 2026-09-23) était ROUGE : un seul test, **B20 sur le profil

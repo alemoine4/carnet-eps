@@ -2,11 +2,11 @@
 // Contrat : docs/avis/AVIS_FORMAT_MARQUEURS.md, §6.5. Routes : #/marqueurs, #/marqueurs/nouveau,
 // #/marqueurs/modifier/<id>. Toute écriture passe par ecrireMarqueur (io.js, §4.4), qui relit le
 // vocabulaire dans sa transaction : l'écran ne décide jamais seul de l'unicité d'un code ni du genre.
-// Aucune suppression (archiver / restaurer seulement, §4.4) ; aucune pose ici (v0.14.2).
+// Aucune suppression (archiver / restaurer seulement, §4.4) ; la pose se fait pendant l'appel (modules/appel.js).
 
 import { el, carte, champ, enregistrerVue, toast, rerendre } from '../ui.js';
 import { tous, lire, ecrireMarqueur } from '../io.js';
-import { GENRES, LIBELLES_GENRE, COULEURS, cleCourt } from '../marqueurs-calcul.js';
+import { GENRES, LIBELLES_GENRE, COULEURS, cleCourt, genreAffiche, couleurAffichee, trierMarqueurs } from '../marqueurs-calcul.js';
 
 // Amorçage (§14, réponse 5 : OUI, sur un vocabulaire vide seulement). Couleurs distinctes entre
 // rôles et équipes ; le comportement est gris de toute façon (forcé par ecrireMarqueur, décision 10).
@@ -20,21 +20,23 @@ const PROPOSES = [
 ];
 const LIBELLE_AMORCE = 'Créer les 6 marqueurs proposés';
 
-// Un genre absent ou inconnu (sauvegarde tierce ou future) se range et se lit avec les comportements
-// (§5.1 point 5) : jamais « undefined », jamais un code de rôle inattendu.
-const genreAffiche = (m) => (GENRES.includes(m.genre) ? m.genre : 'comportement');
-// Couleur de l'aperçu : aucune pour un comportement (bordure neutre), gris pour une couleur inconnue.
-const couleurAffichee = (m) => (genreAffiche(m) === 'comportement' ? null : (COULEURS.includes(m.couleur) ? m.couleur : 'gris'));
-// Aperçu « sur la carte » : les mêmes nœuds que la carte d'élève (§6.1). Un rôle ou une équipe montre
-// son code (purement visuel : il est déjà dans le texte de la carte ou dans le champ du formulaire).
-// Un comportement — genre absent ou inconnu compris — ne montre JAMAIS son code (décision 10, §5.1
-// points 2 et 5) : le repère neutre, sans texte, et une phrase qui dit où vit le sens (revue v0.14.1, R2).
+// Genre affiché (un genre absent ou inconnu se range et se lit avec les comportements, §5.1 point 5), couleur
+// affichée et ordre du catalogue : UNE seule source, marqueurs-calcul.js, partagée avec la carte d'élève et la
+// feuille « ⋯ » de l'appel (v0.14.2 ; cet écran en avait une copie).
+//
+// Aperçu « sur la carte » (§6.5 ; addendum v0.14.2, A3) : EXACTEMENT la rangée de la carte d'élève (§6.1) — même
+// nœud `.rang-marqueurs-carte`, mêmes classes, mêmes règles de taille (components.css). Un rôle ou une équipe y
+// montre son code en première place (purement visuel : il est déjà dans le texte de la carte ou dans le champ du
+// formulaire). Un comportement — genre absent ou inconnu compris — ne montre JAMAIS son code (décision 10, §5.1
+// points 2 et 5) : le repère neutre, sans texte, et HORS de la rangée une phrase qui dit où vit le sens (revue
+// v0.14.1, R2).
 const NOTE_NEUTRE = 'un repère neutre, sans code ; le sens reste dans la feuille de l’élève.';
+const rangeeCarte = (...enfants) => el('span', { class: 'rang-marqueurs-carte' }, ...enfants);
 function apercuCarte(m) {
   if (genreAffiche(m) === 'comportement') {
-    return [el('span', { class: 'mq-neutre', 'aria-hidden': 'true' }), ' ', el('span', { class: 'note-inline' }, NOTE_NEUTRE)];
+    return [rangeeCarte(el('span', { class: 'mq-neutre', 'aria-hidden': 'true' })), ' ', el('span', { class: 'note-inline' }, NOTE_NEUTRE)];
   }
-  return [el('span', { class: 'mq-code', 'aria-hidden': 'true', 'data-niveau-couleur': couleurAffichee(m) }, m.court)];
+  return [rangeeCarte(el('span', { class: 'mq-code', 'data-mq-rang': '1', 'aria-hidden': 'true', 'data-niveau-couleur': couleurAffichee(m) }, m.court))];
 }
 
 // Focus après un nouveau rendu de la liste (revue v0.14.1, R3) : `rerendre` ne rend le focus que par
@@ -62,9 +64,6 @@ function doublons(vocabulaire) {
   return new Map([...parCode].filter(([, liste]) => liste.length > 1));
 }
 const nomsGuillemets = (liste) => liste.map((m) => `« ${m.libelle} »`).join(', ');
-
-const trier = (a, b) => Number(a.archivee === true) - Number(b.archivee === true)
-  || String(a.libelle).localeCompare(String(b.libelle), 'fr') || cleCourt(a.court).localeCompare(cleCourt(b.court));
 
 async function basculerArchive(c, m) {
   const archiver = m.archivee !== true;
@@ -118,7 +117,7 @@ function carteMarqueur(c, m, enDouble) {
   const bloc = el('section', { class: 'carte' },
     el('h3', { class: 'mq-titre' }, m.libelle),
     el('p', {}, `${m.court} · ${LIBELLES_GENRE[genreAffiche(m)]}${m.archivee === true ? ' · archivé' : ''}`),
-    el('p', {}, ...(genreAffiche(m) === 'comportement' ? ['Sur la carte : '] : []), ...apercuCarte(m)));
+    el('p', {}, ...(genreAffiche(m) === 'comportement' ? ['Sur la carte : '] : []), el('span', { class: 'mq-apercu' }, ...apercuCarte(m))));
   if (enDouble) {
     bloc.append(el('p', { class: 'statut statut-erreur' },
       `Code en double avec ${nomsGuillemets(enDouble.filter((x) => x.id !== m.id))} : archivez l’un des deux pour pouvoir les modifier.`));
@@ -139,8 +138,6 @@ async function liste(c, avertissement = '') {
     '. Les rôles et les équipes s’affichent par leur code sur la carte de l’élève ; les comportements n’affichent qu’un repère neutre, leur sens reste dans la feuille de l’élève. Renommer sert à ',
     el('strong', {}, 'corriger une faute'),
     '. Pour changer de sens, créez un nouveau marqueur : l’ancien reste lisible dans l’historique.'));
-  // v0.14.1 seulement — la pose n'existe pas encore : ne rien promettre d'absent (texte retiré en v0.14.2).
-  intro.append(el('p', { class: 'mq-provisoire', id: 'mq-bientot' }, 'Cette version sert à préparer votre liste : la pose des marqueurs pendant l’appel arrive dans la prochaine version.'));
   c.append(intro);
   const nouveau = el('a', { class: 'btn btn-principal', href: '#/marqueurs/nouveau', id: 'mq-nouveau' }, 'Nouveau marqueur');
   c.append(el('div', { class: 'barre-actions no-print' }, nouveau));
@@ -177,7 +174,7 @@ async function liste(c, avertissement = '') {
   }
 
   for (const genre of GENRES) {
-    const duGenre = vocabulaire.filter((m) => genreAffiche(m) === genre).sort(trier);
+    const duGenre = trierMarqueurs(vocabulaire).filter((m) => genreAffiche(m) === genre);
     if (!duGenre.length) continue;
     c.append(el('h2', { class: 'mq-genre' }, LIBELLES_GENRE[genre]));
     for (const m of duGenre) c.append(carteMarqueur(c, m, enDouble.get(cleCourt(m.court)) && m.archivee !== true ? enDouble.get(cleCourt(m.court)) : null));

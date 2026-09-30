@@ -1,7 +1,8 @@
 // Marqueurs de séance, v0.14.0 « le format seul » : schéma 4, compatibilité, sauvegardes, cascades.
-// Contrat : docs/avis/AVIS_FORMAT_MARQUEURS.md (§11.1 — MIG-01 à MIG-07, MIG-09, MIG-10 ; MIG-08 arrive
-// en v0.14.2 avec l'affichage). Aucun écran nouveau n'existe encore : les poses et le vocabulaire sont
-// écrits par io.js directement. Données INVENTÉES uniquement (élèves « NOMxx Prenomx »).
+// Contrat : docs/avis/AVIS_FORMAT_MARQUEURS.md (§11.1 — MIG-01 à MIG-07, MIG-09, MIG-10). v0.14.2 « poser et relire » :
+// MIG-08 (orphelins et genres inconnus, à l'écran), MIG-11 (chaque cascade collecte et supprime dans UNE transaction :
+// une pose écrite juste avant elle part avec elle, « Annuler » la rend) et MIG-12 (cascade avortée au commit). Hors
+// MIG-08, les poses et le vocabulaire sont écrits par io.js directement. Données INVENTÉES uniquement (élèves « NOMxx Prenomx »).
 // Chaque test AFFIRME ses prémisses avant de conclure : une absence sans ancre visible passe à vide.
 
 import { test, expect } from '@playwright/test';
@@ -9,7 +10,13 @@ import { test, expect } from '@playwright/test';
 // Base vidée en DÉRIVANT la liste des magasins de io.STORES, jamais par une liste écrite à la main :
 // une constante figée oublierait « marqueurs » et « marquages » comme d'autres specs ont oublié
 // « grilles », et une pose laissée d'un test à l'autre polluerait le suivant sans rien dire.
+// Erreurs console et exceptions écoutées AVANT la première navigation (motif smoke.spec.mjs) : seul MIG-08, qui rend des
+// poses à l'écran, les affirme (l'exception d'une vue ne produit qu'un console.error, ui.js).
+let erreurs = [];
 test.beforeEach(async ({ page }) => {
+  erreurs = [];
+  page.on('console', (m) => { if (m.type() === 'error') erreurs.push(m.text()); });
+  page.on('pageerror', (e) => erreurs.push(String(e)));
   await page.goto('/');
   await page.evaluate(async () => {
     const io = await import('/js/io.js');
@@ -77,6 +84,43 @@ const lireMarqueurs = (page) => page.evaluate(async () => {
   const tri = (l) => l.sort((a, b) => a.id.localeCompare(b.id));
   return { marqueurs: tri(await io.tous('marqueurs')), marquages: tri(await io.tous('marquages')) };
 });
+
+// Magasins quelconques relus en entier, triés par identifiant.
+const lireTout = (page, magasins) => page.evaluate(async (liste) => {
+  const io = await import('/js/io.js');
+  const res = {};
+  for (const m of liste) res[m] = (await io.tous(m)).sort((a, b) => a.id.localeCompare(b.id));
+  return res;
+}, magasins);
+const trierParId = (l) => [...l].sort((a, b) => a.id.localeCompare(b.id));
+
+// Écrit `lignes` ({ magasin: [enregistrements] }) dans une transaction créée JUSTE AVANT la prochaine transaction readwrite
+// dont la portée contient `declencheur` (généralisation d'injecterAvantEcriture, marqueurs.spec.mjs). IndexedDB exécute dans
+// leur ordre de création les transactions d'écriture de portées communes : l'écriture « de l'autre onglet » tombe au pire
+// moment — après toute lecture faite AVANT la transaction visée, avant la transaction elle-même. `window.__injecte` atteste
+// le déclenchement, `window.__injecteOk` la validation de la transaction injectée ; `window.__dansInjecteur` est vrai
+// pendant sa création (une sonde de comptage posée AVANT l'injecteur l'exclut ainsi).
+const injecterAvant = (page, { declencheur, lignes }) => page.evaluate(({ declencheur, lignes }) => {
+  const origine = IDBDatabase.prototype.transaction;
+  window.__injecte = false;
+  window.__injecteOk = false;
+  window.__dansInjecteur = false;
+  IDBDatabase.prototype.transaction = function (stores, mode, ...reste) {
+    if (!window.__injecte && mode === 'readwrite' && [].concat(stores).includes(declencheur)) {
+      window.__injecte = true;
+      IDBDatabase.prototype.transaction = origine;
+      window.__dansInjecteur = true;
+      try {
+        const tx = origine.call(this, Object.keys(lignes), 'readwrite');
+        tx.oncomplete = () => { window.__injecteOk = true; };
+        for (const [magasin, liste] of Object.entries(lignes)) for (const l of liste) tx.objectStore(magasin).put(l);
+      } finally {
+        window.__dansInjecteur = false;
+      }
+    }
+    return origine.call(this, stores, mode, ...reste);
+  };
+}, { declencheur, lignes });
 
 test('MIG-01 — montée 3 → 4 : « marqueurs » et « marquages » naissent avec leurs trois index, un appel du schéma 3 est relu à l’identique', async ({ page }) => {
   const APPEL = { id: 'sa_ea', seanceId: 'sa', eleveId: 'ea', statut: 'retard', minutesRetard: 12, commentaire: 'Commentaire fictif' };
@@ -355,8 +399,150 @@ test('MIG-07 — sauvegarde altérée refusée cas par cas, base intacte ; champ
   expect(res.acceptes).toEqual({ poseNue: true, marqueurNu: true, inconnu: true });
 });
 
+// Navigation par le hash (DEUXIÈME rendu : afficherVue rend le focus à #vue en fin de rendu, ui.js) : attend un conteneur
+// #vue NEUF qui a reçu le focus — le rendu est TERMINÉ (aides dupliquées de marqueurs-ecran.spec.mjs, convention du dépôt).
+async function naviguer(page, hash) {
+  await page.evaluate((h) => { window.__vuePrecedente = document.getElementById('vue'); location.hash = h; }, hash);
+  await expect.poll(() => page.evaluate(() => {
+    const v = document.getElementById('vue');
+    return v !== window.__vuePrecedente && document.activeElement === v;
+  })).toBe(true);
+}
+async function ouvrirAppel(page, seanceId, n) {
+  await naviguer(page, `#/appel/${seanceId}`);
+  await expect(page.locator('.btn-eleve')).toHaveCount(n);
+}
+// Rangée de la carte de chaque élève, dans l'ordre de la grille : codes (texte, orphelin, couleur), repères, nom accessible.
+const lireRangees = (page) => page.evaluate(() => [...document.querySelectorAll('.btn-eleve')].map((carte) => {
+  const rang = carte.querySelector('.rang-marqueurs-carte');
+  if (!rang) return null;
+  return {
+    texte: rang.textContent,
+    codes: [...rang.querySelectorAll('[data-mq-rang]')].map((c) => ({
+      court: c.textContent, orphelin: c.hasAttribute('data-mq-orphelin'), couleur: c.getAttribute('data-niveau-couleur') })),
+    mqCodes: rang.querySelectorAll('.mq-code').length,
+    reperes: rang.querySelectorAll('.mq-neutre').length,
+    nom: rang.querySelector('.sr-only')?.textContent ?? null,
+  };
+}));
+
+test('MIG-08 — orphelins et genres inconnus : import accepté, rendu à l’écran sans erreur (le genre décide, code gris ou repère), orphelin retirable jamais reposable ; ordre du catalogue', async ({ page }) => {
+  await peupler(page, { poses: false });
+  // Sauvegarde RÉELLE (exporterJSON), vocabulaire vidé, quatre poses orphelines sur s1 : c'est ce qu'un import rend
+  // quand le marqueur a disparu du vocabulaire. Le format n'impose aucun contrôle relationnel (décision 16).
+  const orphelins = [
+    { id: 's1_e1_x-role', seanceId: 's1', eleveId: 'e1', marqueurId: 'x-role', occurrences: 1, genreSecours: 'role', courtSecours: 'BX7', dateAjout: '2026-09-14T10:00:00.000Z' },
+    { id: 's1_e1_x-grp', seanceId: 's1', eleveId: 'e1', marqueurId: 'x-grp', occurrences: 1, genreSecours: 'groupe', dateAjout: '2026-09-14T10:00:00.000Z' },
+    { id: 's1_e2_x-comp', seanceId: 's1', eleveId: 'e2', marqueurId: 'x-comp', occurrences: 1, genreSecours: 'comportement', dateAjout: '2026-09-14T10:00:00.000Z' },
+    { id: 's1_e3_x-inc', seanceId: 's1', eleveId: 'e3', marqueurId: 'x-inc', occurrences: 1, courtSecours: 'ZZ', dateAjout: '2026-09-14T10:00:00.000Z' },
+  ];
+  await page.evaluate(async (poses) => {
+    const io = await import('/js/io.js');
+    const dump = await io.exporterJSON();
+    dump.stores.marqueurs = [];
+    dump.stores.marquages = poses;
+    await io.importerJSON(JSON.parse(JSON.stringify(dump))); // comme un fichier réel
+  }, orphelins);
+  // Prémisses : l'import a bien écrit les quatre orphelins, et le vocabulaire est bien VIDE.
+  const relus = await lireMarqueurs(page);
+  expect(relus.marqueurs).toEqual([]);
+  expect(relus.marquages).toEqual(trierParId(orphelins));
+
+  await ouvrirAppel(page, 's1', 3);
+  await expect(page.locator('#vue')).not.toContainText('Affichage impossible');
+  // Prémisse : vocabulaire vide, la rangée existe quand même — elle vient des poses de la séance (M88).
+  await expect(page.locator('.btn-eleve .rang-marqueurs-carte')).toHaveCount(3);
+  const [r1, r2, r3] = await lireRangees(page);
+  for (const r of [r1, r2, r3]) expect(r.texte).not.toBe('');
+  // e1 : deux orphelins rôle et équipe → codes GRIS (aucune couleur), dans l'ordre des genres ; sans courtSecours → « ? ».
+  expect(r1.codes).toEqual([
+    { court: 'BX7', orphelin: true, couleur: null },
+    { court: '?', orphelin: true, couleur: null },
+  ]);
+  expect(r1.nom).toBe('Marqueurs : marqueur supprimé (BX7), marqueur supprimé (?)');
+  // e2 : orphelin comportement → le repère neutre, aucun code (jamais « ? »).
+  expect(r2.mqCodes).toBe(0);
+  expect(r2.reperes).toBe(1);
+  expect(r2.nom).toBe('Marqueurs : 1 comportement noté');
+  // e3 : orphelin SANS genre mais avec un courtSecours → le GENRE décide d'abord : repère, ni « ZZ » ni « ? ».
+  expect(r3.mqCodes).toBe(0);
+  expect(r3.reperes).toBe(1);
+  expect(r3.texte).not.toContain('ZZ');
+  expect(r3.texte).not.toContain('?');
+
+  // Feuille « ⋯ » de e1 : l'orphelin est montré, posé, marqué comme tel (E114) ; retirable, jamais reposable (C11, C12).
+  await page.locator('.btn-eleve').nth(0).locator('.eleve-menu').click();
+  const dlg = page.locator('dialog.feuille[open]');
+  await expect(dlg).toHaveCount(1);
+  const orphBX7 = dlg.locator('.btn-marqueur', { hasText: 'marqueur supprimé (BX7)' });
+  await expect(orphBX7).toHaveCount(1);
+  await expect(orphBX7).toHaveAttribute('aria-pressed', 'true');
+  await expect(orphBX7).toHaveAttribute('data-mq-orphelin', '');
+  await expect(orphBX7).not.toHaveAttribute('aria-disabled', 'true');
+  await expect(dlg.locator('.btn-marqueur', { hasText: 'marqueur supprimé (?)' })).toHaveAttribute('aria-pressed', 'true');
+  await orphBX7.click();
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+  await expect.poll(async () => (await lireMarqueurs(page)).marquages.map((p) => p.id))
+    .toEqual(['s1_e1_x-grp', 's1_e2_x-comp', 's1_e3_x-inc']);
+  // L'annonce commence par une majuscule, même quand le libellé est le repli « marqueur supprimé » (revue v0.14.2, K4) ; feuille
+  // ouverte, elle va dans la région de la feuille (D1 : celle de la vue, sous la modale, est inerte).
+  await expect(dlg.locator(':scope > p.sr-only[role="status"]')).toHaveText('Marqueur supprimé retiré de Prenom1 NOM01.');
+  // Retiré, il reste EN PLACE, non pressé et verrouillé ; un second geste ne le repose pas.
+  await expect(orphBX7).toHaveAttribute('aria-pressed', 'false');
+  await expect(orphBX7).toHaveAttribute('aria-disabled', 'true');
+  await orphBX7.click({ force: true }); // aria-disabled : Playwright refuse le clic, un doigt le fait
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+  expect((await lireMarqueurs(page)).marquages.map((p) => p.id)).toEqual(['s1_e1_x-grp', 's1_e2_x-comp', 's1_e3_x-inc']);
+  await dlg.getByRole('button', { name: 'Fermer', exact: true }).click();
+  await expect(dlg).toHaveCount(0);
+
+  // Phase 2 — marqueurs CONNUS de genre inconnu ou absent (écrits bruts : ecrireMarqueur les refuserait) : comportements.
+  await page.evaluate(async () => {
+    const io = await import('/js/io.js');
+    await io.enregistrer('marqueurs', { id: 'x-inc', libelle: 'Aide', court: 'AI', genre: 'inconnu' });
+    await io.enregistrer('marqueurs', { id: 'x-sans', libelle: 'Zèle', court: 'ZL' });
+    await io.enregistrer('marquages', { id: 's1_e2_x-sans', seanceId: 's1', eleveId: 'e2', marqueurId: 'x-sans', occurrences: 1, dateAjout: '2026-09-14T10:00:00.000Z' });
+  });
+  expect((await lireMarqueurs(page)).marqueurs.map((m) => m.id)).toEqual(['x-inc', 'x-sans']); // prémisse
+  await naviguer(page, '#/appel');
+  await ouvrirAppel(page, 's1', 3);
+  await expect(page.locator('#vue')).not.toContainText('Affichage impossible');
+  const [, q2, q3] = await lireRangees(page);
+  // e3 : « x-inc » n'est plus orphelin, son genre inconnu le range en comportement — le vocabulaire gagne (§5.2 règle 1).
+  expect(q3.reperes).toBe(1);
+  expect(q3.mqCodes).toBe(0);
+  expect(q3.texte).not.toContain('AI');
+  expect(q3.texte).not.toContain('ZZ');
+  // e2 : un orphelin comportement + un marqueur sans genre = deux repères, comptés sans être nommés.
+  expect(q2.reperes).toBe(2);
+  expect(q2.mqCodes).toBe(0);
+  expect(q2.nom).toBe('Marqueurs : 2 comportements notés');
+
+  // Test pur de l'ordre du catalogue (C9) : le genre d'abord (inconnu = comportement), les archivés en dernier DANS leur
+  // genre, puis le libellé ; l'entrée n'est pas modifiée.
+  const tri = await page.evaluate(async () => {
+    const { trierMarqueurs } = await import('/js/marqueurs-calcul.js');
+    const entree = [
+      { id: 'a', libelle: 'Bavardage', court: 'BAV', genre: 'comportement' },
+      { id: 'b', libelle: 'Arbitre', court: 'ARB', genre: 'role' },
+      { id: 'c', libelle: 'Ancien', court: 'ANC', genre: 'role', archivee: true },
+      { id: 'd', libelle: 'Équipe 1', court: 'E1', genre: 'groupe' },
+      { id: 'e', libelle: 'Zèle', court: 'ZL' },
+      { id: 'f', libelle: 'Aide', court: 'AI', genre: 'inconnu' },
+      { id: 'g', libelle: 'Équipe 0', court: 'E0', genre: 'groupe', archivee: true },
+    ];
+    const avant = JSON.stringify(entree);
+    const sortie = trierMarqueurs(entree);
+    return { libelles: sortie.map((m) => m.libelle), intacte: JSON.stringify(entree) === avant, copie: sortie !== entree };
+  });
+  expect(tri).toEqual({ libelles: ['Arbitre', 'Ancien', 'Équipe 1', 'Équipe 0', 'Aide', 'Bavardage', 'Zèle'], intacte: true, copie: true });
+
+  expect(erreurs, 'aucune erreur console ni exception').toEqual([]);
+});
+
 // MIG-09 — trois chemins, trois tests : la séance (seul aperçu NEUF de ce lot), la séquence (le chemin
-// qu'on oublie : supprimerSequenceEnCascade doit reporter ce que collecterSeance ramasse) et l'élève.
+// qu'on oublie : depuis la v0.14.2, supprimerSequenceEnCascade emporte chaque séance par la MÊME fonction que la
+// séance, emporterSeance ; collecterSeance n'existe plus) et l'élève.
 test('MIG-09 — supprimer une séance emporte ses marqueurs posés, la confirmation les compte, « Annuler » les restaure', async ({ page }) => {
   await peupler(page);
   const avant = await lireMarqueurs(page);
@@ -447,4 +633,151 @@ test('MIG-10 — appliquerMarquages rejette quand la transaction avorte APRÈS l
   expect(res.resolu).toBe(false); // un « ✓ » mensonger résoudrait ici
   expect(res.erreur).toBeTruthy();
   expect(res.enBase).toBe(0);
+});
+
+// MIG-11 — v0.14.2 (contrat §16, revue de la v0.14.0, point 1) : chaque cascade COLLECTE et SUPPRIME dans UNE transaction
+// d'écriture. Une pose (et une ligne d'un autre magasin) écrites par « un autre onglet » juste avant cette transaction partent
+// avec elle, et « Annuler » les rend. Avant : lectures dans des transactions séparées, puis supprimerLot — ce qui était écrit
+// entre les deux survivait à sa séance ou à son élève.
+const poseInjectee = (seanceId, eleveId, m) => ({
+  id: `${seanceId}_${eleveId}_${m.id}`, seanceId, eleveId, marqueurId: m.id, occurrences: 1,
+  courtSecours: m.court, genreSecours: m.genre, dateAjout: '2026-09-21T10:00:00.000Z',
+});
+const appelInjecte = (seanceId, eleveId) => ({ id: `${seanceId}_${eleveId}`, seanceId, eleveId, statut: 'present', minutesRetard: null, commentaire: '' });
+
+test('MIG-11 — séance : une pose et un appel écrits juste avant la cascade partent avec la séance ; « Annuler » les rend', async ({ page }) => {
+  await peupler(page);
+  await page.evaluate(async () => { // e4 n'a aucun appel sur s1 : l'appel injecté est une ligne NEUVE
+    await (await import('/js/io.js')).enregistrer('eleves', { id: 'e4', classeId: 'c1', nom: 'NOM04', prenom: 'Prenom4', actif: true });
+  });
+  const avant = await lireTout(page, ['appels', 'marquages']);
+  const pose = poseInjectee('s1', 'e4', { id: 'mq-arb', court: 'ARB', genre: 'role' });
+  const appel = appelInjecte('s1', 'e4');
+  expect(avant.marquages.map((p) => p.id)).not.toContain(pose.id); // prémisses : lignes absentes avant
+  expect(avant.appels.map((a) => a.id)).not.toContain(appel.id);
+  expect(avant.marquages.filter((p) => p.seanceId === 's1')).toHaveLength(4);
+  await page.goto('/#/sequences/sq');
+  await page.getByRole('button', { name: /^Supprimer la séance du 14\/09/ }).click();
+  const dlg = page.locator('dialog.feuille-confirm');
+  await expect(dlg.locator('.confirm-detail')).toHaveText('Seront aussi supprimés : 3 appels, 4 marqueurs posés.'); // aperçu lu avant
+  await injecterAvant(page, { declencheur: 'marquages', lignes: { marquages: [pose], appels: [appel] } });
+  await dlg.locator('.btn-danger').click();
+  await expect(page.locator('.toast').last()).toContainText('Séance supprimée');
+  expect(await page.evaluate(() => [window.__injecte, window.__injecteOk])).toEqual([true, true]); // prémisse : écrites, validées
+  const apres = await lireTout(page, ['appels', 'marquages']);
+  expect(apres.marquages.filter((p) => p.seanceId === 's1')).toEqual([]); // dans TOUT le magasin
+  expect(apres.appels.filter((a) => a.seanceId === 's1')).toEqual([]);
+  expect(apres.marquages).toEqual(avant.marquages.filter((p) => p.seanceId === 's2')); // les 2 poses de s2 intactes
+  await page.locator('.toast').last().getByRole('button', { name: 'Annuler' }).click();
+  await expect.poll(async () => (await lireTout(page, ['marquages'])).marquages.length).toBe(avant.marquages.length + 1);
+  expect(await lireTout(page, ['appels', 'marquages'])).toEqual({
+    appels: trierParId([...avant.appels, appel]),
+    marquages: trierParId([...avant.marquages, pose]),
+  });
+});
+
+test('MIG-11 — séquence : une pose et un appel écrits juste avant la cascade partent avec la séquence, en une seule transaction ; « Annuler » les rend', async ({ page }) => {
+  await peupler(page);
+  const avant = await lireTout(page, ['appels', 'marquages']);
+  const pose = poseInjectee('s2', 'e3', { id: 'mq-e1', court: 'E1', genre: 'groupe' });
+  const appel = appelInjecte('s2', 'e3'); // s2 n'a pas d'appel de e3
+  expect(avant.marquages.map((p) => p.id)).not.toContain(pose.id); // prémisses
+  expect(avant.appels.map((a) => a.id)).not.toContain(appel.id);
+  expect(avant.marquages).toHaveLength(6);
+  await page.goto('/#/sequences/sq');
+  await page.getByRole('button', { name: 'Supprimer définitivement' }).click();
+  const dlg = page.locator('dialog.feuille-confirm');
+  await expect(dlg.locator('.confirm-detail')).toContainText('6 marqueurs posés');
+  // Sonde posée AVANT l'injecteur : transactions d'écriture couvrant « appels » ouvertes par la cascade (hors injecteur).
+  await page.evaluate(() => {
+    window.__txAppels = 0;
+    const orig = IDBDatabase.prototype.transaction;
+    IDBDatabase.prototype.transaction = function (noms, mode, ...a) {
+      if (mode === 'readwrite' && [].concat(noms).includes('appels') && !window.__dansInjecteur) window.__txAppels++;
+      return orig.call(this, noms, mode, ...a);
+    };
+  });
+  await injecterAvant(page, { declencheur: 'marquages', lignes: { marquages: [pose], appels: [appel] } });
+  await dlg.locator('.btn-danger').click();
+  await expect(page.locator('.toast').last()).toContainText('Séquence Badminton supprimée');
+  expect(await page.evaluate(() => [window.__injecte, window.__injecteOk])).toEqual([true, true]); // prémisse
+  const apres = await lireTout(page, ['appels', 'marquages']);
+  expect(apres.marquages).toEqual([]); // s1 et s2 sont les deux séances de sq
+  expect(apres.appels).toEqual([]);
+  expect(await page.evaluate(() => window.__txAppels)).toBe(1); // UNE transaction pour toute la séquence
+  await page.locator('.toast').last().getByRole('button', { name: 'Annuler' }).click();
+  await expect.poll(async () => (await lireTout(page, ['marquages'])).marquages.length).toBe(avant.marquages.length + 1);
+  expect(await lireTout(page, ['appels', 'marquages'])).toEqual({
+    appels: trierParId([...avant.appels, appel]),
+    marquages: trierParId([...avant.marquages, pose]),
+  });
+});
+
+test('MIG-11 — élève : une pose et une observation écrites juste avant la cascade partent avec l’élève ; « Annuler » les rend', async ({ page }) => {
+  await peupler(page);
+  const avant = await lireTout(page, ['marquages', 'observations']);
+  const pose = poseInjectee('s2', 'e1', { id: 'mq-e1', court: 'E1', genre: 'groupe' });
+  const observation = { id: 'obs-inj', eleveId: 'e1', texte: 'x', type: 'Remarque', date: '2026-09-21', seanceId: null, dateAjout: '2026-09-21T10:00:00.000Z' };
+  expect(avant.marquages.map((p) => p.id)).not.toContain(pose.id); // prémisses
+  expect(avant.observations).toEqual([]);
+  expect(avant.marquages.filter((p) => p.eleveId === 'e1')).toHaveLength(3);
+  await page.goto('/#/eleves/fiche/e1');
+  await page.getByRole('button', { name: 'Supprimer définitivement' }).click();
+  const dlg = page.locator('dialog.feuille-confirm');
+  await expect(dlg.locator('.confirm-detail')).toContainText('3 marqueurs posés');
+  await injecterAvant(page, { declencheur: 'marquages', lignes: { marquages: [pose], observations: [observation] } });
+  await dlg.locator('.btn-danger').click();
+  await expect(page.locator('.toast').last()).toContainText('Prenom1 NOM01 supprimé');
+  expect(await page.evaluate(() => [window.__injecte, window.__injecteOk])).toEqual([true, true]); // prémisse
+  const apres = await lireTout(page, ['marquages', 'observations']);
+  expect(apres.marquages.filter((p) => p.eleveId === 'e1')).toEqual([]);
+  expect(apres.observations).toEqual([]);
+  expect(apres.marquages).toEqual(avant.marquages.filter((p) => p.eleveId !== 'e1')); // les autres élèves intacts
+  await page.locator('.toast').last().getByRole('button', { name: 'Annuler' }).click();
+  await expect.poll(async () => (await lireTout(page, ['marquages'])).marquages.length).toBe(avant.marquages.length + 1);
+  expect(await lireTout(page, ['marquages', 'observations'])).toEqual({
+    marquages: trierParId([...avant.marquages, pose]),
+    observations: [observation],
+  });
+});
+
+test('MIG-12 — une cascade qui avorte au commit rejette et ne supprime rien', async ({ page }) => {
+  await peupler(page);
+  const avant = await lireTout(page, ['seances', 'appels', 'marquages']);
+  // Prémisses : s1, ses 4 poses et ses 3 appels existent.
+  expect(avant.seances.map((s) => s.id)).toContain('s1');
+  expect(avant.marquages.filter((p) => p.seanceId === 's1')).toHaveLength(4);
+  expect(avant.appels.filter((a) => a.seanceId === 's1')).toHaveLength(3);
+  const res = await page.evaluate(async () => {
+    const io = await import('/js/io.js');
+    const original = IDBObjectStore.prototype.delete;
+    const trace = { suppressionReussie: false, abandon: false };
+    let arme = true;
+    // Défaillance au COMMIT : la première suppression d'une pose réussit, puis la transaction est abandonnée par une requête
+    // émise après elle (motif MIG-10). Une cascade qui résoudrait avant la validation annoncerait une suppression qui n'a pas eu lieu.
+    IDBObjectStore.prototype.delete = function (...args) {
+      const req = original.apply(this, args);
+      if (this.name === 'marquages' && arme) {
+        arme = false;
+        const store = this;
+        req.addEventListener('success', () => {
+          trace.suppressionReussie = true;
+          store.count().addEventListener('success', () => { trace.abandon = true; try { req.transaction.abort(); } catch { /* déjà close */ } });
+        });
+      }
+      return req;
+    };
+    let resolu = false;
+    let erreur = null;
+    try {
+      await io.supprimerSeanceEnCascade('s1');
+      resolu = true;
+    } catch (e) { erreur = e?.message || String(e); } finally { IDBObjectStore.prototype.delete = original; }
+    return { ...trace, resolu, erreur };
+  });
+  expect(res.suppressionReussie).toBe(true); // prémisse : une suppression a bien réussi avant l'abandon
+  expect(res.abandon).toBe(true); // prémisse : l'abandon a bien eu lieu
+  expect(res.resolu).toBe(false); // la promesse est REJETÉE
+  expect(res.erreur).toBeTruthy();
+  expect(await lireTout(page, ['seances', 'appels', 'marquages'])).toEqual(avant); // rien n'est supprimé
 });

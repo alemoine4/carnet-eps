@@ -77,6 +77,7 @@ Audit du 2026-09-05 (B30) : le seuil ⚠ « 3 oublis de tenue / 3 dispenses « m
 - **Départage** entre deux inaptitudes actives : totale > partielle, puis certificat > infirmerie > mot (déterministe, indépendant de l'ordre des identifiants).
 **Écartés** : statut `infirmerie` pour l'origine infirmerie (il signifie « parti à l'infirmerie pendant le cours ») ; pré-remplir la partielle en `inapte` (fausse le compteur de pratiquants) ; marquer les enregistrements posés d'office (`auto`) pour les exclure du seuil (retiré du cadre de D012, à rouvrir si le terrain trouve l'alerte gênante).
 *Réexamen si* : besoin d'un statut « aménagé » distinct pour les partielles (compte pratiquant, mais tracé) ; alerte « 3 dispenses » jugée parasite pour une inaptitude sur mot déclarée → exclure les enregistrements posés d'office du seuil.
+*Amendé par D016 (2026-09-26, v0.14.2)* : le pré-remplissage et « Terminer l'appel » n'écrivent plus que pour les élèves **sans appel relu en base** — un statut posé ailleurs (autre onglet, autre fenêtre) n'est plus remplacé par « inapte », « dispensé » ni « présent ».
 
 ## D014 — 2026-09-22 — Marqueurs de séance : magasin dédié et schéma 4, pendant la fenêtre « zéro donnée »
 
@@ -113,3 +114,65 @@ contrôle de concurrence optimiste sur les poses (un tap au gymnase deviendrait 
 (aucune dans le premier lot, ajoutable sans montée de schéma grâce à la tolérance des champs).
 *Réexamen si* : besoin de compter plusieurs fois un comportement dans une séance (changer la valeur d'`occurrences`, rien à
 migrer) ; besoin d'une exclusivité (champ `famille`) ; besoin de l'heure de chaque occurrence (changerait les clés, donc migration).
+
+## D015 — 2026-09-26 — Cascades en une transaction, magasins rattachés dérivés du schéma
+
+Revue de la v0.14.0 (contrat des marqueurs, §16, point 1), devenue atteignable en v0.14.2 avec la pose par la feuille « ⋯ » :
+les cascades de suppression **collectaient** par lectures, dans des transactions séparées, **puis** supprimaient d'un bloc
+(`supprimerLot`, avis B29) ; une pose écrite entre les deux par un autre onglet survivait à sa séance ou à son élève. La même
+fenêtre existait pour `appels` et `notes` (plan v0.14.2, C17) : le défaut est la forme de la cascade, pas le magasin.
+- **Une transaction** : chaque cascade (séance, séquence, élève) collecte **et** supprime dans **une** transaction `readwrite`
+  (`cascade(stores, collecter)`, `io.js`) — requêtes émises dans les rappels, **sans `await`** ; dédoublonnage par clé ;
+  résolution sur `oncomplete`, rejet sur `abort` avec le conseil de `motifEcriture` ; valeur de retour `{ magasin: [lignes] }`
+  inchangée (l'annulation par `restaurer` rend exactement ce qui a été supprimé). IndexedDB exécute dans leur ordre de création
+  les transactions d'écriture de portées communes : une écriture concurrente passe **avant** (collectée, supprimée, rendue par
+  « Annuler ») ou **après** ~~(elle ne trouve plus rien)~~, jamais entre la lecture et la suppression. **Après la cascade, seules
+  les écritures qui relisent la séance et l'élève dans leur transaction sont refusées ou écartées** — la pose d'un marqueur
+  (`appliquerMarquages`) et « Terminer l'appel » ou le pré-remplissage (`completerAppels`, D016). Un statut ou un commentaire
+  (`definirStatut`), une note (`mettreAJourEvaluation` relit l'évaluation, pas l'élève) ou une observation écrits par une vue
+  restée ouverte sont des `put` qui ne relisent rien : ils **recréent une ligne orpheline** — un appel peut ainsi garder un
+  commentaire libre (un texte de santé) pour un élève supprimé définitivement, et la sauvegarde l'emporte (revue adversariale de
+  la v0.14.2, 2026-09-28, R04 ; défaut préexistant, déjà en v0.14.1, `definirStatut` hors contrat — règle n° 1).
+- **Magasins rattachés dérivés du schéma** : `PAR_SEANCE` = tout magasin de `SCHEMA` indexé par `seanceId` (aujourd'hui `appels`,
+  `marquages`), `PAR_ELEVE` = tout magasin indexé par `eleveId` (`appels`, `inaptitudes`, `certificats`, `notes`, `observations`,
+  `marquages`), plus les pièces des certificats et la photo de l'élève ; la séance et la séquence partagent `emporterSeance` (la
+  séquence ne peut plus oublier ce que la séance emporte, le « chemin oublié » de la v0.14.0). Un magasin futur indexé par
+  `seanceId` ou `eleveId` entre dans la cascade sans une ligne de plus. Le budget de la garde C37 reste **6** lectures par index.
+- **Le second chemin est fermé aussi** : `appliquerMarquages` relit la séance et l'élève et **refuse une pose** sur une séance ou
+  un élève disparus, même quand une vue périmée a recréé l'appel par `definirStatut` ; le retrait reste toujours permis.
+**Écartés** : refuser la pose seulement (l'alternative du §16 ne ferme pas la fenêtre : la séance existe encore entre la
+collecte et la suppression) ; collecte en lecture seule puis `supprimerLot` (la forme d'avant, mutant M113) ; liste des magasins
+écrite à la main (elle avait déjà oublié `inaptitudes` et `marquages` dans la sonde de C37, v0.14.0).
+*Limites consignées (`TODO.md`)* : l'aperçu de la confirmation est lu avant, hors de la transaction — la cascade peut emporter
+plus que ce qu'il annonce (une pose écrite entre l'aperçu et la confirmation) ; « Annuler » réécrit par `put` sans relire ; les
+suppressions de `notes.js`, `inaptitudes.js` et `documents.js` gardent la forme « collecte puis suppression » ; une écriture
+d'une vue périmée APRÈS la cascade (statut, commentaire, note, observation) recrée une ligne orpheline (« Appel orphelin »).
+*Réexamen si* : un magasin se rattache à une séance ou à un élève autrement que par un index `seanceId` / `eleveId`.
+
+## D016 — 2026-09-26 — `completerAppels` : compléter l'appel sans jamais remplacer un appel existant, y compris le pré-remplissage des inaptitudes
+
+Contrat des marqueurs, §14 réponse 3 (« Terminer l'appel » durci dans la v0.14.2, le lot où il devient le passage obligé vers les
+marqueurs). « Terminer l'appel » écrivait ses enregistrements par `restaurer` : des `put` aveugles bâtis sur la mémoire de la vue.
+Un statut posé entre-temps dans un autre onglet ou une autre fenêtre **du même appareil** (chaque appareil a sa propre base) était
+remplacé par « présent » — ou par le statut d'office de D013. Le pré-remplissage des inaptitudes avait le même défaut (plan
+v0.14.2, C26) : même classe, même correctif.
+- `completerAppels(seanceId, candidats)` (`io.js`) : **une** transaction `readwrite` sur `seances`, `eleves` et `appels` (seules
+  des `put` sur `appels`), qui relit les appels de la séance **en dernier** et n'écrit **que** les candidats ~~dont la clé est
+  **absente** de la base~~ **dont l'élève n'a aucun appel dans la base, retrouvé par (séance, élève) comme la vue le repère —
+  jamais par sa clé ; une clé prise par l'appel d'un autre élève (sauvegarde tierce) fait tout refuser, sans écraser sa ligne
+  (revue adversariale de la v0.14.2, 2026-09-28, R03)**. Rend `{ creees, deja, ecartes }` sur `oncomplete` : `deja` = les appels trouvés, rendus tels quels,
+  jamais réécrits ; `ecartes` = les élèves supprimés entre-temps (rien d'écrit pour eux). Séance supprimée ou candidat
+  incohérent : tout est refusé (« séance supprimée entre-temps : rechargez la page », « appel incohérent avec sa séance :
+  rechargez la page ») ; une erreur de quota garde son conseil (`motifEcriture`).
+- **La vue s'aligne par identifiant** sur `creees ∪ deja` : le dernier état confirmé est toujours celui de la base ; l'écran ne
+  change que si aucun tap n'a eu lieu pendant l'écriture ; toasts « N statut(s) déjà saisi(s) sur un autre écran : conservé(s). »
+  et « N élève(s) introuvable(s) sur cet appareil : rechargez la page. ». Toujours **une** transaction et le bouton verrouillé
+  pendant l'écriture (A27). Le pré-remplissage emploie la même fonction, sans peindre (la grille n'existe pas encore).
+- **Amende D013** : la règle de D013 (statut d'office selon le type et l'origine de l'inaptitude) ne s'applique plus qu'aux élèves
+  **sans appel en base**, relu dans la transaction : un statut posé ailleurs n'est plus jamais remplacé par « inapte »,
+  « dispensé » ni « présent ». Le reste de D013 est inchangé.
+**Écartés** : contrôle de concurrence optimiste (un « rechargez la page » au lieu de conserver ce qui existe) ; réaligner tout
+l'écran sur l'appel relu (un chemin d'écriture de l'écran de plus, pour un cas rare : le rechargement relit tout) ; laisser le
+pré-remplissage tel quel (même défaut, « réparer la classe »).
+*Réexamen si* : un appel doit un jour être complété champ par champ (commentaire, minutes) — `completerAppels` ne fusionne jamais,
+il complète ou conserve.

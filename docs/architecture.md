@@ -25,11 +25,11 @@ PWA **vanilla** (HTML/CSS/JS ES modules), multi-fichiers, **sans étape de build
 | Boot/Router | `main.js` | démarrage, table des routes, SW | logique métier |
 | Vues | `ui.js` + `modules/*.js` | rendu DOM, interactions | accès direct à IndexedDB (passer par `io.js`) |
 | État | `state.js` | préférences UI en mémoire (`etat.prefs`), pub/sub (`abonner`/`emettre`), `VERSION_APP`, `MODE_ESSAI` (bandeau et titre « version d’essai » ; va de pair avec `manifest.webmanifest`) | persistance métier, état de route (le hash fait foi) |
-| Données | `io.js` | IndexedDB (CRUD + index), **écritures groupées atomiques** (`supprimerLot`, `restaurer`, cascades, import : une transaction multi-stores — avis B29), export/import JSON, parse CSV | manipulation du DOM |
+| Données | `io.js` | IndexedDB (CRUD + index), **écritures groupées atomiques** (`supprimerLot`, `restaurer`, cascades, import : une transaction multi-stores — avis B29 ; depuis la v0.14.2, chaque cascade de séance, de séquence et d'élève **collecte et supprime dans la même transaction**, magasins rattachés dérivés du schéma — D015), **relectures dans la transaction d'écriture** (`mettreAJourEvaluation`, `appliquerMarquages`, `completerAppels` : « Terminer l'appel » et le pré-remplissage complètent l'appel sans jamais remplacer un appel existant — D016), export/import JSON, parse CSV | manipulation du DOM |
 
 Règle de croissance (détail et contrat d'un module : `docs/modules.md`) : **un module métier = un fichier** dans `modules/` (ex. `appel.js`) qui exporte `enregistrerVue()`. `main.js` importe les modules ; jamais l'inverse entre modules (passer par `state.js`/événements). Exception assumée : `modules/observations.js` est une **brique** (carte réutilisable) importée par `eleves.js` (v0.12.0).
 
-Ce qui est commun à plusieurs modules vit dans **`metier.js`** (vocabulaire, dates, tris `trierEleves`/`trierClasses`, `normaliser`/`cleTexte`, `baremeDe`, `formatFR`, `jours`) ou **`ui.js`** (`el`, `carte`, `champ`, `champTexte`/`champSelect`/`champZone`, feuilles, `confirmer`, `toast`) — un module ne redéfinit jamais un helper qui existe déjà là (v0.12.5, avis B27).
+Ce qui est commun à plusieurs modules vit dans **`metier.js`** (vocabulaire, dates, tris `trierEleves`/`trierClasses`, `normaliser`/`cleTexte`, `baremeDe`, `formatFR`, `jours`) ou **`ui.js`** (`el`, `carte`, `champ`, `champTexte`/`champSelect`/`champZone`, feuilles, `confirmer`, `toast`) — un module ne redéfinit jamais un helper qui existe déjà là (v0.12.5, avis B27). Toute modale s'ouvre par `ouvrirModale` (`ui.js`) : `showModal()` rend inerte le reste du document, donc la modale reçoit sa propre région d'annonce (`regionModale()`, où une vue annonce tant qu'une feuille la recouvre) et porte la pile des toasts tant qu'elle est au premier plan (revue v0.14.2, D1).
 
 ## Navigation
 
@@ -39,8 +39,8 @@ Ce qui est commun à plusieurs modules vit dans **`metier.js`** (vocabulaire, da
 
 ## Stockage
 
-- **IndexedDB** `carnet-eps` (wrapper maison promisifié dans `io.js`, décision D003 — pas d'idb-keyval) : 17 stores (`DB_VERSION 4` depuis v0.14.0 — `grilles` en schéma 3, `marqueurs` et `marquages` en schéma 4 —, migrations additives D009), schéma détaillé dans `modele-donnees.md`. Les règles pures des marqueurs de séance vivent dans `marqueurs-calcul.js`, importé par `io.js` comme `grilles-calcul.js` (D014).
-- **localStorage** `carnet-eps:prefs` : préférences UI uniquement — `theme`, `derniereClasseId`, `derniereEvalId` (raccourcis « Reprendre » de l'accueil, effacés à la purge et à l'import, A25) — jamais de données élèves.
+- **IndexedDB** `carnet-eps` (wrapper maison promisifié dans `io.js`, décision D003 — pas d'idb-keyval) : 17 stores (`DB_VERSION 4` depuis v0.14.0 — `grilles` en schéma 3, `marqueurs` et `marquages` en schéma 4 —, migrations additives D009), schéma détaillé dans `modele-donnees.md`. Les règles pures des marqueurs de séance vivent dans `marqueurs-calcul.js`, importé par `io.js` comme `grilles-calcul.js` (D014) — validation, et depuis la v0.14.2 l'affichage (`codesCarte`, `trierMarqueurs`, `genreAffiche`, `couleurAffichee`), une seule source pour la carte d'élève, la feuille « ⋯ » de l'appel et l'écran du vocabulaire.
+- **localStorage** `carnet-eps:prefs` : préférences UI uniquement — `theme`, `derniereClasseId`, `derniereEvalId` (raccourcis « Reprendre » de l'accueil, effacés à la purge et à l'import, A25), `marqueursRecents` (ordre « derniers utilisés » de la feuille des marqueurs : liste d'`id`, plus récent en tête, plafonnée à 40, écrite après chaque pose réussie, lue une fois à l'ouverture de l'écran d'appel, effacée à l'import et à la purge) — jamais de données élèves.
 - **Blobs** (photos certificats, documents) : store dédié `fichiers`, compression canvas→JPEG avant écriture.
 - `navigator.storage.persist()` demandé au premier lancement (évite l'éviction silencieuse sur Android).
 

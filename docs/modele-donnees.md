@@ -79,7 +79,8 @@ marquages     (schéma 4) { id, seanceId*, eleveId*, marqueurId*, occurrences?, 
 - Supprimer une **classe** → possible seulement si elle ne contient plus **aucun** élève (actifs ou partis : le bouton « Supprimer la classe » n'apparaît qu'alors) ; refus supplémentaire tant que des séquences, des créneaux EDT (B22, v0.12.4) ou des documents (D-12, v0.12.9) la référencent (message « Classe non supprimée : elle a encore … »). Sinon : archiver.
 - Supprimer une **évaluation/séquence/séance** → cascade sur notes/séances/appels/marqueurs posés avec récapitulatif avant confirmation (la séance a son propre aperçu depuis la v0.14.0).
 - Une **inaptitude active** à une date D = `dateDebut ≤ D ≤ dateFin` → pré-remplit le statut d'appel et affiche la pastille.
-- **Atomicité (v0.12.7, avis B29 ; complétée en v0.12.8, hypothèses Codex)** : toute cascade de suppression, toute annulation (`restaurer`), la **purge totale** (`viderTout`) et l'import JSON s'exécutent en **une seule transaction IndexedDB multi-stores** (`io.js` : `ecrireLot`). Les lectures ont lieu avant, les écritures sont émises d'un bloc : tout ou rien, même si l'onglet est fermé en cours de route. Un module ne doit plus enchaîner des `supprimer()` / `enregistrer()` pour une opération logiquement unique.
+- **Compléter l'appel n'écrase jamais un appel existant (v0.14.2, décision D016)** : « Terminer l'appel » et le pré-remplissage des inaptitudes passent par `completerAppels(seanceId, candidats)` — **une** transaction `readwrite` sur `seances`, `eleves` et `appels`, qui relit les appels de la séance et n'écrit **que** les élèves sans appel **en base**. Un appel trouvé est rendu tel quel, jamais remplacé (un statut posé dans un autre onglet est conservé) ; un élève supprimé entre-temps est écarté ; une séance supprimée ou un candidat incohérent font tout refuser. Résolution sur `oncomplete`.
+- **Atomicité (v0.12.7, avis B29 ; complétée en v0.12.8, hypothèses Codex)** : toute cascade de suppression, toute annulation (`restaurer`), la **purge totale** (`viderTout`) et l'import JSON s'exécutent en **une seule transaction IndexedDB multi-stores** (`io.js` : `ecrireLot`). Les lectures ont lieu avant, les écritures sont émises d'un bloc : tout ou rien, même si l'onglet est fermé en cours de route. Un module ne doit plus enchaîner des `supprimer()` / `enregistrer()` pour une opération logiquement unique. **Depuis la v0.14.2 (décision D015), les cascades de séance, de séquence et d'élève collectent ET suppriment dans une même transaction `readwrite`** (`cascade` dans `io.js`) : une ligne écrite par un autre onglet passe avant (emportée, rendue par « Annuler ») ou après, jamais entre la lecture et la suppression. **Après la cascade, seules les écritures qui relisent la séance et l'élève dans leur transaction sont refusées ou écartées** : la pose d'un marqueur (`appliquerMarquages`) et « Terminer l'appel » ou le pré-remplissage des inaptitudes (`completerAppels`). Un statut ou un commentaire (`definirStatut`), une note (`mettreAJourEvaluation` relit l'évaluation, pas l'élève) ou une observation écrits par une vue restée ouverte ne relisent rien et **recréent une ligne orpheline** — un appel qui garde son commentaire libre pour un élève supprimé, emporté par l'export JSON ; défaut préexistant, consigné dans `TODO.md` (« Appel orphelin » ; revue adversariale de la v0.14.2, R04). Les magasins emportés sont **dérivés du schéma** : tout magasin indexé par `seanceId` part avec sa séance, tout magasin indexé par `eleveId` avec son élève (plus les pièces des certificats et la photo). Les suppressions de `notes.js`, `inaptitudes.js` et `documents.js` lisent encore avant d'écrire (consigné dans `TODO.md`).
 - **Créations atomiques (v0.12.13, lot 2)** : une création qui touche une **pièce jointe** et un enregistrement métier s'écrit en **une** transaction (`enregistrerLot` : `put` et `delete` mêlés, plusieurs stores). La compression de l'image et la construction de l'enregistrement `fichiers` se font AVANT, hors transaction (`preparerFichier`). Un remplacement de pièce échange l'ancienne et la nouvelle dans la même transaction : la suppression ne précède jamais l'écriture. L'import CSV collecte classes et élèves puis écrit tout d'un bloc.
 - **Durabilité (v0.12.8, H03)** : les écritures unitaires (`enregistrer`, `supprimer`, `vider`) ne résolvent qu'à la **validation de la transaction** (`oncomplete`), jamais au simple succès de la requête : un quota plein ou une erreur disque au commit remonte en rejet (toast d'erreur) au lieu d'un « ✓ » sans écriture.
 - **Instantané (v0.12.8, H02)** : l'export JSON et le comptage lisent tous les stores dans **une** transaction readonly (`lireLot`) : une écriture concurrente attend, la sauvegarde ne peut pas contenir d'orphelins nés pendant sa lecture.
@@ -134,8 +135,10 @@ Store **`observations`** (schéma v2), index `eleveId`. Notes de suivi terrain.
 ## Marqueurs de séance — schéma 4 (v0.14.0)
 
 Contrat complet : `docs/avis/AVIS_FORMAT_MARQUEURS.md` ; décision D014. Deux magasins dédiés, ajoutés par migration additive
-(montée `DB_VERSION` 3 → 4, aucune donnée existante lue ni transformée). La v0.14.0 ne livre que le **format** : aucun écran
-ne pose encore de marqueur.
+(montée `DB_VERSION` 3 → 4, aucune donnée existante lue ni transformée). La v0.14.0 a livré le **format**, la v0.14.1 l'écran
+du vocabulaire (Plus → Marqueurs de séance) ; **depuis la v0.14.2, la pose se fait pendant l'appel**, par la feuille « ⋯ » d'un
+élève, et la carte d'élève montre les codes des rôles et des équipes et le repère neutre des comportements. Aucun de ces écrans
+ne change le format.
 
 - **Store `marqueurs`** (le vocabulaire) : `{ id, libelle, court, genre, couleur, archivee }`. `id` = `crypto.randomUUID()`,
   **stable à vie** : un renommage ne le change jamais (il corrige une faute ; changer de sens = nouveau marqueur).
@@ -151,13 +154,24 @@ ne pose encore de marqueur.
 - **Le vocabulaire d'abord** : quand `marqueurId` se résout, on affiche le libellé, le code et la couleur ACTUELS (un
   renommage change la lecture de tout l'historique) ; l'instantané n'existe que pour ce qui a disparu.
 - **Écritures** (`io.js`) : `appliquerMarquages(seanceId, operations, options)` est l'unique écriture des poses — lecture de
-  l'appel, du vocabulaire et des poses de la séance, contrôle et écriture dans **une** transaction ; une pose sur un élève sans
-  enregistrement d'appel est refusée (`AppelManquant`) ou écartée en mode `ignorer` ; **rien n'est jamais écrit dans
-  `appels`** (un marqueur ne valide pas une présence) ; reposer conserve `occurrences`, `dateAjout` et tout champ inconnu ;
-  résolution sur `tx.oncomplete`. `ecrireMarqueur(id, modifs)` est l'unique écriture du vocabulaire — `id` jamais pris dans
+  la séance, des élèves concernés, de l'appel, du vocabulaire et des poses de la séance, contrôle et écriture dans **une**
+  transaction ; une pose sur une séance supprimée entre-temps est refusée (« séance supprimée entre-temps : rechargez la page »),
+  sur un élève supprimé refusée (« élève introuvable : rechargez la page ») ou écartée en mode `ignorer` (v0.14.2), sur un élève
+  sans enregistrement d'appel refusée (`AppelManquant`) ou écartée en mode `ignorer` ; **un retrait est toujours permis**
+  (orphelin, archivé, séance ou élève disparus) ; **rien n'est jamais écrit dans `appels`** (un marqueur ne valide pas une
+  présence) ; reposer conserve `occurrences`, `dateAjout` et tout champ inconnu ; résolution sur `tx.oncomplete` ; une erreur de
+  quota garde son conseil (`motifEcriture`). L'opération transmise est toujours absolue (`poser` / `retirer`) : la bascule se
+  décide dans la vue. `ecrireMarqueur(id, modifs)` est l'unique écriture du vocabulaire — `id` jamais pris dans
   `modifs`, aucun genre par défaut (un marqueur importé sans genre est refusé à la modification au lieu de devenir un rôle),
   champs inconnus préservés, unicité du code relue dans la transaction.
-- **Cascades** : supprimer une séance (donc une séquence, séance par séance) ou un élève emporte ses poses, et l'annulation
-  les restaure ; le vocabulaire n'est dans aucune cascade.
+- **Cascades** : supprimer une séance, une séquence (toutes ses séances) ou un élève emporte ses poses, et l'annulation les
+  restaure ; le vocabulaire n'est dans aucune cascade. Depuis la v0.14.2, la collecte et la suppression se font dans **une**
+  transaction, séquence entière comprise (décision D015) : une pose écrite juste avant la cascade part avec elle.
+- **Préférence d'appareil** : l'ordre « derniers utilisés » de la feuille est dans `localStorage` (`marqueursRecents`, liste
+  d'`id`, voir `architecture.md`), jamais dans la base : poser n'écrit jamais dans `marqueurs`.
+- **Affichage** (`marqueurs-calcul.js`, fonctions pures) : `codesCarte` (au plus deux codes, `plus` calculé sur les données,
+  comportements comptés, nom accessible), `trierMarqueurs` (genre, archivés en dernier dans leur genre, libellé, code),
+  `grouperParEleve`, `genreAffiche` / `couleurAffichee` (genre absent ou inconnu → comportement, couleur inconnue → gris) —
+  une seule source pour la carte, la feuille « ⋯ » et l'écran du vocabulaire.
 - **Tolérance** : un genre ou une couleur inconnus ou absents ne refusent pas une sauvegarde ; ils dégraderont l'affichage
   (repère neutre, gris). Seules les écritures de l'application exigent des valeurs connues.

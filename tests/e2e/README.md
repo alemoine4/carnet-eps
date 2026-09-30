@@ -184,24 +184,40 @@ grille, mesurées sur une case rendue, ressemblent à leur nom. La première car
 d'actions. Sept mutants (ancienne palette claire, ancienne palette sombre automatique, pastille du retard, couleurs de grille rebranchées sur les statuts, espacement, les deux
 pastilles de la fiche élève) rendent ces tests rouges.
 
-**`marqueurs-migration.spec.mjs` (11)** — marqueurs de séance, **v0.14.0 « le format seul »** (contrat
-`docs/avis/AVIS_FORMAT_MARQUEURS.md`, §11.1) : aucun écran nouveau, le vocabulaire et les poses sont écrits par `io.js`. La
-base est vidée en **dérivant** la liste des magasins de `io.STORES`. **MIG-01** : une base de schéma 3 créée avant le chargement
+**`marqueurs-migration.spec.mjs` (16)** — marqueurs de séance, **v0.14.0 « le format seul »** (contrat
+`docs/avis/AVIS_FORMAT_MARQUEURS.md`, §11.1) puis **v0.14.2 « poser et relire »** (MIG-08, MIG-11, MIG-12) : le vocabulaire et
+les poses sont écrits par `io.js` (MIG-08 les rend en plus à l'écran). La base est vidée en **dérivant** la liste des magasins de
+`io.STORES`. **MIG-01** : une base de schéma 3 créée avant le chargement
 de l'application monte en 4, les deux magasins naissent avec les trois index de `marquages`, un appel est relu champ pour champ.
 **MIG-02** : la base montée en 4 refuse de s'ouvrir en 3 (`VersionError`, ce que ferait une v0.13.5) et rend ensuite les mêmes
 poses ; devant une base plus récente qu'elle, l'application affiche un message en français. **MIG-03** : un cycle présent →
 absent → oubli de tenue par taps (donc `definirStatut`, commentaire hérité relu) laisse les poses intactes. **MIG-04** :
 aller-retour JSON sans perte, `schemaVersion` 4. **MIG-05** : une sauvegarde de schéma 3, importée par l'écran, vide les deux
 magasins **et le dit** dans la confirmation. **MIG-06** : une sauvegarde de schéma 5 est refusée sans rien vider, la même en
-schéma 4 passe. **MIG-07** : six altérations refusées une à une, base intacte, un message distinct par cas ; une pose sans
+schéma 4 passe. **MIG-07** : quinze altérations (six du contrat, neuf ajoutées par la revue de la v0.14.0) refusées une à une, base intacte, un message distinct par cas ; une pose sans
 `courtSecours`, `genreSecours` ni `occurrences`, un marqueur sans `genre`, `couleur` ni `archivee`, et un champ inconnu sur l'un et
-sur l'autre sont acceptés et relus tels quels. **MIG-09** (trois tests) : supprimer une séance, une séquence ou un élève emporte les
+sur l'autre sont acceptés et relus tels quels. **MIG-08** (v0.14.2) : une sauvegarde réelle au vocabulaire vide, qui porte quatre
+poses orphelines, s'importe ; à l'écran la rangée existe quand même (elle vient des poses de la séance), un orphelin de rôle ou
+d'équipe devient un code gris sans couleur (`BX7`, ou `?` sans code de secours) nommé « marqueur supprimé (BX7) », un orphelin de
+comportement ou sans genre n'est qu'un repère neutre (jamais « ? » ni son code : le genre décide d'abord) ; dans la feuille « ⋯ »,
+l'orphelin est pressé et retirable (annonce « Marqueur supprimé retiré de … », majuscule en tête — revue v0.14.2, K4), puis reste
+en place, verrouillé, et ne se repose pas ; un marqueur connu de genre inconnu ou
+absent se range avec les comportements ; test pur de `trierMarqueurs` (genre, archivés en dernier dans leur genre, libellé ; entrée
+intacte) ; aucune erreur console. **MIG-09** (trois tests) : supprimer une séance, une séquence ou un élève emporte les
 poses, la confirmation les compte (« 4 marqueurs posés ») et « Annuler » les restaure. **MIG-10** : `appliquerMarquages` rejette
-quand la transaction avorte après le succès de la requête d'écriture. **Treize mutants** (M01, M02, M03, M05, M07, M08, M09, M10,
-M32, M33, M34, M49, M50 ; 15 exécutions avec les variantes de M49 et M50) rendent ces tests rouges, chacun par son propre test.
+quand la transaction avorte après le succès de la requête d'écriture. **MIG-11** (trois tests, v0.14.2) : une pose et une ligne
+d'un autre magasin (appel, observation) écrites par « un autre onglet » juste avant la cascade d'une séance, d'une séquence ou d'un
+élève partent avec elle — chaque cascade collecte et supprime dans UNE transaction d'écriture (une seule pour toute la séquence,
+comptée) — et « Annuler » les rend. **MIG-12** : une cascade qui avorte au commit rejette et ne supprime rien. **Treize mutants**
+de la v0.14.0 (M01, M02, M03, M05, M07, M08, M09, M10, M32, M33, M34, M49, M50 ; 15 exécutions avec les variantes de M49 et M50 ;
+M07 à M09 réancrés en v0.14.2 sur les cascades en une transaction) rendent ces tests rouges, chacun par son propre test ; en
+v0.14.2, M12, M86 et M88 (MIG-08), M113 à M116 (MIG-11) et M117 (MIG-12) ; revue adversariale de la v0.14.2, M140 (MIG-08).
 
-**`marqueurs.spec.mjs` (5)** — marqueurs de séance, **v0.14.1 « le vocabulaire »** (contrat §6.5 et §11.2) : l'écran
-`#/marqueurs`. Même `beforeEach` dérivé de `io.STORES`. **MQ-12** : un code court déjà pris sous une autre forme (« éq » contre
+**`marqueurs.spec.mjs` (29)** — marqueurs de séance, **v0.14.1 « le vocabulaire »** (contrat §6.5 et §11.2) : l'écran
+`#/marqueurs` (MQ-12, MQ-17 à MQ-20) ; puis **v0.14.2 « poser et relire »** : la pose par la feuille « ⋯ » de l'appel (§6.2) et
+les écritures durcies (MQ-01 à MQ-11, MQ-13, MQ-15, MQ-16, MQ-21 à MQ-26), et les tests de la revue adversariale de la v0.14.2
+(MQ-27 à MQ-30 ; contrat §16, une ligne par constat). Même `beforeEach` dérivé de `io.STORES` ; projet
+chromium seul (les gestes au doigt sont dans `marqueurs-ecran.spec.mjs`). **MQ-12** : un code court déjà pris sous une autre forme (« éq » contre
 « EQ ») est refusé, avec son motif, par la relecture **dans** la transaction — la collision est écrite juste avant la
 transaction d'écriture, derrière une vue ouverte sur un vocabulaire vide ; rien n'est écrit, la saisie reste ; le genre est
 verrouillé en modification et n'est jamais transmis, même forcé par programme ; le même code est accepté après renommage du
@@ -220,8 +236,113 @@ l'aperçu d'un rôle montre son code, qui suit la frappe ; celui d'un comporteme
 couleur masquée, dans le formulaire et dans la liste. **Vingt-huit mutants** (M06, M31, M35, M51 ; M63 à M70 avec les variantes
 de M66 et M67 ; M71 à M77 avec leurs variantes, revue de la v0.14.1) rendent ces tests rouges, chacun par son propre test (A43
 pour le précache).
+En **v0.14.2** (la vue d'appel ouverte par l'adresse, tous les gestes par la feuille « ⋯ ») : **MQ-01** : poser n'écrase ni le
+statut, ni les minutes de retard, ni le commentaire qu'« un autre onglet » a écrits derrière une vue périmée. **MQ-02** : l'appel
+supprimé derrière la vue est relu dans la transaction — la pose est refusée avec son propre texte (« Appel introuvable pour… »,
+qui ne nomme aucun contrôle absent), **annoncé** aussi (jamais « … posé sur … »), aucun échec durable ; après un statut tapé et
+refusé sur CE même écran, le refus dit « … son statut n’a pas été enregistré. Choisissez-le de nouveau. », jamais « un autre
+écran » (revue v0.14.2, R02, R08, R24). **MQ-03** : deux poses en panne dans la même rafale (base tenue
+occupée) — l'écran revient au dernier état confirmé, l'échec est annoncé, dit en toast qui nomme le marqueur et l'élève, avec
+le conseil « mémoire de l'appareil pleine », et affiché dans la barre, QUOI et QUI d'abord, un seul « : » (revue v0.14.2, D2) ; puis un tap récent réussi n'est pas défait par l'échec d'un plus ancien. **MQ-04** : la pose
+et le retrait ont leur propre annonce, jamais celle d'un statut, et l'appel n'est pas réécrit ; feuille ouverte, elle est écrite
+dans la région de la FEUILLE, celle de la vue (inerte sous la modale) ne reçoit rien (revue v0.14.2, D1 — MQ-02, MQ-03 et ECR-14 y
+lisent aussi l'annonce ; l'exposition elle-même est prouvée par ECR-21). **MQ-05** : un élève pas encore
+appelé — boutons `aria-disabled` (jamais `disabled`), paragraphe de refus dans le premier groupe, toast au tap (« Terminer
+l'appel » ne passe en présent que les élèves pas encore saisis, R07), aucune écriture ; aucun statut pressé dans sa feuille, ni
+après un statut refusé par la base (K2, D3) ;
+« Retard » choisi dans la même feuille lève le verrou en direct ; vocabulaire vide dit. **MQ-06** : « Terminer l'appel » ouvre la
+pose pour toute la classe. **MQ-07** : cumul libre (Équipe 1 et Équipe 2, deux codes visibles). **MQ-08** : reposer (second
+onglet) ne crée pas de seconde ligne. **MQ-09** : `occurrences: 3` et `dateAjout` survivent à la relecture, à l'aller-retour JSON
+et à la repose. **MQ-10** : un marqueur archivé ailleurs reste lu sur la carte, apparaît « (archivé) » en dernier de son genre,
+se retire, reste en place verrouillé sans jamais se reposer, et n'est plus proposé à un autre élève. **MQ-11** : renommer suit
+tout l'historique (le vocabulaire gagne sur l'instantané) ; l'aperçu de l'écran du vocabulaire (formulaire et liste) a les
+tailles calculées exactes du code de la carte, largeur comprise (revue v0.14.2, D4 : un code de la carte n'est plus jamais
+rétréci) ; le code de la carte est mesuré après la passe de l'observateur de taille, en une seule évaluation (D10, R23 :
+`mesurerCode` — deux images, puis le nœud résolu et mesuré dans la même tâche, jamais un nœud que la passe a remplacé). **MQ-13** : douze rôles aux ids inversés, tous atteignables ; « derniers utilisés »
+en tête à la réouverture de la vue, jamais sur un retrait, ordre gelé dans la vue. **MQ-15** : poser n'écrit ni observation ni
+note (témoins : une observation et une note font bouger les comptes). **MQ-16** : la rangée est masquée à l'impression (la carte
+reste imprimée) ; le récapitulatif et son CSV (BOM retiré) n'ont que les colonnes dérivées de `STATUTS` ; à l'impression
+(718 px, une A4 à marges de 10 mm), 🩺 et ⚠ ne recouvrent aucune lettre d'un nom — rangée présente, cartes avec et sans pose, ou
+non — et restent où les imprime une carte sans rangée (revue v0.14.2, D9, R18 ; prémisse : des lettres de la dernière ligne d'un
+nom à l'aplomb d'un signal) ; le code visible à l'écran est mesuré après la passe de l'observateur de taille, en une seule
+évaluation (D10, R23), et les mesures d'impression attendent deux images. **MQ-21** : « Terminer
+l'appel » et le pré-remplissage des inaptitudes ne remplacent jamais un statut posé ailleurs (écrit juste avant leur transaction),
+le disent (« 1 statut déjà saisi sur un autre écran : conservé. ») et alignent l'écran sur la base, y compris après une panne et
+pour un tap pendant l'écriture. **MQ-22** : `completerAppels` en appel direct — appel existant rendu intact, durabilité (abandon au
+commit), élève supprimé écarté, séance supprimée refusée, candidat incohérent refusé en bloc, conseil de `motifEcriture` ; un
+appel retrouvé par (séance, élève), jamais par sa clé, et une clé prise par l'appel d'un autre élève refusée sans l'écraser
+(revue v0.14.2, R03).
+**MQ-23** : une pose sur une séance ou un élève supprimés ailleurs est refusée même quand un tap dans la vue périmée a recréé
+l'appel (écran puis `io.js`, option « ignorer ») ; le retrait reste toujours permis. **MQ-24** : la carte « Plus » promet la pose,
+l'écran du vocabulaire n'annonce plus la prochaine version. **MQ-25** : échecs durables en session par identifiants seulement,
+réaffichés au retour, écartés dès l'ouverture quand ils sont rattrapés ou obsolètes, gardés sans affichage pour un élève sorti de
+la vue. **MQ-26** : « derniers utilisés » illisibles (autre forme, liste de non-chaînes, JSON cassé) — l'appel s'affiche, la feuille
+garde l'ordre du catalogue, aucune erreur, et la liste suivante repart propre. **Revue adversariale de la v0.14.2** (deux pages
+du même contexte = deux onglets, une base) : **MQ-27** — un échec rattrapé dans l'autre onglet quitte la ligne et la session dès
+l'écriture réussie suivante, un échec non rattrapé reste (R01) ; **MQ-28** — après sa propre pose, la vue repeint toute carte
+que la base a changée, et la carte ne contredit plus sa feuille (R06) ; **MQ-29** — sortie puis retour pendant une rafale de neuf
+poses, la première tenue : la vue rouverte attend la file, montre les huit poses et l'échec de la neuvième (R26 ; au-delà de
+cinq écritures en file, la vue sans l'attente en montrait cinq) ; **MQ-30** — « Terminer l'appel » sur une sauvegarde tierce qui
+range un appel sous la clé d'un autre élève : aucune erreur, l'écran dit la base, rien d'écrit, refus dit (R03). Mutants de la v0.14.2 tués par ces tests : M04,
+M04b, M11, M13 à M16, M28 à M30b, M45, M48, M68 et M76 (réancrés), M89 à M110, M118 à M124 (M111 et M112 : A27,
+`audit5-lot5.spec.mjs`) ; revue adversariale : M126 à M132, M135, M136, M138, M139, M141 à M144 (M14, M15, M48, M91, M94, M95,
+M97, M102 et M104 réancrés) ; troisième lot : M169, M170 ; quatrième lot (D10) : M171, M172.
 
-Total de la suite : **310 tests** (+ 87 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs`, `grilles-robustesse.spec.mjs` et `audit-independant.spec.mjs`).
+**`marqueurs-ecran.spec.mjs` (18)** — marqueurs de séance, **v0.14.2 « poser et relire »**, le geste au gymnase (contrat §6.1,
+§6.2, §7, §11.3 ; §14 réponse 11 ; ECR-20 à ECR-27 : revue adversariale de la v0.14.2, contrat §16) : joués aussi sur le projet
+mobile (Pixel 7), gestes au doigt (`hasTouch` + `tap`), erreurs
+console et exceptions écoutées avant la première navigation et affirmées vides après chaque test, horloge figée sur le pire cas
+et deux images avant toute mesure, taille du texte par le CSSOM. **ECR-01** : la zone des marqueurs est entre « Minutes de
+retard » et le commentaire ; deux taps sur « Arbitre », le second pendant l'écriture du premier, donnent pose puis retrait sans
+toucher au statut ni fermer la feuille ; sur une vue périmée, le tap veut poser et la ligne reste. **ECR-07** : deux codes puis
+« +2 » calculé sur les données, nom accessible complet, ordre des genres (un rôle avant une équipe même quand l'alphabet dit
+l'inverse, un orphelin après les rôles connus), jamais l'usage récent ni l'ordre de lecture ; à 320 px et 200 %, « +n » compte
+les codes masqués et ce qui reste affiché garde l'ordre de la carte. **ECR-08** : un comportement n'a aucun code, un repère neutre identique pour tous, de taille non nulle, en encre
+pleine dans les deux thèmes, compté sans être nommé ; le code d'un rôle aussi en encre pleine. **ECR-09** (récrit par la revue v0.14.2, D4,
+R15, R16) : à 320 et 360 px, 100, 130 et 200 %, police locale et Verdana, sans rechargement, 🩺 et ⚠ ne recouvrent jamais la
+rangée, même sur une carte étirée par sa voisine ; la rangée reste dans la carte ; le repère passe en tête, entier, et ne cède
+jamais ; **tout ce qui est affiché est entier**, caractère par caractère (rectangle de `Range` dans sa boîte et dans la rangée,
+premier plan en son centre), jamais d'après le texte du DOM ; ce qui cède suit l'ordre de la réponse 11 (2e code, 1er code, repères
+au-delà du premier) et ne cède pas pour rien (réaffiché, le dernier masqué déborde) ; « +n » compte tous les codes masqués ; deux
+codes courts tiennent à 100 % et le 2e disparaît à 200 %, sous les deux polices ; « E11 » et « E1 » (préfixe, même couleur) ; un
+rôle, une équipe et un comportement : « ● +2 » à 320 px et 200 %. **ECR-10** : la carte ne change pas de hauteur au
+premier marqueur, à 100 % puis 200 %. **ECR-12** : une pose en panne fait grandir la barre sans faire défiler l'écran sous le
+doigt. **ECR-13** : cinq « À recadrer » n'ajoutent aucune alerte (témoin : trois oublis de tenue en donnent une). **ECR-14** :
+l'ordre de la feuille est gelé pour toute la vue, change à la réouverture ; sans `localStorage` ni `sessionStorage`, la pose et le
+retrait fonctionnent, et ne sont jamais DITS non enregistrés — aucun toast, aucune ligne d'échec, annonce de la pose puis du
+retrait (revue v0.14.2, R20). **ECR-15** : vocabulaire vide, ou seulement archivé, et séance sans pose : aucune rangée, l'écran d'appel
+fonctionne (témoin : un marqueur actif en donne une par carte). **ECR-16** : posé, non posé et verrouillé se distinguent sans
+couleur ni lecteur d'écran (contour, bordure en tirets). **ECR-20** (revue v0.14.2, D2) : la ligne d'échec durable nomme QUOI et
+QUI d'abord, chaque caractère visible (rectangle de `Range` dans la boîte et la fenêtre, premier plan en son centre), seule la
+cause écourtée, un seul « : » — à 320, 360 et 412 px, 100 % et 200 %, police locale et Verdana, un puis deux échecs aux noms
+longs. (ECR-17 à ECR-19 sont réservés au mode tampon, v0.14.3.) **Revue adversariale de la v0.14.2, second lot** (vu = élément au
+premier plan au centre du nœud, `elementFromPoint` ; entendu = nœud de texte non ignoré sous une région `status` non ignorée, dans
+l'arbre d'accessibilité de Chromium lu par CDP — `toBeVisible` ne voit pas l'occlusion, ni `toHaveText` l'inertie d'une modale) :
+**ECR-21** (D1) : feuille « ⋯ » ouverte, le refus « pas encore appelé », l'échec d'écriture (annonce et toast) et la pose sont
+vus et entendus ; la pile des toasts vit dans la feuille, en haut, sans la recouvrir, et un point entre deux messages est le fond ;
+fermée, la pile revient au document, toast encore vu et entendu, ligne durable au premier plan ; « Retard » choisi dans la feuille
+annonce dans la feuille, « Présent » (qui la ferme) dans la région de la vue, entendue — témoin : feuille fermée, la vue est
+entendue. **ECR-22** (D1, la classe) : confirmation, choix, feuille d'observation (même `ouvrirFeuille` que « Ajuster les
+points ») et visionneuse — un toast émis pendant qu'elle est ouverte est vu, entendu, dans la modale ; sa région d'annonce est
+entendue ; fermée, la pile revient au document. **ECR-23** (D5) : « Fermer » dans la fenêtre et au premier plan à l'ouverture et
+après une pose, pied opaque, même place en fin de défilement, commentaire au premier plan tout en bas, aucun contrôle focalisé au
+clavier caché sous le pied — taille du projet et 360×640, 100 % et 200 %, police locale et Verdana (prémisse : à 200 %, la feuille
+défile toujours). **ECR-24** (D6, R25) : dans la feuille de l'élève MARQUÉ, poser ne déplace ni ne redimensionne aucun bouton, à
+une largeur limite trouvée (un pixel de plus au bouton posé y renverrait un voisin à la ligne), deux vocabulaires, 100 % et 130 %,
+deux polices. **ECR-25** (D6, R12) : au clavier, un marqueur posé qui a le focus se distingue d'un posé sans focus (contour
+calculé, pixels), anneau ≥ 3:1, contour de l'état posé conservé, clair et sombre. **ECR-26** (D8, R13) : libellé et code d'un
+archivé ou d'un supprimé posé ≥ 4,5:1 sur le fond composé (`color(srgb …)` lu comme tel), encre atténuée gardée, état posé dit
+par le contour, clair et sombre. **ECR-27** (D8, R14, R19) : en couleurs forcées, palettes claire et sombre, le repère d'un
+comportement a un fond opaque, ≥ 3:1 sur le fond vu derrière lui, et des pixels peints distincts de ce fond (témoin : sans
+couleurs forcées). Mutants tués par ces tests : M17, M21 à M24 (avec variantes), M38, M38b,
+M39, M42 à M44, M47, M79 à M85 (avec M83b, addendum de la v0.14.2 ; M80b retiré par la revue, D4), M87, M125 ; revue
+adversariale : M133, M134, M136, M137, M139, M145 ; second lot : M146 à M163 (avec M151b, M151c, M156b ; M38 réancré) ;
+troisième lot : M164 à M168 (M23, M80 et M81 réancrés). Campagne de la v0.14.2 : 134
+mutants rejoués (84 de la v0.14.2 avec leurs variantes, 27 de la v0.14.1, 23 de la v0.14.0), tous tués par leur propre test.
+Campagne complète après les quatre lots de la revue adversariale (2026-09-29) : 183 mutants (M80b retiré, M126 à M172 ajoutés),
+tous tués par leur propre test ; M84, M93 et M120 rejoués cinq fois, sans aucun rouge intermittent (D10).
+
+Total de la suite : **357 tests** (+ 105 rejoués sur le projet **mobile**, Pixel 7 émulé : `audit5-lot3.spec.mjs` sauf le test de position des toasts, propre au PC, `grilles.spec.mjs`, `grilles-robustesse.spec.mjs`, `audit-independant.spec.mjs` et `marqueurs-ecran.spec.mjs`).
 
 > **Tests du service-worker** (H05, lot 4) : ils naviguent sur `http://app.localhost:8160` (Chromium résout `*.localhost` en boucle locale = contexte
 > sécurisé, mais pas « localhost » pour `estLocalhost()`, donc le SW s'enregistre ; repli `[::1]` puis `127.0.0.2`). Si aucune adresse

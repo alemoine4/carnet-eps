@@ -4,6 +4,177 @@ Historique des changements notables. Format : date — résumé. Le détail vit 
 
 > 🔖 Versions déployées (tags git), correspondance version → commit et **procédure de retour arrière** : `docs/deploiement.md`.
 
+## 2026-09-27 — v0.14.2 : marqueurs de séance, poser et relire — candidate, NON publiée
+
+Troisième des cinq paliers du contrat `docs/avis/AVIS_FORMAT_MARQUEURS.md` (§13), avec les réponses 3 et 11 de l'enseignant
+(§14) et le point 1 de la revue de la v0.14.0 (§16). **Aucun changement de format** : schéma 4 et `DB_VERSION` inchangés,
+validateurs des marqueurs et forme des enregistrements intacts ; aucun fichier JS nouveau (`ASSETS` inchangé). Le détail des
+choix (contradictions du contrat C1 à C32, addendum A1 à A10) est au §16 du contrat, « v0.14.2 ». **Revue adversariale du diff
+(cinq lentilles, deux réfutateurs par constat : 26 constats R01 à R26, tous retenus) et regard à l'écran (Pixel 7 émulé : 5
+constats K1 à K5), faits le 2026-09-28, arbitrés en onze décisions D1 à D11 et corrigés les 2026-09-28 et 29 — tous, sauf K5
+(préexistant) et la partie préexistante de R04, consignés au `TODO.md`** (ci-dessous, « Revue adversariale » ; une ligne par
+constat au §16 du contrat, « Revue adversariale de la v0.14.2 »). **Reste avant commit : la relecture des textes nouveaux par
+l'enseignant.**
+
+- **Poser et retirer pendant l'appel** : la feuille « ⋯ » d'un élève gagne, entre « Minutes de retard » et le commentaire, un
+  groupe par genre (« Rôles », « Équipes », « Comportements ») ; un tap pose, un second retire, sans toucher au statut ni fermer
+  la feuille, et deux taps rapides donnent toujours pose puis retrait. Tout le vocabulaire actif est proposé, sans plafond,
+  derniers utilisés en tête (ordre propre à l'appareil, gelé pendant toute la vue : un bouton ne bouge jamais sous le doigt). Un
+  marqueur archivé ou supprimé mais posé reste visible et **retirable**, jamais reposable. Chaque geste a sa propre annonce
+  (« Arbitre posé sur Léa Martin. »), jamais celle d'un statut ; poser n'écrit ni observation, ni note, ni rien dans l'appel.
+- **Refus « pas encore appelé »** (décision 14) : un marqueur ne fait pas l'appel. Tant que l'élève n'a pas de statut, les
+  boutons sont verrouillés (sans sortir de l'ordre de tabulation), la feuille le dit, un tap le rappelle en toast et n'écrit
+  rien ; choisir « Retard » dans la même feuille lève le verrou aussitôt ; « Terminer l'appel » débloque toute la classe.
+- **Sur la carte d'élève**, une troisième ligne réservée dès qu'un marqueur existe (la carte ne grandit pas au premier tap, à
+  100 % comme à 200 % de texte) : le repère neutre d'un comportement **en premier** (réponse 11), puis deux codes de rôles ou
+  d'équipes et « +n » ; sous contrainte (320 px, texte agrandi), ce qui ne tient pas en entier disparaît — le 2e code, puis le
+  1er, puis les repères au-delà du premier — et « +n » compte tous les rôles et équipes non affichés : **aucun code n'est jamais
+  affiché rogné** (revue adversariale, D4). Le lecteur d'écran entend tous les rôles et équipes et le **nombre** de
+  comportements, jamais leur nom. 🩺 et ⚠ restent sur la ligne du statut, même sur une carte étirée par sa voisine, et sur le
+  papier. Sans vocabulaire actif ni pose, la carte reste celle de la v0.14.1. La
+  rangée ne s'imprime pas ; aucune colonne au récapitulatif ni au CSV (décision 8).
+- **Échecs d'écriture dits et gardés** : un marqueur non enregistré est annoncé, dit en toast qui nomme le marqueur et l'élève
+  (avec le conseil « mémoire de l’appareil pleine » quand c'est la cause), l'écran revient au dernier état confirmé sans défaire
+  un tap plus récent, et une ligne « Non enregistré : Arbitre pour Léa Martin — … » reste dans la barre collante, sous le pouce,
+  jusqu'à ce que le geste soit rattrapé (gardée pour la session, par identifiants seulement ; écartée dès que la base a le bon
+  état — à la réouverture comme après chaque écriture réussie).
+- **« Terminer l'appel » durci** (réponse 3) : il **complète** l'appel, relu dans sa transaction (`completerAppels`), au lieu
+  d'écrire en aveugle : un statut posé entre-temps sur un autre onglet est conservé, et le toast le dit. **Le durcissement
+  s'étend au pré-remplissage des inaptitudes** : même écriture relue, un statut déjà saisi ailleurs n'est plus jamais remplacé
+  par « inapte » (D016, qui amende D013).
+- **Cascades de suppression en une transaction** (revue de la v0.14.0, point 1) : supprimer une séance, une séquence ou un
+  élève collecte **et** supprime dans une seule transaction d'écriture, pour tous les magasins rattachés — dérivés du schéma,
+  plus d'une liste écrite à la main (D015) ; une pose, un appel ou une observation écrits juste avant partent avec elle et
+  reviennent avec « Annuler ». Une pose sur une séance ou un élève supprimés entre-temps est refusée, même quand une vue
+  périmée a recréé l'appel ; le retrait reste toujours permis.
+- **Écran du vocabulaire** : l'aperçu est exactement la rangée de la carte d'élève (même nœud, mêmes tailles calculées) ; genre
+  affiché, couleur et ordre du catalogue viennent d'une seule source (`marqueurs-calcul.js`), partagée avec la carte et la
+  feuille. Les deux textes provisoires de la v0.14.1 sont retirés : la carte « Plus » dit de nouveau « Rôles, équipes et
+  comportements posés d’un tap pendant l’appel. » (texte du §6.5).
+- **Textes nouveaux, à relire par l'enseignant** (mot pour mot, tels que le code les affiche après la revue adversariale ; les
+  textes du §9.1 du contrat ne sont pas repris ici ; même liste au §16 du contrat) :
+  - toast après « Terminer l'appel » : « 1 statut déjà saisi sur un autre écran : conservé. » / « 3 statuts déjà saisis sur un
+    autre écran : conservés. » ; et « 1 élève introuvable sur cet appareil : rechargez la page. » / « 2 élèves introuvables sur
+    cet appareil : rechargez la page. » ;
+  - motifs d'écriture de « Terminer l'appel » et du pré-remplissage, affichés après « Appel non terminé : » et dans
+    « Pré-remplissage des inaptitudes non enregistré (…) — statuts à saisir à la main. » : « séance supprimée entre-temps :
+    rechargez la page » · « appel incohérent avec sa séance : rechargez la page » (ce dernier vient d'un défaut de programme, ou
+    d'une sauvegarde tierce qui range un appel sous la clé d'un autre élève ; recharger ne la répare pas) ;
+  - cause d'un échec de marqueur, dans le toast et la ligne d'échec, où le « : » du motif devient une virgule : « séance
+    supprimée entre-temps, rechargez la page » · « élève introuvable, rechargez la page » · « marqueur « Arbitre » archivé,
+    rechargez la page » · « marqueur inconnu, rechargez la page » (ces deux derniers existent depuis la v0.14.0 ; la pose les
+    rend visibles pour la première fois) ;
+  - ligne d'échec dans la barre (QUOI et QUI d'abord, jamais coupés ; seule la cause peut être écourtée « … ») : « Non
+    enregistré : Arbitre pour Léa Martin — <cause>. », « Non enregistré : Arbitre pour Léa Martin, Équipe 1 pour Léa Martin —
+    <cause>. », puis « … et 1 autre — <cause>. » / « … et 2 autres — <cause>. » ; causes différentes : « … — plusieurs
+    causes. » ; infobulle : « Non enregistré : » puis une ligne « Arbitre pour Léa Martin — <cause>. » par échec ; replis des
+    noms : « marqueur supprimé » (marqueur disparu), « élève » (élève inconnu) ;
+  - toast d'échec d'un marqueur (remplace « Marqueur non enregistré : <motif> » du contrat) : « Non enregistré : Arbitre pour
+    Léa Martin — <motif>. » ;
+  - refus venu de la base après un statut tapé sur ce même écran et refusé, en toast et en annonce : « Appel introuvable pour
+    Léa Martin : son statut n’a pas été enregistré. Choisissez-le de nouveau. » ;
+  - refus « pas encore appelé » au tap (remplace « … pour passer tout le monde en présent. ») : « Appel non fait pour Léa
+    Martin : choisissez d’abord un statut ci-dessus, ou « Terminer l’appel » pour passer en présent les élèves pas encore
+    saisis. » ;
+  - feuille « ⋯ » : « marqueur supprimé (ARB) » ou « marqueur supprimé (?) » (marqueur disparu du vocabulaire mais posé) ; « Coach
+    (archivé) » (suffixe « (archivé) ») ;
+  - annonces pour un marqueur disparu (lecteur d'écran), avec une majuscule en tête comme toute annonce : « Marqueur supprimé
+    retiré de Léa Martin. » et « Marqueur supprimé non enregistré pour Léa Martin. » ;
+  - texte existant, nouveau lieu : le conseil « mémoire de l’appareil pleine, exportez une sauvegarde (Plus → Sauvegarde), puis
+    libérez de l’espace sur l’appareil » suit désormais aussi l'échec d'un marqueur (sa virgule remplace le « : » d'origine) ;
+  - sans texte nouveau, à regarder aussi : pendant qu'une feuille, une confirmation, un choix ou la visionneuse est ouvert, les
+    toasts s'affichent en haut de l'écran ; « Fermer » vit dans un pied collant de la feuille ; un marqueur posé n'est plus en
+    gras ; dans la feuille d'un élève sans appel, aucun statut n'est pressé ; sous contrainte, la carte masque un code au lieu de
+    le rogner (« ● +2 ») ; « Choisissez d’abord un statut : un marqueur ne fait pas l’appel. » est inchangé.
+- **Revue adversariale** (2026-09-28), premier lot de corrections (données, textes, élève non appelé — D7, D2, D3) :
+  - deux onglets : un échec rattrapé ailleurs quitte la ligne dès l'écriture réussie suivante (la « relance » qu'elle suggérait
+    RETIRAIT la pose) ; toute carte que la base a changée est repeinte (la carte ne contredit plus sa feuille) ;
+  - refus venu de la base : annoncé par son propre texte, jamais « … posé sur … » ; après un statut refusé sur ce même écran, il
+    n'accuse plus « un autre écran » ;
+  - « Terminer l'appel » sur une sauvegarde tierce qui range un appel sous la clé d'un autre élève : l'appel est retrouvé par
+    élève, la clé occupée fait tout refuser, sans écraser la ligne ni planter après avoir écrit ;
+  - « derniers utilisés » écrits hors de l'écriture de la pose : une préférence non enregistrable n'est jamais dite
+    « non enregistré » ; l'attente de la file à la réouverture de l'écran a désormais sa preuve ;
+  - ligne d'échec et toast : QUOI et QUI d'abord, un seul « : » ; majuscule en tête de toute annonce ;
+  - feuille « ⋯ » d'un élève sans appel : aucun statut pressé (« Présent » l'était par défaut, sans décision consignée), et un
+    statut refusé ne reste pas pressé ; le refus ne promet plus « tout le monde en présent » ;
+  - preuves : MQ-02, MQ-03, MQ-05, MQ-22, MQ-23, MQ-25, ECR-14 et MIG-08 renforcés ; **cinq tests nouveaux** (MQ-27 à MQ-30,
+    ECR-20, ce dernier joué aussi sur le projet mobile) ; vingt mutants nouveaux (M126 à M145) et neuf réancrés (M14, M15, M48,
+    M91, M94, M95, M97, M102, M104), chacun tué par son propre test.
+- **Revue adversariale**, deuxième lot (modales, feuille « ⋯ », accessibilité visuelle — D1, D5, D6, D8) :
+  - feuille ouverte, les messages sont vus et entendus : la pile des toasts vit dans toute modale ouverte (en haut de
+    l'écran, sur le fond assombri, sans recouvrir la feuille), et chaque modale a sa région d'annonce — un refus, un échec
+    d'écriture ou une pose tapés dans la feuille étaient recouverts à l'œil et muets pour un lecteur d'écran. Corrigé une fois,
+    pour toutes les modales (confirmation, choix, feuilles d'observation et d'ajustement des points, visionneuse) ; un statut
+    choisi dans la feuille qui la ferme est désormais annoncé ;
+  - « Fermer » reste en bas de la feuille, visible sans la faire défiler, à 100 % comme à 200 % de texte ;
+  - un marqueur posé ne passe plus en gras : ses voisins ne glissent plus d'un tap à l'autre (à une largeur limite, le tap
+    suivant tombait sur un autre marqueur) ; au clavier, un marqueur posé qui a le focus se voit ;
+  - contraste suffisant pour un marqueur archivé ou supprimé mais posé ; le repère d'un comportement reste visible en thème
+    de contraste Windows ;
+  - aucun texte nouveau ; **sept tests nouveaux** (ECR-21 à ECR-27, joués aussi sur le projet mobile), MQ-02 à MQ-04, ECR-14,
+    MIG-08 relus dans la feuille ; vingt-et-un mutants nouveaux (M146 à M163, avec M151b, M151c, M156b) et M38 réancré,
+    chacun tué par son propre test.
+- **Revue adversariale**, troisième lot (rangée de la carte, impression — D4, D9) :
+  - un code n'est plus jamais affiché rogné sur la carte d'élève : le 1er code rétrécissait sans aucune marque, et « E11 » se
+    lisait « E1 » — le code d'une autre équipe —, « ARB » tombait à une boîte vide et le chiffre de « +n » sortait de la rangée.
+    Désormais ce qui ne tient pas en entier disparaît (le 2e code, puis le 1er, puis les repères au-delà du premier) et « +n »,
+    entier, compte tout ce qui n'est pas affiché ; le premier repère d'un comportement reste toujours. Contrepartie, mesurée et
+    dite au contrat (§6.1) : à 320 px et 200 % de texte, la carte ne montre plus que « ● +2 » ou « ●● +1 », et trois
+    comportements n'y laissent que deux repères ;
+  - à l'impression de la feuille d'appel, 🩺 et ⚠ ne tombent plus sur la fin du nom (ils restaient relevés pour une rangée qui
+    ne s'imprime pas) ;
+  - l'aperçu de l'écran du vocabulaire garde exactement le rendu de la carte, largeur comprise ;
+  - aucun texte nouveau ; aucun test nouveau : ECR-09 récrit sur ce qui est VU (caractère par caractère, à 320 et 360 px, à
+    100, 130 et 200 %, sous deux polices, cartes « E11 » et « E1 »), ECR-07, MQ-11 et MQ-16 renforcés ; sept mutants nouveaux
+    (M164 à M170), M23, M80 et M81 réancrés, M80b retiré (sans objet), chacun tué par son propre test.
+- **Revue adversariale**, quatrième lot (preuves — D10) :
+  - MQ-11 et MQ-16 pouvaient rougir sans raison, rarement : ils mesuraient le code de la carte en deux allers-retours, et la
+    passe de l'observateur de taille, tombée entre les deux, remplaçait ce code — le test mesurait un nœud retiré de la page
+    (« hauteur 0 »). Défaut des tests, pas de l'application (jamais un faux vert) : le code est désormais mesuré en une seule
+    évaluation, deux images après l'ouverture de la vue. Vu rouge sous un observateur retardé (MQ-16 2 fois sur 6, MQ-11 une
+    fois sur 6), vert ensuite (48 sur 48) ;
+  - aucun texte nouveau, aucun code de l'application changé, aucun test nouveau ; deux mutants nouveaux (M171, M172), qui ne
+    changent que ce que rend la passe de l'observateur, chacun tué par son propre test ; M84, M93 et M120 rejoués cinq fois
+    chacun : les mêmes rouges à chaque fois, aucun rouge intermittent ;
+  - **campagne de mutants complète après les quatre lots** : contrôle sain vert sur les deux projets, **183 exécutions, 183 tuées
+    par leur propre test** du premier coup (les 134 d'avant la revue, M80b retiré, et les 50 de la revue : M126 à M172 avec
+    M151b, M151c, M156b), fichiers identiques à la référence avant et après ; ECR-01, joué en tête de chacun des 134 passages
+    des specs de marqueurs, n'a rougi que sous les deux mutants qui le visent (M28, M89).
+- **Revue adversariale**, cinquième lot (documentation — D11, R04) :
+  - trois textes disaient qu'une écriture faite APRÈS une suppression en cascade « ne trouve plus rien » (décision D015,
+    `docs/modele-donnees.md`, commentaire des cascades d'`io.js`) : c'est vrai pour la pose d'un marqueur et pour « Terminer
+    l'appel », qui relisent la séance et l'élève, **faux** pour un statut, un commentaire, une note ou une observation écrits
+    par une vue restée ouverte, qui recréent une ligne orpheline — un commentaire de santé tapé dans un onglet resté ouvert
+    survit ainsi à la suppression définitive de l'élève, et la sauvegarde l'emporte. Textes corrigés (et §8 du contrat) ; le
+    défaut, **préexistant** (identique en v0.14.1) et hors contrat (`definirStatut`, règle n° 1), est consigné au `TODO.md` ;
+  - consignés aussi : K5 (préexistant), les points relevés à l'implémentation hors périmètre, et l'essai de terrain avant la
+    v0.14.3 ; le §16 du contrat donne la revue entière, une ligne par constat (correction, preuve, mutant), les arbitrages et
+    les textes nouveaux mot pour mot ;
+  - aucun code exécutable changé (un commentaire d'`io.js`), aucun test ni mutant nouveau.
+- **Regard à l'écran** (2026-09-28, Pixel 7 émulé, thème clair, 320 px à 100 % et 200 %, feuille « ⋯ » ouverte, ligne d'échec,
+  comparé à la production) : K1, les toasts recouverts par la feuille (corrigé par D1, deuxième lot) ; K2, « Présent » pressé
+  pour un élève sans appel, déjà en v0.14.1 (corrigé par D3, premier lot) ; K3, deux « : » dans la ligne d'échec, et K4, une
+  annonce en minuscule (corrigés par D2, premier lot) ; K5, **préexistant** : à 320 px et 200 %, la barre « Terminer l'appel »
+  prend un tiers de l'écran et les noms se coupent en plein mot — non corrigé, consigné au `TODO.md`.
+- **Preuves** : 35 tests nouveaux — `marqueurs-migration.spec.mjs` 11 → 16 (MIG-08, MIG-11 ×3, MIG-12), `marqueurs.spec.mjs` 5 → 25
+  (MQ-01 à MQ-11, MQ-13, MQ-15, MQ-16, MQ-21 à MQ-26), `marqueurs-ecran.spec.mjs` créé, 10 tests joués aussi sur le projet
+  mobile (ECR-01, ECR-07 à ECR-10, ECR-12 à ECR-16) ; suite **345 tests + 97 rejoués sur le projet mobile**, 21 fichiers de specs,
+  verte (après le premier lot de la revue adversariale : **350 tests + 98 rejoués** ; après le deuxième : **357 tests + 105
+  rejoués**, inchangé ensuite — **état final, vert**) ; gardes re-réglées (21 fichiers, comptes des README, énumération du projet mobile désormais **dérivée**, garde
+  « Préférences ↔ architecture » **dérivée**). Campagne de mutants complète : contrôle sain vert sur les deux projets,
+  **134 exécutions, 134 tuées par leur propre test** — 84 de la v0.14.2 (M04, M04b, M11 à M17, M21 à M24, M28 à M30, M38, M39,
+  M42 à M45, M47, M48 et leurs variantes ; M79 à M125, dont M80b, M83b, M123b de l'addendum ; M07 à M09, M68 et M76 réancrés),
+  plus les 23 de la v0.14.0 et les 27 de la v0.14.1 rejouées ; après la revue adversariale, **183 exécutions, 183 tuées par
+  leur propre test** (quatrième lot, ci-dessus).
+- **Limites dites** (contrat §15, « ne prouve pas ») : l'impression **papier** réelle ; la perception des repères à bout de
+  bras au gymnase (essai de terrain prévu entre v0.14.2 et v0.14.3, `docs/test-terrain.md`) ; TalkBack sur un Android réel (ce qui
+  est « entendu » est prouvé dans l'arbre d'accessibilité de Chromium) ; le thème de contraste réel de Windows (couleurs forcées
+  émulées) ; ~~et,
+  dans le pire cas extrême (quatre rôles ou équipes et trois comportements à 320 px et 200 % de texte, ou à 100 % sous la police
+  de l'intégration continue), « +n » peut être rogné de quelques pixels — le nom accessible reste exact~~ (limite fausse, revue
+  adversariale R16 : remplacée au contrat §6.1 par ce qui est garanti — aucun code affiché rogné — et mesuré).
+
 ## 2026-09-24 — v0.14.1 : marqueurs de séance, le vocabulaire — candidate, NON publiée
 
 Deuxième des cinq paliers du contrat `docs/avis/AVIS_FORMAT_MARQUEURS.md`. **Aucun changement de format** : schéma 4 et

@@ -730,8 +730,8 @@ fieldset.groupe legend {
 .btn-eleve[data-statut="oubli_tenue"] .badge-statut { background: var(--stbf-oubli_tenue, var(--stb-oubli_tenue)); color: var(--stbt-oubli_tenue, var(--c-sur-accent)); }
 .btn-eleve[data-statut="infirmerie"] .badge-statut { background: var(--stbf-infirmerie, var(--stb-infirmerie)); color: var(--stbt-infirmerie, var(--c-sur-accent)); }
 
-/* ---- Marqueurs de séance : le code court (v0.14.1, écran du vocabulaire ; la carte d'élève le
-   reprendra en v0.14.2). Contraste par construction (contrat AVIS_FORMAT_MARQUEURS §7, point 2) :
+/* ---- Marqueurs de séance : le code court (écran du vocabulaire et carte d'élève).
+   Contraste par construction (contrat AVIS_FORMAT_MARQUEURS §7, point 2) :
    le texte est TOUJOURS en encre pleine, la couleur ne porte que la bordure et une teinte à 12 %.
    La couleur arrive par data-niveau-couleur (pont générique plus bas), jamais par element.style. ---- */
 .mq-code {
@@ -770,23 +770,17 @@ fieldset.groupe legend {
   text-transform: uppercase; /* majuscules AFFICHÉES : la valeur n'est jamais réécrite pendant la frappe (revue v0.14.1, R1) */
 }
 
-/* L'aperçu ne fait pas bloc dans la rangée : ses nœuds (code, ou repère + phrase) y sont rangés un à un.
-   Sinon, au téléphone, la phrase d'un comportement emportait le repère à la ligne, loin de « Sur la
-   carte : » (vu à l'écran, Pixel 7) ; là, seule la phrase passe à la ligne. */
+/* L'aperçu ne fait pas bloc dans la rangée : ses nœuds (la rangée de carte, puis la phrase d'un
+   comportement) y sont rangés un à un. Sinon, au téléphone, la phrase d'un comportement emportait le
+   repère à la ligne, loin de « Sur la carte : » (vu à l'écran, Pixel 7) ; là, seule la phrase passe à la ligne. */
 .mq-apercu {
   display: contents;
 }
 
-/* Mention provisoire de l'écran du vocabulaire (v0.14.1 seulement, retirée en v0.14.2 avec son texte) :
-   un paragraphe à part, aligné sur le texte de la carte, plus petit — pas la suite du paragraphe. */
-.carte .mq-provisoire {
-  margin-top: 10px;
-  font-size: 0.85rem;
-}
-
 /* Repère d'un comportement (contrat §7, point 3) : même forme, même encre PLEINE pour tous, aucun texte
    ni couleur parlante (décision 10). `display` et `vertical-align` en plus de la règle du contrat : hors
-   de la rangée flex de la carte d'élève (écran du vocabulaire), un span sans eux n'aurait aucune taille. */
+   d'une rangée flex, un span sans eux n'aurait aucune taille (l'aperçu de l'écran du vocabulaire l'était
+   en v0.14.1 ; depuis la v0.14.2 il est lui-même une rangée de carte, addendum A3). */
 .mq-neutre {
   display: inline-block;
   vertical-align: middle;
@@ -794,6 +788,112 @@ fieldset.groupe legend {
   height: 10px;
   border-radius: 999px;
   background: var(--c-texte);
+}
+
+/* Couleurs forcées (thème de contraste de Windows, sur PC — revue v0.14.2, D8, R14, R19) : le navigateur force tous les fonds
+   à celui de la page, et ce repère, dessiné par son seul fond, disparaissait — une carte avec un comportement noté ressemblait
+   à une carte vide. Il prend la couleur système du texte posé sur ce fond : contraste garanti par le thème lui-même. */
+@media (forced-colors: active) {
+  .mq-neutre {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+}
+
+/* ---- Marqueurs de séance sur la carte d'élève et dans la feuille « ⋯ » (v0.14.2 ; contrat §6.1, §6.2, §7 ; §14 réponse 11) ---- */
+/* Réserve de hauteur dans l'unité de la police de la rangée : une ligne (1.2em de 0.74rem) + bordure et remplissage d'un code.
+   Déclarée aussi sur la rangée elle-même : l'aperçu de l'écran du vocabulaire (addendum A3) n'a pas de .eleve-cycle. */
+.eleve-cycle,
+.rang-marqueurs-carte {
+  --h-rang-carte: calc(0.74rem * 1.2 + 6px);
+}
+
+/* align-self: stretch — largeur fixée par la carte, jamais par le contenu : masquer un code ou un repère ne change pas la
+   taille de la rangée, donc ne relance pas l'observateur de taille (aucune boucle). */
+.rang-marqueurs-carte {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  align-self: stretch;
+  gap: 3px;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  min-height: var(--h-rang-carte);
+  overflow: hidden;
+}
+
+/* Réponse 11 appliquée strictement (revue v0.14.2, D4, R15, R16) : RIEN ne rétrécit — un 1er code rétréci ne montrait aucune
+   marque de coupure (« E11 » lu « E1 », « ARB » réduit à une boîte vide). Ce qui ne tient pas disparaît ENTIER : c'est la vue
+   qui le masque (attribut hidden) après mesure, dans l'ordre de D4 (ajusterRangee, appel.js), et « +n » le compte. */
+.rang-marqueurs-carte > * {
+  flex: 0 0 auto;
+}
+
+/* Écran du vocabulaire (addendum A3) : l'aperçu EST cette rangée — mêmes nœuds, mêmes règles de taille —, posée en ligne
+   dans le texte qui l'annonce (carte de la liste) ; dans le formulaire, c'est un élément de la rangée du champ. */
+.mq-apercu > .rang-marqueurs-carte {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+/* La rangée est toujours la DERNIÈRE ligne de la carte, collée à son bas, même quand une voisine plus haute étire la
+   carte (même ligne de grille) : 🩺 et ⚠, ancrés au bas de la carte, se posent ainsi exactement au-dessus d'elle. Sans
+   cela, une voisine d'une ligne de plus (nom sur trois lignes) faisait chevaucher la rangée par 🩺 (mesuré à 320 px). */
+.eleve-cycle > .rang-marqueurs-carte {
+  margin-top: auto;
+}
+
+/* 🩺 et ⚠ restent sur la ligne du statut : relevés de la hauteur de la rangée + l'écart de la colonne (gap 4px). À l'ÉCRAN
+   seulement : la rangée ne s'imprime pas (@media print, plus bas), mais :has() voit aussi un nœud masqué — relevés sur le
+   papier, les pictogrammes tombaient sur la fin du nom (revue v0.14.2, D9, R18). */
+@media screen {
+  .eleve-cycle:has(> .rang-marqueurs-carte) > :is(.pastille-info, .pastille-warn) {
+    bottom: calc(6px + var(--h-rang-carte) + 4px);
+  }
+}
+
+/* Orphelin (marqueur disparu) et archivé dans la feuille : encre atténuée, aucune couleur. */
+[data-mq-orphelin],
+[data-mq-orphelin] .mq-code,
+[data-mq-archive],
+[data-mq-archive] .mq-code {
+  color: var(--c-texte-2);
+}
+
+/* Feuille « ⋯ » : cible tactile du terrain ; posé et verrouillé se voient sans la couleur (modèle .grille-niveaux). */
+.btn-marqueur {
+  min-height: 44px;
+}
+
+/* Posé : fond teinté et contour. Même graisse que non posé (revue v0.14.2, D6, R25) : le gras élargissait le bouton, ses
+   voisins glissaient entre deux taps, et à une largeur limite l'un d'eux passait à la ligne — faux tap. */
+.btn-marqueur[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--niveau-couleur, var(--c-accent)) 18%, var(--c-surface));
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* Posé ET focalisé au clavier (revue v0.14.2, D6, R12) : la règle de l'état posé écrasait l'anneau :focus-visible (base.css),
+   et le bouton focalisé devenait identique aux autres boutons posés. L'anneau de l'application (accent, 3 px) passe au-delà du
+   contour de l'état posé, redessiné à la même place par une ombre. */
+.btn-marqueur[aria-pressed="true"]:focus-visible {
+  outline: 3px solid var(--c-accent);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 2px var(--c-surface), 0 0 0 4px currentColor;
+}
+
+/* Archivé ou supprimé, POSÉ (revue v0.14.2, D8, R13) : « aucune couleur » (§7 point 6), fond compris. Sous l'encre atténuée,
+   la teinte de l'état posé (l'accent à 18 %, faute de couleur propre) ne laissait que 4,2:1 en clair à ce libellé d'un
+   contrôle actif — le seul chemin pour retirer la pose. Sur la surface : 5,5:1. L'état posé reste dit par le contour. */
+.btn-marqueur[aria-pressed="true"]:is([data-mq-archive], [data-mq-orphelin]) {
+  background: var(--c-surface);
+}
+
+.btn-marqueur[aria-disabled="true"] {
+  opacity: 0.55;
+  border-style: dashed;
+  cursor: not-allowed;
 }
 
 /* ---- Feuille (menu de statuts, <dialog> natif) ---- */
@@ -817,6 +917,28 @@ dialog.feuille {
 
 dialog.feuille::backdrop {
   background: rgba(10, 16, 30, 0.45);
+}
+
+/* Pied de feuille collant (feuille « ⋯ » de l'appel — revue v0.14.2, D5, R09) : la zone des marqueurs repoussait « Fermer »
+   sous le bas de la feuille (plusieurs centaines de pixels à 200 % de texte). Il colle au bas de la feuille, opaque, sur
+   toute sa largeur et sur sa marge du bas (repère de collage décalé d'autant : le défilement ne passe pas dessous, entre lui
+   et le bord). Sa marge basse, négative d'autant, le fait finir au même bord une fois revenu à sa place en fin de défilement :
+   sans elle, « Fermer » remontait de 16 px sous le doigt dans les derniers pixels du défilement (mesuré, reprise de C2). */
+dialog.feuille .pied-feuille {
+  position: sticky;
+  bottom: calc(-16px - env(safe-area-inset-bottom));
+  margin-inline: -16px;
+  margin-bottom: calc(-16px - env(safe-area-inset-bottom));
+  padding: 8px 16px calc(16px + env(safe-area-inset-bottom));
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-bordure);
+}
+
+/* Un contrôle atteint au clavier ne finit jamais sous ce pied (2.4.11) : réserve de défilement de sa hauteur — « Fermer »
+   (44 px au moins, ou sa ligne de texte agrandi et ses marges), plus le pied et un écart —, sinon, à 200 %, le bouton
+   focalisé s'arrêtait dessous. */
+dialog.feuille:has(> .pied-feuille) :is(a, button, input, select, textarea, [tabindex]) {
+  scroll-margin-bottom: calc(max(44px, 1.4rem + 18px) + 33px + env(safe-area-inset-bottom));
 }
 
 /* Boîte de confirmation (helper confirmer()) */
@@ -1040,6 +1162,30 @@ dialog.visionneuse::backdrop {
   max-width: calc(100vw - 24px);
 }
 
+/* Porte-pile d'une modale ouverte (ui.js, ouvrirModale — revue v0.14.2, D1) : la pile des toasts y vit tant que la modale est
+   au premier plan, en HAUT de l'écran, sur le fond assombri, sur toute la largeur moins les marges. Une feuille monte du bas :
+   en bas, le message recouvrait ses boutons (marqueurs, « Fermer ») pendant ses huit secondes. La pile y est un simple bloc :
+   les règles qui la placent dans la page (bas d'écran, zone de contenu sur PC, au-dessus de la barre des grilles) n'ont plus
+   prise sur elle. Aucun tap n'est pris à côté d'un message : il atteint la feuille, ou le fond (qui la ferme). */
+.pile-modale {
+  position: fixed;
+  top: calc(8px + env(safe-area-inset-top));
+  left: 12px;
+  right: 12px;
+  z-index: 60;
+  pointer-events: none;
+}
+
+.pile-modale > .toasts {
+  position: static;
+  transform: none;
+  max-width: none;
+}
+
+.pile-modale .toast {
+  pointer-events: auto;
+}
+
 .toast {
   display: flex;
   align-items: center;
@@ -1062,7 +1208,8 @@ dialog.visionneuse::backdrop {
   .recherche,
   .toasts,
   .saut,
-  .no-print {
+  .no-print,
+  .rang-marqueurs-carte {
     display: none !important;
   }
 
@@ -1176,6 +1323,10 @@ dialog.visionneuse::backdrop {
 /* Échec d'écriture non rattrapé, sous le pouce et sans rien recouvrir ; la ligne d'état du haut reste la seule annonce. */
 .grille-echec { margin: 0 0 8px; color: var(--c-alerte); font-weight: 600; font-size: .9rem; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .grille-echec[hidden] { display: none; }
+/* Échecs des marqueurs, dans la barre de l'appel (revue v0.14.2, D2) : QUOI et QUI d'abord (.echec-qui), jamais coupés —
+   la ligne grandit, sur plusieurs lignes s'il le faut — ; seule la cause (.echec-cause), à la suite, est écourtée (« … »). */
+.barre-appel .grille-echec { display: block; overflow: visible; }
+.barre-appel .grille-echec .echec-cause { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .grille-barre .rang-btn { flex-wrap: nowrap; }
 .grille-barre .btn { flex: 1 1 0; min-width: 0; padding-inline: 8px; white-space: normal; overflow-wrap: anywhere; hyphens: auto; }
 

@@ -35,8 +35,7 @@ enregistrerVue('plus', (c) => {
     lien('grilles', carte('Grilles d’évaluation', 'Critères, niveaux de maîtrise, pondérations et notes sur 20.')),
     lien('edt', carte('Emploi du temps', 'Créneaux hebdomadaires, semaines A/B, installations.')),
     lien('sequences', carte('Séquences & séances', 'APSA, champs d’apprentissage, séances numérotées automatiquement.')),
-    // v0.14.1 : la pose n'existe pas encore — le texte du contrat (« posés d’un tap pendant l’appel ») revient en v0.14.2.
-    lien('marqueurs', carte('Marqueurs de séance', 'Préparez vos rôles, équipes et comportements ; leur pose pendant l’appel arrive bientôt.')),
+    lien('marqueurs', carte('Marqueurs de séance', 'Rôles, équipes et comportements posés d’un tap pendant l’appel.')),
     lien('documents', carte('Documents', 'Bibliothèque locale : fiches, protocoles, convocations — photo, PDF ou lien.')),
     lien('sauvegarde', carte('Sauvegarde', 'Export / import JSON complet — le transfert PC ↔ Android et le filet de sécurité.')),
     lien('reglages', carte('Réglages', 'Établissement, année scolaire, thème, stockage, mises à jour.')),
