@@ -14,6 +14,21 @@ Modèle d'entrée :
 
 ---
 
+## 2026-09-30 (51) — v0.14.2 commitée ; CI rouge sur ECR-24 (prémisse dépendante de la police), corrigée
+
+**Fait** : vérification finale par moi avant commit (suite 462/462 ; campagne complète 183/183 mutants tués par leur propre test,
+contrôle sain vert, fichiers identiques à la référence ; regard à l'écran Pixel 7 clair et sombre : toasts visibles feuille
+ouverte, aucun statut pressé pour un élève non appelé, « ● +3 » à 320 px et 200 %, « Fermer » collant). Textes nouveaux montrés
+à l'enseignant (11 messages) ; « go commit » → commit `4863cab`. **CI rouge, 461/462** : ECR-24 sur le projet mobile, à la
+PRÉMISSE « une largeur limite existe » (cas « huit, police locale, 130 % »). Cause : la recherche de la largeur limite balayait
+la feuille de 300 px à la largeur de l'écran, 412 px sur Pixel 7 ; sous la police plus large de l'intégration continue, chaque
+bouton y occupe sa ligne sur toute la plage, aucune limite n'existe. Reproduit ici avec un texte à 170 % (doublure d'une police
+plus large) : même message sur l'ancienne version, vert sur la nouvelle.
+**Décidé** : ECR-24 élargit la fenêtre à 600 px sur les deux projets (plage jusqu'à 560 px, où deux boutons courts partagent une
+ligne quelle que soit la police) ; la preuve est inchangée, M159 (le gras revenu) reste tué par ECR-24. Leçon déjà écrite
+(`CLAUDE.md`, « le calendrier aussi est une police ») et de nouveau payée : une PRÉMISSE aussi peut dépendre de la police.
+**Prochaine étape** : CI verte, puis « go » de publication.
+
 ## 2026-09-29 (50) — v0.14.2 : revue adversariale et regard à l'écran, 31 constats corrigés ou consignés
 
 Demande : l'étape É13 de la v0.14.2 — revue adversariale du diff, regard à l'écran, corrections — puis la documentation de la

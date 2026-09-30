@@ -1092,6 +1092,11 @@ test('ECR-23 — feuille « ⋯ » : « Fermer » visible sans défiler à l’o
 test('ECR-24 — feuille de l’élève marqué : poser ne déplace aucun bouton, à une largeur limite, sous deux polices', async ({ page }) => {
   test.setTimeout(60_000);
   await figerHorloge(page);
+  // Fenêtre élargie à 600 px sur les DEUX projets : la recherche de la largeur limite balaie la feuille jusqu'à 560 px. Bornée à la
+  // largeur du Pixel 7 (412 px), elle ne trouvait aucune limite sous une police large (celle de l'intégration continue, texte à
+  // 130 %) : chaque bouton y occupait sa ligne sur toute la plage, et la prémisse rougissait (CI du 2026-09-30). Jusqu'à 560 px,
+  // deux boutons courts partagent une ligne quelle que soit la police : la limite existe, la preuve ne dépend plus de la police.
+  await page.setViewportSize({ width: 600, height: 900 });
   const cap = { id: 'mq-cap', libelle: 'Capitaine', court: 'CAP', genre: 'role', couleur: 'rouge' };
   const chr = { id: 'mq-chr', libelle: 'Chronométreur', court: 'CHR', genre: 'role', couleur: 'vert' };
   const vocabulaires = {
