@@ -36,7 +36,7 @@ Cadrage : `docs/brief.md` + `docs/fonctionnalites.md`. Avancement : `docs/roadma
 
 | Quoi | Où en est-on |
 |---|---|
-| **Adresse de production** | https://carnet-eps.github.io/ (organisation `carnet-EPS`), **schéma IndexedDB 4** (depuis le 2026-09-23 : plus jamais de version en `DB_VERSION` 3), version en ligne **v0.14.1** (2026-09-25 ; l’écran du vocabulaire des marqueurs, sans pose — v0.14.2 à v0.14.4 à venir ; ses deux textes provisoires sont à rétablir en v0.14.2, contrat §16) |
+| **Adresse de production** | https://carnet-eps.github.io/ (organisation `carnet-EPS`), **schéma IndexedDB 4** (depuis le 2026-09-23 : plus jamais de version en `DB_VERSION` 3), version en ligne **v0.14.2** (2026-09-30 ; pose et relecture des marqueurs pendant l’appel — v0.14.3 (mode tampon) et v0.14.4 (reprise) à venir, après l’essai de terrain, `docs/test-terrain.md`) |
 | **Branche qui publie** | `grilles-schema3` (et non `main`) |
 | **Ancienne adresse** | https://alemoine4.github.io/carnet-eps/ en **v0.12.22**, schéma 2, bandeau « a déménagé » (branche `demenagement`) — **gelée** |
 | **Données de l'enseignant** | **aucune donnée saisie à ce jour** (dit le 2026-09-22) : plus rien à migrer, la condition « attendre la fin de la migration » est levée |
@@ -73,7 +73,7 @@ puis tag `vX.Y.Z`, vérification en ligne (`state.js`, `service-worker.js`, page
 | Modèle de données | `docs/modele-donnees.md` — IndexedDB `carnet-eps`, wrapper maison dans `app/js/io.js` |
 | Service worker | enregistré **uniquement hors localhost** → jamais de cache pendant le dev |
 | Échanges Pronote | `docs/pronote.md` |
-| Décisions actées | `docs/decisions.md` (D001 à D014) |
+| Décisions actées | `docs/decisions.md` (D001 à D016) |
 | Déploiement | `docs/deploiement.md` — tableau version → commit → commit du site, et procédure de retour arrière |
 | Audits internes | `docs/audit-2026-07-10.md` (soldé), `docs/audit-2026-09-05.md` (4e passe), `docs/audit-2026-09-07.md` + `.json` (5e passe, 179 constats : lots 1, 3, 4, 5 livrés ; **lot 2 en attente de « go »** — `docs/avis/AVIS_CREATIONS_ATOMIQUES.md` ; A01 « origine dédiée » **tranché et exécuté** le 2026-09-17) |
 | Audits externes | **Audit indépendant du 2026-09-16** : `AUDIT-INDEPENDANT-2026-09-16.md`, **hors dépôt**, dans `CARNET EPS\` (36 constats ; premier lot livré en v0.13.1). **Audits Codex** : dossier `audit codex/` (hors suivi Git), un rapport par passe `AUDIT_Vn.md` ; je prépare `audit codex/CONSIGNE_Vn.md` et il suffit de dire à Codex « lis-la et exécute-la ». Dernier : **V7** (v0.13.4 → correctifs livrés en v0.13.5) |
